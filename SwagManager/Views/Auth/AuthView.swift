@@ -26,14 +26,23 @@ struct AuthView: View {
             // Form
             VStack(spacing: 12) {
                 TextField("Email", text: $email)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .padding(8)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .cornerRadius(6)
 
                 SecureField("Password", text: $password)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .padding(8)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .cornerRadius(6)
 
                 if isSignUp {
                     SecureField("Confirm Password", text: $confirmPassword)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(nsColor: .textBackgroundColor))
+                        .cornerRadius(6)
                 }
 
                 Button(isSignUp ? "Create Account" : "Sign In") {
@@ -41,6 +50,7 @@ struct AuthView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isLoading || !isFormValid)
+                .padding(.top, 8)
             }
             .frame(width: 260)
 
@@ -54,7 +64,6 @@ struct AuthView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
         .alert("Error", isPresented: $showError) {
             Button("OK") { }
         } message: {

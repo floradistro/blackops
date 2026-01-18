@@ -1,0 +1,408 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */; };
+		BF001 /* SwagManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF001 /* SwagManagerApp.swift */; };
+		BF002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF002 /* ContentView.swift */; };
+		BF003 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF003 /* AuthView.swift */; };
+		BF004 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF004 /* EditorView.swift */; };
+		BF005 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF005 /* AuthManager.swift */; };
+		BF006 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF006 /* SupabaseService.swift */; };
+		BF007 /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF007 /* Collection.swift */; };
+		BF008 /* Creation.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF008 /* Creation.swift */; };
+		BF009 /* Product.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF009 /* Product.swift */; };
+		BF010 /* AnyCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF010 /* AnyCodable.swift */; };
+		BF011 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF011 /* SettingsView.swift */; };
+		BF012 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = PD001 /* Supabase */; };
+		BF013 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = PD002 /* SwiftSoup */; };
+		BF014 /* Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF013 /* Chat.swift */; };
+		BF015 /* TeamChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF014 /* TeamChatView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryConfigView.swift; sourceTree = "<group>"; };
+		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		SF001 /* SwagManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManagerApp.swift; sourceTree = "<group>"; };
+		SF002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		SF003 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		SF004 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
+		SF005 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		SF006 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		SF007 /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
+		SF008 /* Creation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Creation.swift; sourceTree = "<group>"; };
+		SF009 /* Product.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Product.swift; sourceTree = "<group>"; };
+		SF010 /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
+		SF011 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		SF012 /* SwagManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwagManager.entitlements; sourceTree = "<group>"; };
+		SF013 /* Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chat.swift; sourceTree = "<group>"; };
+		SF014 /* TeamChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamChatView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		PH001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF012 /* Supabase in Frameworks */,
+				BF013 /* SwiftSoup in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		GR001 = {
+			isa = PBXGroup;
+			children = (
+				GR002 /* SwagManager */,
+				GR003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		GR002 /* SwagManager */ = {
+			isa = PBXGroup;
+			children = (
+				GR004 /* App */,
+				GR005 /* Views */,
+				GR006 /* Services */,
+				GR007 /* Models */,
+				GR008 /* Utilities */,
+				SF012 /* SwagManager.entitlements */,
+			);
+			path = SwagManager;
+			sourceTree = "<group>";
+		};
+		GR003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				PR001 /* SwagManager.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		GR004 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				SF001 /* SwagManagerApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		GR005 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				SF002 /* ContentView.swift */,
+				SF004 /* EditorView.swift */,
+				GR009 /* Auth */,
+				GR011 /* Chat */,
+				GR010 /* Settings */,
+				8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		GR006 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				SF005 /* AuthManager.swift */,
+				SF006 /* SupabaseService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		GR007 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				SF013 /* Chat.swift */,
+				SF007 /* Collection.swift */,
+				SF008 /* Creation.swift */,
+				SF009 /* Product.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		GR008 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				SF010 /* AnyCodable.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		GR009 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				SF003 /* AuthView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		GR010 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				SF011 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		GR011 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				SF014 /* TeamChatView.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		TG001 /* SwagManager */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CL002 /* Build configuration list for PBXNativeTarget "SwagManager" */;
+			buildPhases = (
+				PH002 /* Sources */,
+				PH001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SwagManager;
+			packageProductDependencies = (
+				PD001 /* Supabase */,
+				PD002 /* SwiftSoup */,
+			);
+			productName = SwagManager;
+			productReference = PR001 /* SwagManager.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		PJ001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					TG001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = CL001 /* Build configuration list for PBXProject "SwagManager" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = GR001;
+			packageReferences = (
+				PK001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				PK002 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
+			productRefGroup = GR003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				TG001 /* SwagManager */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		PH002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF001 /* SwagManagerApp.swift in Sources */,
+				BF002 /* ContentView.swift in Sources */,
+				BF003 /* AuthView.swift in Sources */,
+				BF004 /* EditorView.swift in Sources */,
+				BF005 /* AuthManager.swift in Sources */,
+				BF006 /* SupabaseService.swift in Sources */,
+				BF007 /* Collection.swift in Sources */,
+				BF008 /* Creation.swift in Sources */,
+				BF009 /* Product.swift in Sources */,
+				BF010 /* AnyCodable.swift in Sources */,
+				BF011 /* SettingsView.swift in Sources */,
+				BF014 /* Chat.swift in Sources */,
+				BF015 /* TeamChatView.swift in Sources */,
+				7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BC001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BC002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		BC003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = SwagManager/SwagManager.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.floradistro.SwagManager;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		BC004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = SwagManager/SwagManager.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.floradistro.SwagManager;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CL001 /* Build configuration list for PBXProject "SwagManager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC001 /* Debug */,
+				BC002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CL002 /* Build configuration list for PBXNativeTarget "SwagManager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC003 /* Debug */,
+				BC004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		PK001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		PK002 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		PD001 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PK001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		PD002 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PK002 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = PJ001 /* Project object */;
+}

@@ -93,7 +93,21 @@ struct EditorView: View {
                         case .product(let product):
                             // Product editor
                             ProductEditorPanel(product: product, store: store)
+
+                        case .conversation(let conversation):
+                            // Chat conversation
+                            ChatTabView(conversation: conversation, store: store)
+
+                        case .category(let category):
+                            // Category config editor
+                            CategoryConfigView(category: category, store: store)
                         }
+                    } else if let category = store.selectedCategory {
+                        // Show category config even without tab
+                        CategoryConfigView(category: category, store: store)
+                    } else if let conversation = store.selectedConversation {
+                        // Show conversation even without tab
+                        ChatTabView(conversation: conversation, store: store)
                     } else if let product = store.selectedProduct {
                         // Show product even without tab
                         ProductEditorPanel(product: product, store: store)
@@ -202,6 +216,12 @@ struct EditorView: View {
         .sheet(isPresented: $store.showNewStoreSheet) {
             NewStoreSheet(store: store, authManager: authManager)
         }
+        .sheet(isPresented: $store.showNewCatalogSheet) {
+            NewCatalogSheet(store: store)
+        }
+        .sheet(isPresented: $store.showNewCategorySheet) {
+            NewCategorySheet(store: store)
+        }
         .alert("Error", isPresented: Binding(
             get: { store.error != nil },
             set: { if !$0 { store.error = nil } }
@@ -234,11 +254,15 @@ enum EditorTab: String, CaseIterable {
 enum OpenTabItem: Identifiable, Hashable {
     case creation(Creation)
     case product(Product)
+    case conversation(Conversation)
+    case category(Category)
 
     var id: String {
         switch self {
         case .creation(let c): return "creation-\(c.id)"
         case .product(let p): return "product-\(p.id)"
+        case .conversation(let c): return "conversation-\(c.id)"
+        case .category(let c): return "category-\(c.id)"
         }
     }
 
@@ -246,6 +270,8 @@ enum OpenTabItem: Identifiable, Hashable {
         switch self {
         case .creation(let c): return c.name
         case .product(let p): return p.name
+        case .conversation(let c): return c.displayTitle
+        case .category(let c): return c.name
         }
     }
 
@@ -262,6 +288,8 @@ enum OpenTabItem: Identifiable, Hashable {
             case .store: return "storefront"
             }
         case .product: return "leaf"
+        case .conversation(let c): return c.chatTypeIcon
+        case .category: return "folder"
         }
     }
 
@@ -269,6 +297,8 @@ enum OpenTabItem: Identifiable, Hashable {
         switch self {
         case .creation(let c): return c.creationType.color
         case .product: return .green
+        case .conversation: return .blue
+        case .category: return .orange
         }
     }
 
@@ -296,10 +326,20 @@ class EditorStore: ObservableObject {
     // MARK: - Catalog State (Products, Categories & Stores)
     @Published var stores: [Store] = []
     @Published var selectedStore: Store?
+    @Published var catalogs: [Catalog] = []
+    @Published var selectedCatalog: Catalog?
     @Published var products: [Product] = []
     @Published var categories: [Category] = []
     @Published var selectedProduct: Product?
     @Published var selectedProductIds: Set<UUID> = []
+
+    // MARK: - Chat/Conversations State
+    @Published var locations: [Location] = []
+    @Published var conversations: [Conversation] = []
+    @Published var selectedConversation: Conversation?
+
+    // MARK: - Category Config State
+    @Published var selectedCategory: Category?
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []
@@ -310,17 +350,20 @@ class EditorStore: ObservableObject {
     @Published var isSaving = false
     @Published var refreshTrigger = UUID()
     @Published var error: String?
-    @Published var sidebarCreationsExpanded = true
-    @Published var sidebarCatalogExpanded = true
+    @Published var sidebarCreationsExpanded = false
+    @Published var sidebarCatalogExpanded = false
+    @Published var sidebarChatExpanded = false
 
     // Sheet states
     @Published var showNewCreationSheet = false
     @Published var showNewCollectionSheet = false
     @Published var showNewStoreSheet = false
+    @Published var showNewCatalogSheet = false
+    @Published var showNewCategorySheet = false
 
     var lastSelectedIndex: Int?
 
-    private let supabase = SupabaseService.shared
+    let supabase = SupabaseService.shared
     private var realtimeTask: Task<Void, Never>?
 
     // Default store ID for new items
@@ -360,8 +403,11 @@ class EditorStore: ObservableObject {
             let collectionItemsDeletes = channel.postgresChange(DeleteAction.self, table: "creation_collection_items")
 
             do {
-                await channel.subscribe()
+                try await channel.subscribeWithError()
                 NSLog("[EditorStore] Realtime: Successfully subscribed to channel")
+            } catch {
+                NSLog("[EditorStore] Realtime: Failed to subscribe - \(error.localizedDescription)")
+                return // Don't try to use the channel if subscription failed
             }
 
             // Keep processing events in parallel
@@ -785,7 +831,14 @@ class EditorStore: ObservableObject {
 
     func selectStore(_ store: Store) async {
         selectedStore = store
-        // Reload catalog for new store
+        // Clear old data
+        selectedCatalog = nil
+        catalogs = []
+        categories = []
+        products = []
+        conversations = []
+        locations = []
+        // Reload all data for new store
         await loadCatalog()
     }
 
@@ -799,7 +852,7 @@ class EditorStore: ObservableObject {
                 storeName: name,
                 slug: slug,
                 email: email,
-                ownerUserId: ownerUserId,
+                ownerUserId: nil,  // DB trigger will auto-set from logged-in user
                 status: "active",
                 storeType: "standard"
             )
@@ -820,16 +873,210 @@ class EditorStore: ObservableObject {
         selectedStore?.id ?? defaultStoreId
     }
 
-    func loadCatalog() async {
+    // MARK: - Catalogs
+
+    func loadCatalogs() async {
         do {
-            categories = try await supabase.fetchCategories(storeId: currentStoreId)
-            products = try await supabase.fetchProducts(storeId: currentStoreId)
-            NSLog("[EditorStore] Loaded %d categories, %d products for store %@", categories.count, products.count, selectedStore?.storeName ?? "default")
+            NSLog("[EditorStore] Loading catalogs for store: %@ (%@)", selectedStore?.storeName ?? "unknown", currentStoreId.uuidString)
+            catalogs = try await supabase.fetchCatalogs(storeId: currentStoreId)
+            NSLog("[EditorStore] Found %d catalogs for store %@:", catalogs.count, selectedStore?.storeName ?? "unknown")
+            for cat in catalogs {
+                NSLog("[EditorStore]   - %@ (id: %@, store_id: %@)", cat.name, cat.id.uuidString, cat.storeId.uuidString)
+            }
+
+            // Auto-create default catalog if none exist but categories do
+            if catalogs.isEmpty {
+                NSLog("[EditorStore] No catalogs found, checking for orphan categories...")
+                let orphanCategories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: nil)
+                let orphanCount = orphanCategories.filter { $0.catalogId == nil }.count
+                NSLog("[EditorStore] Found %d total categories, %d without catalog_id", orphanCategories.count, orphanCount)
+
+                if orphanCount > 0 {
+                    NSLog("[EditorStore] Creating default Distro catalog and migrating %d categories...", orphanCount)
+                    await createDefaultCatalogAndMigrate()
+                    return // createDefaultCatalogAndMigrate will reload catalogs
+                }
+            } else if let defaultCatalog = catalogs.first(where: { $0.isDefault == true }) ?? catalogs.first {
+                // Catalogs exist - assign ALL categories for this store to the default catalog
+                // This ensures categories don't belong to other/orphaned catalogs
+                let allCategories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: nil)
+                let wrongCatalogCount = allCategories.filter { $0.catalogId != defaultCatalog.id }.count
+                if wrongCatalogCount > 0 {
+                    NSLog("[EditorStore] Found %d categories not in default catalog, migrating to %@...", wrongCatalogCount, defaultCatalog.name)
+                    let migrated = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: defaultCatalog.id, onlyOrphans: false)
+                    NSLog("[EditorStore] Migrated %d categories to %@", migrated, defaultCatalog.name)
+                }
+            }
+
+            // Don't auto-select - let user expand catalog to see contents
+            NSLog("[EditorStore] Loaded %d catalogs for store %@", catalogs.count, selectedStore?.storeName ?? "default")
         } catch {
-            NSLog("[EditorStore] Error loading catalog: %@", String(describing: error))
+            NSLog("[EditorStore] Error loading catalogs: %@", String(describing: error))
+            // Don't show error if table doesn't exist yet
+        }
+    }
+
+    private func createDefaultCatalogAndMigrate() async {
+        guard let ownerUserId = selectedStore?.ownerUserId else {
+            NSLog("[EditorStore] Cannot create catalog: store owner_user_id is nil")
+            return
+        }
+
+        do {
+            // First check if catalog already exists
+            catalogs = try await supabase.fetchCatalogs(storeId: currentStoreId)
+
+            if let existingCatalog = catalogs.first {
+                // Use existing catalog for migration but don't auto-select
+                NSLog("[EditorStore] Found existing catalog: %@ (id: %@)", existingCatalog.name, existingCatalog.id.uuidString)
+
+                // Migrate orphan categories
+                let migratedCount = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: existingCatalog.id)
+                if migratedCount > 0 {
+                    NSLog("[EditorStore] Migrated %d categories to %@", migratedCount, existingCatalog.name)
+                }
+                return
+            }
+
+            NSLog("[EditorStore] Creating default Distro catalog for store: %@", currentStoreId.uuidString)
+
+            // Create default "Distro" catalog
+            let insert = CatalogInsert(
+                storeId: currentStoreId,
+                ownerUserId: ownerUserId,
+                name: "Distro",
+                slug: "distro-\(Int(Date().timeIntervalSince1970))",
+                description: "Main product catalog",
+                vertical: "cannabis",
+                isActive: true,
+                isDefault: true
+            )
+
+            let newCatalog = try await supabase.createCatalog(insert)
+            NSLog("[EditorStore] Created catalog: %@ (id: %@)", newCatalog.name, newCatalog.id.uuidString)
+
+            // Migrate orphan categories
+            let migratedCount = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: newCatalog.id)
+            NSLog("[EditorStore] Migrated %d categories", migratedCount)
+
+            catalogs = [newCatalog]
+            // Don't auto-select - keep collapsed
+        } catch {
+            NSLog("[EditorStore] Error in createDefaultCatalogAndMigrate: %@", String(describing: error))
+            // Don't show error to user - just load what we have
+            await loadCatalogData()
+        }
+    }
+
+    func selectCatalog(_ catalog: Catalog) async {
+        selectedCatalog = catalog
+        await loadCatalogData()
+    }
+
+    func createCatalog(name: String, vertical: String?, isDefault: Bool = false) async {
+        guard let ownerUserId = selectedStore?.ownerUserId else {
+            NSLog("[EditorStore] Cannot create catalog: store owner_user_id is nil")
+            self.error = "Cannot create catalog: store owner not found"
+            return
+        }
+
+        do {
+            let slug = name.lowercased()
+                .replacingOccurrences(of: " ", with: "-")
+                .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
+
+            let insert = CatalogInsert(
+                storeId: currentStoreId,
+                ownerUserId: ownerUserId,
+                name: name,
+                slug: slug,
+                description: nil,
+                vertical: vertical,
+                isActive: true,
+                isDefault: isDefault
+            )
+
+            let newCatalog = try await supabase.createCatalog(insert)
+            await loadCatalogs()
+            selectedCatalog = newCatalog
+            await loadCatalogData()
+            NSLog("[EditorStore] Created catalog: %@", name)
+        } catch {
+            NSLog("[EditorStore] Error creating catalog: %@", String(describing: error))
+            self.error = "Failed to create catalog: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteCatalog(_ catalog: Catalog) async {
+        do {
+            try await supabase.deleteCatalog(id: catalog.id)
+            if selectedCatalog?.id == catalog.id {
+                selectedCatalog = nil
+            }
+            await loadCatalogs()
+            await loadCatalogData()
+            NSLog("[EditorStore] Deleted catalog: %@", catalog.name)
+        } catch {
+            NSLog("[EditorStore] Error deleting catalog: %@", String(describing: error))
+            self.error = "Failed to delete catalog: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Load Catalog Data (Categories & Products)
+
+    func loadCatalog() async {
+        await loadCatalogs()
+        await loadCatalogData()
+        await loadConversations()
+    }
+
+    func loadCatalogData() async {
+        do {
+            categories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: selectedCatalog?.id)
+            products = try await supabase.fetchProducts(storeId: currentStoreId)
+            NSLog("[EditorStore] Loaded %d categories, %d products for store %@, catalog %@", categories.count, products.count, selectedStore?.storeName ?? "default", selectedCatalog?.name ?? "all")
+        } catch {
+            NSLog("[EditorStore] Error loading catalog data: %@", String(describing: error))
             if self.error == nil {
                 self.error = "Failed to load catalog: \(error.localizedDescription)"
             }
+        }
+    }
+
+    func createCategory(name: String, parentId: UUID? = nil) async {
+        do {
+            let slug = name.lowercased()
+                .replacingOccurrences(of: " ", with: "-")
+                .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
+
+            let insert = CategoryInsert(
+                name: name,
+                slug: slug,
+                description: nil,
+                parentId: parentId,
+                catalogId: selectedCatalog?.id,
+                storeId: currentStoreId,
+                displayOrder: categories.count,
+                isActive: true
+            )
+
+            _ = try await supabase.createCategory(insert)
+            await loadCatalogData()
+            NSLog("[EditorStore] Created category: %@", name)
+        } catch {
+            NSLog("[EditorStore] Error creating category: %@", String(describing: error))
+            self.error = "Failed to create category: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteCategory(_ category: Category) async {
+        do {
+            try await supabase.deleteCategory(id: category.id)
+            await loadCatalogData()
+            NSLog("[EditorStore] Deleted category: %@", category.name)
+        } catch {
+            NSLog("[EditorStore] Error deleting category: %@", String(describing: error))
+            self.error = "Failed to delete category: \(error.localizedDescription)"
         }
     }
 
@@ -894,7 +1141,18 @@ class EditorStore: ObservableObject {
         selectedProductIds = [product.id]
         selectedCreation = nil
         selectedCreationIds.removeAll()
+        selectedCategory = nil
         openTab(.product(product))
+    }
+
+    func selectCategory(_ category: Category) {
+        selectedCategory = category
+        selectedProduct = nil
+        selectedProductIds.removeAll()
+        selectedCreation = nil
+        selectedCreationIds.removeAll()
+        selectedConversation = nil
+        openTab(.category(category))
     }
 
     func deleteProduct(_ product: Product) async {
@@ -968,14 +1226,30 @@ class EditorStore: ObservableObject {
                     selectedCreation = c
                     editedCode = c.reactCode
                     selectedProduct = nil
+                    selectedConversation = nil
                 case .product(let p):
                     selectedProduct = p
                     selectedCreation = nil
+                    selectedConversation = nil
+                    editedCode = nil
+                case .conversation(let c):
+                    selectedConversation = c
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedCategory = nil
+                    editedCode = nil
+                case .category(let c):
+                    selectedCategory = c
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
                     editedCode = nil
                 }
             } else {
                 selectedCreation = nil
                 selectedProduct = nil
+                selectedConversation = nil
+                selectedCategory = nil
                 editedCode = nil
             }
         }
@@ -988,10 +1262,131 @@ class EditorStore: ObservableObject {
             selectedCreation = c
             editedCode = c.reactCode
             selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
         case .product(let p):
             selectedProduct = p
             selectedCreation = nil
+            selectedConversation = nil
+            selectedCategory = nil
             editedCode = nil
+        case .conversation(let c):
+            selectedConversation = c
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedCategory = nil
+            editedCode = nil
+        case .category(let c):
+            selectedCategory = c
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            editedCode = nil
+        }
+    }
+
+    func closeOtherTabs(except tab: OpenTabItem) {
+        openTabs = openTabs.filter { $0.id == tab.id }
+        activeTab = tab
+        switch tab {
+        case .creation(let c):
+            selectedCreation = c
+            editedCode = c.reactCode
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+        case .product(let p):
+            selectedProduct = p
+            selectedCreation = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            editedCode = nil
+        case .conversation(let c):
+            selectedConversation = c
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedCategory = nil
+            editedCode = nil
+        case .category(let c):
+            selectedCategory = c
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            editedCode = nil
+        }
+    }
+
+    func closeAllTabs() {
+        openTabs.removeAll()
+        activeTab = nil
+        selectedCreation = nil
+        selectedProduct = nil
+        selectedConversation = nil
+        selectedCategory = nil
+        editedCode = nil
+    }
+
+    func closeTabsToRight(of tab: OpenTabItem) {
+        guard let index = openTabs.firstIndex(where: { $0.id == tab.id }) else { return }
+        openTabs = Array(openTabs.prefix(through: index))
+        // If active tab was closed, switch to the reference tab
+        if let active = activeTab, !openTabs.contains(where: { $0.id == active.id }) {
+            switchToTab(tab)
+        }
+    }
+
+    // MARK: - Conversations & Locations
+
+    func loadConversations() async {
+        guard let store = selectedStore else {
+            NSLog("[EditorStore] No store selected, cannot load conversations")
+            return
+        }
+
+        do {
+            // Load locations first
+            NSLog("[EditorStore] Loading locations for store: \(store.id)")
+            locations = try await supabase.fetchLocations(storeId: store.id)
+            NSLog("[EditorStore] Loaded \(locations.count) locations")
+
+            // Load conversations
+            NSLog("[EditorStore] Loading conversations for store: \(store.id)")
+            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: store.id)
+            NSLog("[EditorStore] Loaded \(conversations.count) conversations")
+        } catch {
+            NSLog("[EditorStore] Failed to load conversations: \(error)")
+            self.error = "Failed to load conversations: \(error.localizedDescription)"
+        }
+    }
+
+    func openConversation(_ conversation: Conversation) {
+        selectedConversation = conversation
+        selectedCreation = nil
+        selectedProduct = nil
+        editedCode = nil
+        openTab(.conversation(conversation))
+    }
+
+    func openLocationChat(_ location: Location) {
+        // Find existing conversation for this location, or create a placeholder
+        if let existingConvo = conversations.first(where: { $0.locationId == location.id }) {
+            openConversation(existingConvo)
+        } else {
+            // Create a virtual conversation for this location (will be created on first message)
+            let virtualConvo = Conversation(
+                id: UUID(),
+                storeId: selectedStore?.id,
+                userId: nil,
+                title: location.name,
+                status: "new",
+                messageCount: 0,
+                chatType: "location",
+                locationId: location.id,
+                metadata: nil,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            openConversation(virtualConvo)
         }
     }
 }
@@ -1003,27 +1398,31 @@ struct OpenTabBar: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
+            HStack(spacing: 1) {
                 ForEach(store.openTabs) { tab in
                     OpenTabButton(
                         tab: tab,
                         isActive: store.activeTab?.id == tab.id,
                         hasUnsavedChanges: tabHasUnsavedChanges(tab),
                         onSelect: { store.switchToTab(tab) },
-                        onClose: { store.closeTab(tab) }
+                        onClose: { store.closeTab(tab) },
+                        onCloseOthers: { store.closeOtherTabs(except: tab) },
+                        onCloseAll: { store.closeAllTabs() },
+                        onCloseToRight: { store.closeTabsToRight(of: tab) }
                     )
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
         }
-        .frame(height: 28)
-        .background(Color(white: 0.06))
-        .overlay(
-            Rectangle()
-                .fill(Color.white.opacity(0.05))
-                .frame(height: 1),
-            alignment: .bottom
-        )
+        .frame(height: 32)
+        .background(Color(white: 0.065))
+        .contextMenu {
+            Button("Close All Tabs") {
+                store.closeAllTabs()
+            }
+            .disabled(store.openTabs.isEmpty)
+        }
     }
 
     private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
@@ -1040,48 +1439,61 @@ struct OpenTabButton: View {
     let hasUnsavedChanges: Bool
     let onSelect: () -> Void
     let onClose: () -> Void
+    let onCloseOthers: () -> Void
+    let onCloseAll: () -> Void
+    let onCloseToRight: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
+            // Icon
             Image(systemName: tab.icon)
-                .font(.system(size: 9))
-                .foregroundStyle(tab.iconColor)
+                .font(.system(size: 10))
+                .foregroundStyle(isActive ? tab.iconColor : tab.iconColor.opacity(0.6))
 
+            // Name
             Text(tab.name)
-                .font(.system(size: 11))
+                .font(.system(size: 11, weight: isActive ? .medium : .regular))
                 .lineLimit(1)
 
-            if hasUnsavedChanges {
+            // Unsaved indicator or close button
+            if hasUnsavedChanges && !isHovering {
                 Circle()
                     .fill(Color.orange)
                     .frame(width: 6, height: 6)
+            } else {
+                Button {
+                    onClose()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(isHovering ? .secondary : .quaternary)
+                        .frame(width: 14, height: 14)
+                        .background(isHovering ? Color.white.opacity(0.1) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                }
+                .buttonStyle(.plain)
+                .opacity(isHovering || isActive ? 1 : 0)
             }
-
-            Button {
-                onClose()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.plain)
-            .opacity(isHovering || isActive ? 1 : 0)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.leading, 10)
+        .padding(.trailing, 6)
+        .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isActive ? Color.white.opacity(0.1) : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(isActive ? Color.white.opacity(0.1) : Color.clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 5)
+                .fill(isActive ? Color(white: 0.12) : (isHovering ? Color.white.opacity(0.03) : Color.clear))
         )
         .foregroundStyle(isActive ? .primary : .secondary)
         .onHover { isHovering = $0 }
         .onTapGesture { onSelect() }
+        .contextMenu {
+            Button("Close") { onClose() }
+            Button("Close Others") { onCloseOthers() }
+            Button("Close Tabs to Right") { onCloseToRight() }
+            Divider()
+            Button("Close All") { onCloseAll() }
+        }
     }
 }
 
@@ -1208,74 +1620,153 @@ struct ProductFieldRow: View {
 
 struct WelcomeView: View {
     @ObservedObject var store: EditorStore
+    @State private var isHoveringCreate = false
+    @State private var isHoveringCollection = false
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "square.grid.2x2")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
+        VStack(spacing: 0) {
+            Spacer()
 
-            Text("Select an item from the sidebar")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+            // Main content
+            VStack(spacing: 32) {
+                // Stats row
+                if !store.creations.isEmpty || !store.products.isEmpty {
+                    HStack(spacing: 0) {
+                        statCard(value: store.products.count, label: "Products", icon: "cube.box")
 
-            Text("Or create something new")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
+                        Rectangle()
+                            .fill(Color.white.opacity(0.06))
+                            .frame(width: 1, height: 40)
 
-            HStack(spacing: 12) {
-                Button {
-                    store.showNewCreationSheet = true
-                } label: {
-                    Label("New Creation", systemImage: "plus.square")
-                }
-                .buttonStyle(.borderedProminent)
+                        statCard(value: store.categories.count, label: "Categories", icon: "folder")
 
-                Button {
-                    store.showNewCollectionSheet = true
-                } label: {
-                    Label("New Collection", systemImage: "folder.badge.plus")
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(.top, 8)
+                        Rectangle()
+                            .fill(Color.white.opacity(0.06))
+                            .frame(width: 1, height: 40)
 
-            // Quick stats
-            if !store.creations.isEmpty || !store.products.isEmpty {
-                VStack(spacing: 8) {
-                    Divider()
-                        .padding(.vertical, 12)
-
-                    HStack(spacing: 24) {
-                        VStack {
-                            Text("\(store.creations.count)")
-                                .font(.title2.bold())
-                            Text("Creations")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        VStack {
-                            Text("\(store.products.count)")
-                                .font(.title2.bold())
-                            Text("Products")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        VStack {
-                            Text("\(store.categories.count)")
-                                .font(.title2.bold())
-                            Text("Categories")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        statCard(value: store.creations.count, label: "Creations", icon: "doc.richtext")
                     }
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 32)
+                    .background(Color.white.opacity(0.02))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    )
+                }
+
+                // Action text
+                VStack(spacing: 8) {
+                    Text("Ready to build")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Text("Select from sidebar or create new")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.white.opacity(0.35))
+                }
+
+                // Action buttons
+                HStack(spacing: 10) {
+                    Button {
+                        store.showNewCreationSheet = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text("New Creation")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(isHoveringCreate ? Color.accentColor : Color.accentColor.opacity(0.9))
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHoveringCreate = $0 }
+
+                    Button {
+                        store.showNewCollectionSheet = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.system(size: 10, weight: .medium))
+                            Text("New Collection")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(isHoveringCollection ? Color.white.opacity(0.1) : Color.white.opacity(0.05))
+                        .foregroundStyle(.secondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHoveringCollection = $0 }
                 }
             }
+            .padding(40)
+
+            Spacer()
+
+            // Keyboard hint at bottom
+            HStack(spacing: 16) {
+                keyboardHint(keys: ["⌘", "N"], action: "New")
+                keyboardHint(keys: ["⌘", "F"], action: "Search")
+                keyboardHint(keys: ["⌘", "1-9"], action: "Switch tabs")
+            }
+            .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(white: 0.08))
+    }
+
+    private func statCard(value: Int, label: String, icon: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(Color.white.opacity(0.3))
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(formatNumber(value))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(label)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.white.opacity(0.4))
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func keyboardHint(keys: [String], action: String) -> some View {
+        HStack(spacing: 4) {
+            ForEach(keys, id: \.self) { key in
+                Text(key)
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+            }
+            Text(action)
+                .font(.system(size: 9))
+                .foregroundStyle(Color.white.opacity(0.3))
+        }
+        .foregroundStyle(Color.white.opacity(0.5))
+    }
+
+    private func formatNumber(_ num: Int) -> String {
+        if num >= 1000 {
+            return String(format: "%.1fK", Double(num) / 1000.0)
+        }
+        return "\(num)"
     }
 }
 
@@ -1308,6 +1799,8 @@ struct SidebarPanel: View {
         VStack(spacing: 0) {
             // MARK: Store Switcher (Top-level environment)
             StoreEnvironmentHeader(store: store)
+                .frame(height: 44)
+                .clipped()
 
             Divider()
                 .background(Color.white.opacity(0.1))
@@ -1361,55 +1854,74 @@ struct SidebarPanel: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        // MARK: CATALOG Section
+                        // MARK: CATALOGS Section
                         TreeSectionHeader(
-                            title: "CATALOG",
+                            title: "CATALOGS",
                             isExpanded: $store.sidebarCatalogExpanded,
-                            count: store.products.count
+                            count: store.catalogs.count
                         )
+                        .padding(.top, 8)
 
                         if store.sidebarCatalogExpanded {
-                            // Show only top-level categories first
-                            ForEach(store.topLevelCategories) { category in
-                                CategoryHierarchyView(
-                                    category: category,
-                                    store: store,
-                                    expandedCategoryIds: $expandedCategoryIds,
-                                    indentLevel: 0
-                                )
-                            }
+                            if store.catalogs.isEmpty {
+                                Text("No catalogs")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                            } else {
+                                // Each catalog is collapsible with categories nested
+                                ForEach(store.catalogs) { catalog in
+                                    let isExpanded = store.selectedCatalog?.id == catalog.id
 
-                            // Uncategorized products at the bottom
-                            if !store.uncategorizedProducts.isEmpty {
-                                ForEach(store.uncategorizedProducts) { product in
-                                    ProductTreeItem(
-                                        product: product,
-                                        isSelected: store.selectedProductIds.contains(product.id),
-                                        isActive: store.selectedProduct?.id == product.id,
-                                        indentLevel: 0
+                                    CatalogRow(
+                                        catalog: catalog,
+                                        isExpanded: isExpanded,
+                                        itemCount: isExpanded ? store.categories.count : nil,
+                                        onTap: {
+                                            Task {
+                                                // Toggle: if already selected, deselect; otherwise select
+                                                if store.selectedCatalog?.id == catalog.id {
+                                                    store.selectedCatalog = nil
+                                                } else {
+                                                    await store.selectCatalog(catalog)
+                                                }
+                                            }
+                                        }
                                     )
-                                    .onTapGesture {
-                                        store.selectProduct(product)
-                                    }
-                                    .contextMenu {
-                                        Button("Delete", role: .destructive) {
-                                            Task { await store.deleteProduct(product) }
+
+                                    // Categories nested under expanded catalog
+                                    if isExpanded {
+                                        ForEach(store.topLevelCategories) { category in
+                                            CategoryHierarchyView(
+                                                category: category,
+                                                store: store,
+                                                expandedCategoryIds: $expandedCategoryIds,
+                                                indentLevel: 1
+                                            )
+                                        }
+
+                                        // Uncategorized products
+                                        if !store.uncategorizedProducts.isEmpty {
+                                            ForEach(store.uncategorizedProducts) { product in
+                                                ProductTreeItem(
+                                                    product: product,
+                                                    isSelected: store.selectedProductIds.contains(product.id),
+                                                    isActive: store.selectedProduct?.id == product.id,
+                                                    indentLevel: 1
+                                                )
+                                                .onTapGesture {
+                                                    store.selectProduct(product)
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            // Empty state for catalog
-                            if store.categories.isEmpty && store.products.isEmpty {
-                                HStack {
-                                    Spacer()
-                                    Text("No products yet")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.tertiary)
-                                    Spacer()
-                                }
-                                .padding(.vertical, 8)
-                            }
+                            Divider()
+                                .padding(.horizontal, 8)
+                                .padding(.top, 4)
                         }
 
                         // MARK: CREATIONS Section
@@ -1512,12 +2024,80 @@ struct SidebarPanel: View {
                                 .padding(.vertical, 8)
                             }
                         }
+
+                        Divider()
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+
+                        // MARK: TEAM CHAT Section
+                        TreeSectionHeader(
+                            title: "TEAM CHAT",
+                            isExpanded: $store.sidebarChatExpanded,
+                            count: store.conversations.count
+                        )
+
+                        if store.sidebarChatExpanded {
+                            if store.selectedStore == nil {
+                                Text("Select a store")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                            } else if store.conversations.isEmpty {
+                                Text("No conversations")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                            } else {
+                                // All conversations sorted by type
+                                // Location chats first (if any)
+                                let locationConvos = store.conversations.filter { $0.chatType == "location" }
+                                if !locationConvos.isEmpty {
+                                    ChatSectionLabel(title: "Locations")
+                                    ForEach(locationConvos) { conversation in
+                                        ConversationRow(
+                                            conversation: conversation,
+                                            isSelected: store.selectedConversation?.id == conversation.id,
+                                            onTap: { store.openConversation(conversation) }
+                                        )
+                                    }
+                                }
+
+                                // Pinned/important chats
+                                let pinnedTypes = ["bugs", "alerts", "team"]
+                                let pinnedConvos = store.conversations.filter { pinnedTypes.contains($0.chatType ?? "") }
+                                if !pinnedConvos.isEmpty {
+                                    ChatSectionLabel(title: "Pinned")
+                                    ForEach(pinnedConvos) { conversation in
+                                        ConversationRow(
+                                            conversation: conversation,
+                                            isSelected: store.selectedConversation?.id == conversation.id,
+                                            onTap: { store.openConversation(conversation) }
+                                        )
+                                    }
+                                }
+
+                                // Recent AI chats
+                                let aiConvos = store.conversations.filter { $0.chatType == "ai" }.prefix(10)
+                                if !aiConvos.isEmpty {
+                                    ChatSectionLabel(title: "Recent Chats")
+                                    ForEach(Array(aiConvos)) { conversation in
+                                        ConversationRow(
+                                            conversation: conversation,
+                                            isSelected: store.selectedConversation?.id == conversation.id,
+                                            onTap: { store.openConversation(conversation) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                     .padding(.vertical, 4)
                 }
             }
         }
-        .background(Color(white: 0.03))
+        .background(Color(white: 0.08))
     }
 }
 
@@ -1536,19 +2116,8 @@ struct StoreEnvironmentHeader: View {
                         Button {
                             Task { await store.selectStore(s) }
                         } label: {
-                            HStack {
-                                if let logoUrl = s.logoUrl, let url = URL(string: logoUrl) {
-                                    AsyncImage(url: url) { image in
-                                        image.resizable().aspectRatio(contentMode: .fill)
-                                    } placeholder: {
-                                        Image(systemName: "storefront.fill")
-                                    }
-                                    .frame(width: 16, height: 16)
-                                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                                } else {
-                                    Image(systemName: "storefront.fill")
-                                        .frame(width: 16, height: 16)
-                                }
+                            HStack(spacing: 8) {
+                                storeLogoView(logoUrl: s.logoUrl)
                                 Text(s.storeName)
                                 Spacer()
                                 if store.selectedStore?.id == s.id {
@@ -1582,17 +2151,7 @@ struct StoreEnvironmentHeader: View {
             HStack(spacing: 8) {
                 // Store icon/logo
                 if let selectedStore = store.selectedStore {
-                    if let logoUrl = selectedStore.logoUrl, let url = URL(string: logoUrl) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            storeIconPlaceholder
-                        }
-                        .frame(width: 28, height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else {
-                        storeIconPlaceholder
-                    }
+                    storeLogoView(logoUrl: selectedStore.logoUrl)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(selectedStore.storeName)
@@ -1604,7 +2163,7 @@ struct StoreEnvironmentHeader: View {
                             .foregroundStyle(.tertiary)
                     }
                 } else {
-                    storeIconPlaceholder
+                    storeLogoView(logoUrl: nil)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Select Store")
@@ -1624,25 +2183,89 @@ struct StoreEnvironmentHeader: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
+            .frame(maxWidth: 200)
             .background(isHovering ? Color.white.opacity(0.05) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .menuStyle(.borderlessButton)
+        .frame(height: 44)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onHover { isHovering = $0 }
     }
 
-    private var storeIconPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 6)
+    private func storeLogoView(logoUrl: String?) -> some View {
+        StoreLogoImage(logoUrl: logoUrl, size: 16)
+    }
+
+    private var storeIconFallback: some View {
+        RoundedRectangle(cornerRadius: 4)
             .fill(Color.green.opacity(0.2))
-            .frame(width: 28, height: 28)
+            .frame(width: 20, height: 20)
             .overlay(
-                Image(systemName: "storefront.fill")
-                    .font(.system(size: 12))
+                Image(systemName: "storefront")
+                    .font(.system(size: 9))
                     .foregroundStyle(.green)
             )
     }
 }
 
+// MARK: - Store Logo Image (fixed size)
+
+struct StoreLogoImage: View {
+    let logoUrl: String?
+    let size: CGFloat
+
+    @State private var nsImage: NSImage?
+
+    var body: some View {
+        Group {
+            if let nsImage = nsImage {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.green.opacity(0.2))
+                    .overlay(
+                        Image(systemName: "storefront")
+                            .font(.system(size: size * 0.45))
+                            .foregroundStyle(.green)
+                    )
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .task(id: logoUrl) {
+            await loadImage()
+        }
+    }
+
+    private func loadImage() async {
+        guard let logoUrl = logoUrl, let url = URL(string: logoUrl) else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let original = NSImage(data: data) {
+                // Resize to exact size needed
+                let targetSize = NSSize(width: size * 2, height: size * 2) // 2x for retina
+                let resized = NSImage(size: targetSize)
+                resized.lockFocus()
+                original.draw(in: NSRect(origin: .zero, size: targetSize),
+                            from: NSRect(origin: .zero, size: original.size),
+                            operation: .copy,
+                            fraction: 1.0)
+                resized.unlockFocus()
+
+                await MainActor.run {
+                    self.nsImage = resized
+                }
+            }
+        } catch {
+            // Keep fallback
+        }
+    }
+}
 
 // MARK: - Category Hierarchy View (Recursive)
 
@@ -1656,6 +2279,10 @@ struct CategoryHierarchyView: View {
 
     private var isExpanded: Bool {
         expandedCategoryIds.contains(category.id)
+    }
+
+    private var isSelected: Bool {
+        store.selectedCategory?.id == category.id
     }
 
     private var childCategories: [Category] {
@@ -1684,23 +2311,17 @@ struct CategoryHierarchyView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Category header row
+            // Category header row - minimal, no icons
             HStack(spacing: 4) {
                 // Chevron - only show if has children
                 if hasChildren {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 8))
                         .foregroundStyle(.tertiary)
-                        .frame(width: 12)
+                        .frame(width: 10)
                 } else {
-                    Spacer().frame(width: 12)
+                    Spacer().frame(width: 10)
                 }
-
-                // Folder icon
-                Image(systemName: category.icon ?? (isExpanded ? "folder.fill" : "folder"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(isHovering ? .green : .green.opacity(0.8))
-                    .frame(width: 14)
 
                 Text(category.name)
                     .font(.system(size: 11))
@@ -1708,15 +2329,7 @@ struct CategoryHierarchyView: View {
 
                 Spacer()
 
-                // Show subcategory count on hover, otherwise total product count
-                if isHovering && subCategoryCount > 0 {
-                    Text("\(subCategoryCount) sub")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.tertiary)
-                        .padding(.trailing, 2)
-                }
-
-                // Show total count (including subcategories)
+                // Show total count
                 if totalCount > 0 {
                     Text("\(totalCount)")
                         .font(.system(size: 9))
@@ -1724,16 +2337,17 @@ struct CategoryHierarchyView: View {
                         .padding(.trailing, 4)
                 }
             }
-            .padding(.leading, CGFloat(8 + indentLevel * 16))
+            .padding(.leading, CGFloat(8 + indentLevel * 12))
             .padding(.trailing, 4)
             .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isHovering ? Color.white.opacity(0.04) : Color.clear)
+                    .fill(isSelected ? Color.accentColor.opacity(0.15) : (isHovering ? Color.white.opacity(0.04) : Color.clear))
             )
             .contentShape(Rectangle())
             .onHover { isHovering = $0 }
             .onTapGesture {
+                // Toggle expand/collapse
                 withAnimation(.easeInOut(duration: 0.15)) {
                     if expandedCategoryIds.contains(category.id) {
                         expandedCategoryIds.remove(category.id)
@@ -1741,6 +2355,8 @@ struct CategoryHierarchyView: View {
                         expandedCategoryIds.insert(category.id)
                     }
                 }
+                // Also select category to show config
+                store.selectCategory(category)
             }
 
             // Expanded content: subcategories first, then products
@@ -1755,13 +2371,13 @@ struct CategoryHierarchyView: View {
                     )
                 }
 
-                // Direct products in this category
+                // Direct products in this category (extra indent for leaves)
                 ForEach(directProducts) { product in
                     ProductTreeItem(
                         product: product,
                         isSelected: store.selectedProductIds.contains(product.id),
                         isActive: store.selectedProduct?.id == product.id,
-                        indentLevel: indentLevel + 1
+                        indentLevel: indentLevel + 2
                     )
                     .onTapGesture {
                         store.selectProduct(product)
@@ -1831,11 +2447,6 @@ struct ProductTreeItem: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "leaf")
-                .font(.system(size: 9))
-                .foregroundStyle(.green)
-                .frame(width: 14)
-
             Text(product.name)
                 .font(.system(size: 11))
                 .lineLimit(1)
@@ -1852,9 +2463,9 @@ struct ProductTreeItem: View {
             // Stock indicator
             Circle()
                 .fill(product.stockStatusColor)
-                .frame(width: 6, height: 6)
+                .frame(width: 5, height: 5)
         }
-        .padding(.leading, CGFloat(8 + indentLevel * 16))
+        .padding(.leading, CGFloat(8 + indentLevel * 12))
         .padding(.trailing, 8)
         .padding(.vertical, 3)
         .background(
@@ -1917,27 +2528,18 @@ struct CollectionTreeItem: View {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                 .font(.system(size: 8))
                 .foregroundStyle(.tertiary)
-                .frame(width: 12)
-
-            // Folder icon
-            Image(systemName: isExpanded ? "folder.fill" : "folder")
-                .font(.system(size: 11))
-                .foregroundStyle(.orange)
-                .frame(width: 16)
+                .frame(width: 10)
 
             Text(collection.name)
                 .font(.system(size: 11))
-                .foregroundStyle(.primary)
                 .lineLimit(1)
 
             Spacer()
 
-            // Item count badge
             if itemCount > 0 {
                 Text("\(itemCount)")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 4)
             }
         }
         .padding(.horizontal, 8)
@@ -2087,6 +2689,201 @@ struct StorePickerRow: View {
     }
 }
 
+// MARK: - Chat Section Label
+
+struct ChatSectionLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+    }
+}
+
+// MARK: - Location Chat Item
+
+struct LocationChatItem: View {
+    let location: Location
+    let conversation: Conversation?
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                // Location indicator
+                Circle()
+                    .fill(location.isActive == true ? Color.green : Color.gray)
+                    .frame(width: 6, height: 6)
+
+                Text(location.name)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+
+                Spacer()
+
+                if let count = conversation?.messageCount, count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) :
+                          isHovering ? Color.white.opacity(0.04) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .padding(.horizontal, 8)
+    }
+}
+
+// MARK: - Catalog Row
+
+struct CatalogRow: View {
+    let catalog: Catalog
+    let isExpanded: Bool
+    let itemCount: Int?
+    let onTap: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 4) {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 10)
+
+                Text(catalog.name)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+
+                Spacer()
+
+                if let count = itemCount, count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isHovering ? Color.white.opacity(0.04) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .padding(.horizontal, 8)
+    }
+}
+
+// MARK: - Conversation Row (Sidebar item for channels)
+
+struct ConversationRow: View {
+    let conversation: Conversation
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                // Channel type indicator
+                Text("#")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.tertiary)
+
+                Text(conversation.displayTitle)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+
+                Spacer()
+
+                if let count = conversation.messageCount, count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) :
+                          isHovering ? Color.white.opacity(0.04) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .padding(.horizontal, 8)
+    }
+}
+
+// MARK: - Location Chat Row (Sidebar item for location chats)
+
+struct LocationChatRow: View {
+    let location: Location
+    let messageCount: Int?
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 8) {
+                // Icon
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 11))
+                    .foregroundStyle(isSelected ? .white : .secondary)
+                    .frame(width: 16)
+
+                // Title
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(location.name)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isSelected ? .white : .primary)
+                        .lineLimit(1)
+
+                    if let count = messageCount, count > 0 {
+                        Text("\(count) messages")
+                            .font(.system(size: 9))
+                            .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.white.opacity(0.4))
+                    }
+                }
+
+                Spacer()
+
+                // Active indicator
+                if location.isActive == true {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.accentColor : Color.clear)
+            .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+    }
+}
+
 struct CreationListItem: View {
     let creation: Creation
     let isSelected: Bool
@@ -2134,19 +2931,21 @@ struct EditorTabBar: View {
                     withAnimation(.easeOut(duration: 0.15)) { sidebarCollapsed = false }
                 } label: {
                     Image(systemName: "sidebar.left")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .frame(width: 32, height: 32)
 
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
-                    .frame(width: 1, height: 20)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 1, height: 18)
+                    .padding(.trailing, 8)
             }
 
-            // Tabs - VSCode file tab style
-            HStack(spacing: 0) {
+            // Tabs
+            HStack(spacing: 2) {
                 ForEach(EditorTab.allCases, id: \.self) { tab in
                     TabButton(
                         tab: tab,
@@ -2160,37 +2959,42 @@ struct EditorTabBar: View {
 
             Spacer()
 
-            // File name + modified indicator
+            // File info & save
             if let creation = creation {
-                HStack(spacing: 4) {
-                    if hasUnsavedChanges {
-                        Circle()
-                            .fill(Color.orange)
-                            .frame(width: 6, height: 6)
+                HStack(spacing: 12) {
+                    // File name
+                    HStack(spacing: 5) {
+                        if hasUnsavedChanges {
+                            Circle()
+                                .fill(Color.orange)
+                                .frame(width: 5, height: 5)
+                        }
+                        Text(creation.name)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.white.opacity(0.4))
+                            .lineLimit(1)
                     }
-                    Text(creation.name)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
+
+                    // Save button
+                    Button {
+                        onSave()
+                    } label: {
+                        Image(systemName: "arrow.down.doc")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(hasUnsavedChanges ? .primary : Color.white.opacity(0.25))
+                            .frame(width: 28, height: 28)
+                            .background(hasUnsavedChanges ? Color.white.opacity(0.06) : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut("s", modifiers: .command)
                 }
                 .padding(.trailing, 8)
-
-                // Save button
-                Button {
-                    onSave()
-                } label: {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(hasUnsavedChanges ? .primary : .tertiary)
-                }
-                .buttonStyle(.plain)
-                .frame(width: 28, height: 28)
-                .keyboardShortcut("s", modifiers: .command)
             }
         }
-        .padding(.horizontal, 4)
-        .frame(height: 32)
-        .background(Color(white: 0.11))
+        .padding(.horizontal, 8)
+        .frame(height: 38)
+        .background(Color(white: 0.095))
     }
 }
 
@@ -2200,11 +3004,14 @@ struct TabButton: View {
     let hasChanges: Bool
     let action: () -> Void
 
+    @State private var isHovering = false
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: tab.icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.white.opacity(0.5))
                 Text(tab.rawValue)
                     .font(.system(size: 11, weight: .medium))
                 if hasChanges {
@@ -2213,23 +3020,16 @@ struct TabButton: View {
                         .frame(width: 5, height: 5)
                 }
             }
-            .foregroundStyle(isSelected ? .primary : .secondary)
+            .foregroundStyle(isSelected ? .primary : Color.white.opacity(0.55))
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.vertical, 7)
             .background(
-                isSelected ?
-                Color(white: 0.18) :
-                Color.clear
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(isSelected ? Color.white.opacity(0.08) : (isHovering ? Color.white.opacity(0.04) : Color.clear))
             )
-            .overlay(alignment: .bottom) {
-                if isSelected {
-                    Rectangle()
-                        .fill(Color.accentColor)
-                        .frame(height: 2)
-                }
-            }
         }
         .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }
 
@@ -3671,5 +4471,233 @@ struct NewStoreSheet: View {
                 email = userEmail
             }
         }
+    }
+}
+
+// MARK: - New Catalog Sheet
+
+struct NewCatalogSheet: View {
+    @ObservedObject var store: EditorStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var selectedVertical = "cannabis"
+    @State private var isDefault = false
+    @State private var isCreating = false
+
+    let verticals = [
+        ("cannabis", "Cannabis", "leaf.fill"),
+        ("real_estate", "Real Estate", "house.fill"),
+        ("retail", "Retail", "cart.fill"),
+        ("food", "Food & Beverage", "fork.knife"),
+        ("other", "Other", "square.grid.2x2.fill")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Create New Catalog")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(white: 0.15))
+
+            // Form
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Catalog Name")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("Master Catalog", text: $name)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(white: 0.18))
+                        .cornerRadius(6)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Vertical / Industry")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        ForEach(verticals, id: \.0) { vertical in
+                            Button {
+                                selectedVertical = vertical.0
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Image(systemName: vertical.2)
+                                        .font(.system(size: 16))
+                                    Text(vertical.1)
+                                        .font(.system(size: 9))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(selectedVertical == vertical.0 ? Color.accentColor.opacity(0.2) : Color(white: 0.18))
+                                .cornerRadius(6)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(selectedVertical == vertical.0 ? Color.accentColor : Color.clear, lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(selectedVertical == vertical.0 ? .primary : .secondary)
+                        }
+                    }
+                }
+
+                Toggle("Set as default catalog", isOn: $isDefault)
+                    .font(.system(size: 11))
+
+                Text("Catalogs contain categories, products, and pricing structures for different business verticals.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+
+            Spacer()
+
+            // Actions
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button {
+                    isCreating = true
+                    Task {
+                        await store.createCatalog(name: name, vertical: selectedVertical, isDefault: isDefault)
+                        isCreating = false
+                        dismiss()
+                    }
+                } label: {
+                    if isCreating {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 80)
+                    } else {
+                        Text("Create Catalog")
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.isEmpty || isCreating)
+            }
+            .padding()
+            .background(Color(white: 0.15))
+        }
+        .frame(width: 420, height: 380)
+        .background(Color(white: 0.12))
+    }
+}
+
+// MARK: - New Category Sheet
+
+struct NewCategorySheet: View {
+    @ObservedObject var store: EditorStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var parentCategory: Category?
+    @State private var isCreating = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Create New Category")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(white: 0.15))
+
+            // Form
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Category Name")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("New Category", text: $name)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(white: 0.18))
+                        .cornerRadius(6)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Parent Category (Optional)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Picker("", selection: $parentCategory) {
+                        Text("None (Top Level)").tag(nil as Category?)
+                        ForEach(store.categories) { category in
+                            Text(category.name).tag(category as Category?)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                Text("Categories help organize your products for easier navigation.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+
+            Spacer()
+
+            // Actions
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button {
+                    isCreating = true
+                    Task {
+                        await store.createCategory(name: name, parentId: parentCategory?.id)
+                        isCreating = false
+                        dismiss()
+                    }
+                } label: {
+                    if isCreating {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 80)
+                    } else {
+                        Text("Create Category")
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.isEmpty || isCreating)
+            }
+            .padding()
+            .background(Color(white: 0.15))
+        }
+        .frame(width: 350, height: 280)
+        .background(Color(white: 0.12))
     }
 }

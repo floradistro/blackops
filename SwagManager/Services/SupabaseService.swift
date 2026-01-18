@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import Auth
 
 // MARK: - Supabase Configuration
 
@@ -12,6 +13,25 @@ enum SupabaseConfig {
     static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTcyMzMsImV4cCI6MjA3NjU3MzIzM30.N8jPwlyCBB5KJB5I-XaK6m-mq88rSR445AWFJJmwRCg"
 }
 
+// MARK: - UserDefaults Auth Storage (avoids Keychain prompts during development)
+
+final class UserDefaultsAuthLocalStorage: AuthLocalStorage, @unchecked Sendable {
+    private let defaults = UserDefaults.standard
+    private let keyPrefix = "supabase.auth."
+
+    func store(key: String, value: Data) throws {
+        defaults.set(value, forKey: keyPrefix + key)
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        defaults.data(forKey: keyPrefix + key)
+    }
+
+    func remove(key: String) throws {
+        defaults.removeObject(forKey: keyPrefix + key)
+    }
+}
+
 // MARK: - Supabase Service
 
 @MainActor
@@ -22,11 +42,13 @@ class SupabaseService {
 
     private init() {
         // Using anon key - RLS policies enforce security
+        // Using UserDefaults storage to avoid Keychain password prompts during development
         client = SupabaseClient(
             supabaseURL: SupabaseConfig.url,
             supabaseKey: SupabaseConfig.anonKey,
             options: .init(
                 auth: .init(
+                    storage: UserDefaultsAuthLocalStorage(),
                     flowType: .implicit,
                     autoRefreshToken: true
                 )
@@ -273,34 +295,133 @@ class SupabaseService {
         return (creations.count, byType, byStatus)
     }
 
-    // MARK: - Categories
+    // MARK: - Catalogs
 
-    func fetchCategories(storeId: UUID? = nil, limit: Int = 100) async throws -> [Category] {
-        if let storeId = storeId {
-            return try await client.from("categories")
-                .select("id, name, slug, description, parent_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
-                .eq("store_id", value: storeId)
-                .order("display_order", ascending: true)
-                .limit(limit)
-                .execute()
-                .value
-        } else {
-            return try await client.from("categories")
-                .select("id, name, slug, description, parent_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
-                .order("display_order", ascending: true)
-                .limit(limit)
-                .execute()
-                .value
-        }
+    func fetchCatalogs(storeId: UUID) async throws -> [Catalog] {
+        return try await client.from("catalogs")
+            .select("id, store_id, name, slug, description, vertical, is_active, is_default, settings, display_order, created_at, updated_at")
+            .eq("store_id", value: storeId)
+            .order("display_order", ascending: true)
+            .execute()
+            .value
     }
 
-    func fetchCategory(id: UUID) async throws -> Category {
-        return try await client.from("categories")
-            .select()
+    func fetchCatalog(id: UUID) async throws -> Catalog {
+        return try await client.from("catalogs")
+            .select("id, store_id, name, slug, description, vertical, is_active, is_default, settings, display_order, created_at, updated_at")
             .eq("id", value: id)
             .single()
             .execute()
             .value
+    }
+
+    func createCatalog(_ catalog: CatalogInsert) async throws -> Catalog {
+        return try await client.from("catalogs")
+            .insert(catalog)
+            .select("id, store_id, name, slug, description, vertical, is_active, is_default, settings, display_order, created_at, updated_at")
+            .single()
+            .execute()
+            .value
+    }
+
+    func deleteCatalog(id: UUID) async throws {
+        try await client.from("catalogs")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+    }
+
+    // MARK: - Categories
+
+    func fetchCategories(storeId: UUID? = nil, catalogId: UUID? = nil) async throws -> [Category] {
+        // Paginate to get ALL categories (Supabase default limit is 1000)
+        var allCategories: [Category] = []
+        let batchSize = 1000
+        var offset = 0
+
+        while true {
+            var query = client.from("categories")
+                .select("id, name, slug, description, parent_id, catalog_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
+
+            if let storeId = storeId {
+                query = query.eq("store_id", value: storeId)
+            }
+
+            if let catalogId = catalogId {
+                query = query.eq("catalog_id", value: catalogId)
+            }
+
+            let batch: [Category] = try await query
+                .order("display_order", ascending: true)
+                .range(from: offset, to: offset + batchSize - 1)
+                .execute()
+                .value
+
+            allCategories.append(contentsOf: batch)
+
+            if batch.count < batchSize {
+                break // No more categories
+            }
+            offset += batchSize
+        }
+
+        return allCategories
+    }
+
+    func fetchCategory(id: UUID) async throws -> Category {
+        return try await client.from("categories")
+            .select("id, name, slug, description, parent_id, catalog_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+
+    func createCategory(_ category: CategoryInsert) async throws -> Category {
+        return try await client.from("categories")
+            .insert(category)
+            .select("id, name, slug, description, parent_id, catalog_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
+            .single()
+            .execute()
+            .value
+    }
+
+    func deleteCategory(id: UUID) async throws {
+        try await client.from("categories")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func assignCategoriesToCatalog(storeId: UUID, catalogId: UUID, onlyOrphans: Bool = true) async throws -> Int {
+        // Simple struct just for getting IDs
+        struct CategoryId: Codable {
+            let id: UUID
+        }
+
+        // Get categories to update
+        var query = client.from("categories")
+            .select("id")
+            .eq("store_id", value: storeId)
+
+        if onlyOrphans {
+            query = query.is("catalog_id", value: nil)
+        } else {
+            // Assign ALL categories for this store to the catalog
+            query = query.neq("catalog_id", value: catalogId.uuidString)
+        }
+
+        let categoriesToUpdate: [CategoryId] = try await query.execute().value
+
+        // Update each one
+        for category in categoriesToUpdate {
+            try await client.from("categories")
+                .update(["catalog_id": catalogId.uuidString])
+                .eq("id", value: category.id)
+                .execute()
+        }
+
+        return categoriesToUpdate.count
     }
 
     // MARK: - Products
@@ -308,29 +429,44 @@ class SupabaseService {
     func fetchProducts(
         storeId: UUID? = nil,
         categoryId: UUID? = nil,
-        search: String? = nil,
-        limit: Int = 100
+        search: String? = nil
     ) async throws -> [Product] {
-        var query = client.from("products")
-            .select("id, name, slug, description, short_description, sku, type, status, regular_price, sale_price, on_sale, price, primary_category_id, store_id, featured_image, image_gallery, has_variations, manage_stock, stock_quantity, stock_status, weight, length, width, height, cost_price, wholesale_price, is_wholesale, wholesale_only, product_visibility, created_at, updated_at")
+        // Paginate to get ALL products (Supabase default limit is 1000)
+        var allProducts: [Product] = []
+        let batchSize = 1000
+        var offset = 0
 
-        if let storeId = storeId {
-            query = query.eq("store_id", value: storeId)
+        while true {
+            var query = client.from("products")
+                .select("id, name, slug, description, short_description, sku, type, status, regular_price, sale_price, on_sale, price, primary_category_id, store_id, featured_image, image_gallery, has_variations, manage_stock, stock_quantity, stock_status, weight, length, width, height, cost_price, wholesale_price, is_wholesale, wholesale_only, product_visibility, created_at, updated_at")
+
+            if let storeId = storeId {
+                query = query.eq("store_id", value: storeId)
+            }
+
+            if let categoryId = categoryId {
+                query = query.eq("primary_category_id", value: categoryId)
+            }
+
+            if let search = search, !search.isEmpty {
+                query = query.ilike("name", pattern: "%\(search)%")
+            }
+
+            let batch: [Product] = try await query
+                .order("name", ascending: true)
+                .range(from: offset, to: offset + batchSize - 1)
+                .execute()
+                .value
+
+            allProducts.append(contentsOf: batch)
+
+            if batch.count < batchSize {
+                break // No more products
+            }
+            offset += batchSize
         }
 
-        if let categoryId = categoryId {
-            query = query.eq("primary_category_id", value: categoryId)
-        }
-
-        if let search = search, !search.isEmpty {
-            query = query.ilike("name", pattern: "%\(search)%")
-        }
-
-        return try await query
-            .order("name", ascending: true)
-            .limit(limit)
-            .execute()
-            .value
+        return allProducts
     }
 
     func fetchProduct(id: UUID) async throws -> Product {
@@ -359,13 +495,55 @@ class SupabaseService {
             .execute()
     }
 
+    // MARK: - Field Schemas
+
+    func fetchFieldSchemas() async throws -> [FieldSchema] {
+        return try await client.from("field_schemas")
+            .select("*")
+            .eq("is_active", value: true)
+            .execute()
+            .value
+    }
+
+    func fetchFieldSchemasForCategory(categoryName: String) async throws -> [FieldSchema] {
+        // Fetch all schemas and filter client-side for category
+        let allSchemas: [FieldSchema] = try await client.from("field_schemas")
+            .select("*")
+            .eq("is_active", value: true)
+            .execute()
+            .value
+
+        return allSchemas.filter { $0.appliesTo(categoryName: categoryName) }
+    }
+
+    // MARK: - Pricing Schemas
+
+    func fetchPricingSchemas() async throws -> [PricingSchema] {
+        return try await client.from("pricing_schemas")
+            .select("*")
+            .eq("is_active", value: true)
+            .execute()
+            .value
+    }
+
+    func fetchPricingSchemasForCategory(categoryName: String) async throws -> [PricingSchema] {
+        // Fetch all schemas and filter client-side
+        let allSchemas: [PricingSchema] = try await client.from("pricing_schemas")
+            .select("*")
+            .eq("is_active", value: true)
+            .execute()
+            .value
+
+        return allSchemas.filter { $0.appliesTo(categoryName: categoryName) }
+    }
+
     // MARK: - Stores
 
     func fetchStores(limit: Int = 50) async throws -> [Store] {
         // RLS policies automatically filter to stores the user owns or is a member of
         // No explicit filter needed - auth token handles it
         return try await client.from("stores")
-            .select("id, store_name, slug, email, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
+            .select("id, store_name, slug, email, owner_user_id, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
             .order("store_name", ascending: true)
             .limit(limit)
             .execute()
@@ -374,7 +552,7 @@ class SupabaseService {
 
     func fetchStore(id: UUID) async throws -> Store {
         return try await client.from("stores")
-            .select("id, store_name, slug, email, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
+            .select("id, store_name, slug, email, owner_user_id, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
             .eq("id", value: id)
             .single()
             .execute()
@@ -384,9 +562,210 @@ class SupabaseService {
     func createStore(_ store: StoreInsert) async throws -> Store {
         return try await client.from("stores")
             .insert(store)
-            .select("id, store_name, slug, email, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
+            .select("id, store_name, slug, email, owner_user_id, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
             .single()
             .execute()
             .value
+    }
+
+    // MARK: - Locations
+
+    func fetchLocations(storeId: UUID) async throws -> [Location] {
+        NSLog("[SupabaseService] Fetching locations for store: \(storeId)")
+        return try await client.from("locations")
+            .select("*")
+            .eq("store_id", value: storeId)
+            .order("name", ascending: true)
+            .execute()
+            .value
+    }
+
+    // MARK: - Chat / Conversations
+
+    func fetchConversations(storeId: UUID, chatType: String? = nil) async throws -> [Conversation] {
+        NSLog("[SupabaseService] Fetching conversations for store: \(storeId), chatType: \(chatType ?? "all")")
+        if let chatType = chatType {
+            return try await client.from("lisa_conversations")
+                .select("*")
+                .eq("store_id", value: storeId)
+                .eq("chat_type", value: chatType)
+                .order("updated_at", ascending: false)
+                .execute()
+                .value
+        } else {
+            // Fetch ALL conversations for this store (don't filter by status)
+            return try await client.from("lisa_conversations")
+                .select("*")
+                .eq("store_id", value: storeId)
+                .order("updated_at", ascending: false)
+                .execute()
+                .value
+        }
+    }
+
+    func fetchConversation(id: UUID) async throws -> Conversation {
+        return try await client.from("lisa_conversations")
+            .select("*")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+
+    func fetchConversationsByLocation(locationId: UUID) async throws -> [Conversation] {
+        NSLog("[SupabaseService] Fetching conversations for location: \(locationId)")
+        return try await client.from("lisa_conversations")
+            .select("*")
+            .eq("location_id", value: locationId)
+            .order("updated_at", ascending: false)
+            .execute()
+            .value
+    }
+
+    func fetchAllConversationsForStoreLocations(storeId: UUID) async throws -> [Conversation] {
+        NSLog("[SupabaseService] Fetching all conversations for store locations: \(storeId)")
+        // First get all locations for this store
+        let locations = try await fetchLocations(storeId: storeId)
+        NSLog("[SupabaseService] Found \(locations.count) locations")
+
+        // Then get conversations for each location
+        var allConversations: [Conversation] = []
+        for location in locations {
+            let convos = try await fetchConversationsByLocation(locationId: location.id)
+            NSLog("[SupabaseService] Location '\(location.name)' has \(convos.count) conversations")
+            allConversations.append(contentsOf: convos)
+        }
+
+        // Also try to get conversations directly by store_id
+        let storeConvos = try await fetchConversations(storeId: storeId, chatType: nil)
+        NSLog("[SupabaseService] Store has \(storeConvos.count) direct conversations")
+
+        // Merge and deduplicate
+        let existingIds = Set(allConversations.map { $0.id })
+        for conv in storeConvos {
+            if !existingIds.contains(conv.id) {
+                allConversations.append(conv)
+            }
+        }
+
+        NSLog("[SupabaseService] Total conversations: \(allConversations.count)")
+        return allConversations.sorted { ($0.updatedAt ?? Date.distantPast) > ($1.updatedAt ?? Date.distantPast) }
+    }
+
+    func createConversation(_ conversation: ConversationInsert) async throws -> Conversation {
+        return try await client.from("lisa_conversations")
+            .insert(conversation)
+            .select("*")
+            .single()
+            .execute()
+            .value
+    }
+
+    func getOrCreateTeamConversation(storeId: UUID, chatType: String = "dm", title: String? = nil) async throws -> Conversation {
+        // Try to find existing conversation of this type
+        let existing: [Conversation] = try await client.from("lisa_conversations")
+            .select("*")
+            .eq("store_id", value: storeId)
+            .eq("chat_type", value: chatType)
+            .eq("status", value: "active")
+            .limit(1)
+            .execute()
+            .value
+
+        if let first = existing.first {
+            return first
+        }
+
+        // Create new conversation
+        let insert = ConversationInsert(
+            storeId: storeId,
+            userId: nil,
+            title: title ?? "Team Chat",
+            chatType: chatType,
+            locationId: nil
+        )
+        return try await createConversation(insert)
+    }
+
+    // MARK: - Messages
+
+    func fetchMessages(conversationId: UUID, limit: Int = 50, before: Date? = nil) async throws -> [ChatMessage] {
+        let messages: [ChatMessage]
+        if let before = before {
+            messages = try await client.from("lisa_messages")
+                .select("*")
+                .eq("conversation_id", value: conversationId)
+                .lt("created_at", value: ISO8601DateFormatter().string(from: before))
+                .order("created_at", ascending: false)
+                .limit(limit)
+                .execute()
+                .value
+        } else {
+            messages = try await client.from("lisa_messages")
+                .select("*")
+                .eq("conversation_id", value: conversationId)
+                .order("created_at", ascending: false)
+                .limit(limit)
+                .execute()
+                .value
+        }
+        return messages.reversed() // Return in chronological order
+    }
+
+    func sendMessage(_ message: ChatMessageInsert) async throws -> ChatMessage {
+        return try await client.from("lisa_messages")
+            .insert(message)
+            .select("*")
+            .single()
+            .execute()
+            .value
+    }
+
+    // MARK: - Chat Participants
+
+    func fetchParticipants(conversationId: UUID) async throws -> [ChatParticipant] {
+        return try await client.from("lisa_chat_participants")
+            .select("*")
+            .eq("conversation_id", value: conversationId)
+            .is("left_at", value: nil)
+            .execute()
+            .value
+    }
+
+    func updateTypingStatus(conversationId: UUID, userId: UUID, isTyping: Bool) async throws {
+        struct TypingUpdate: Codable {
+            let isTyping: Bool
+            let typingStartedAt: String?
+
+            enum CodingKeys: String, CodingKey {
+                case isTyping = "is_typing"
+                case typingStartedAt = "typing_started_at"
+            }
+        }
+
+        let update = TypingUpdate(
+            isTyping: isTyping,
+            typingStartedAt: isTyping ? ISO8601DateFormatter().string(from: Date()) : nil
+        )
+
+        try await client.from("lisa_chat_participants")
+            .update(update)
+            .eq("conversation_id", value: conversationId)
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
+    func markMessagesRead(conversationId: UUID, userId: UUID, lastMessageId: UUID) async throws {
+        try await client.from("lisa_chat_participants")
+            .update(["last_read_at": ISO8601DateFormatter().string(from: Date()), "last_read_message_id": lastMessageId.uuidString])
+            .eq("conversation_id", value: conversationId)
+            .eq("user_id", value: userId)
+            .execute()
+    }
+
+    // MARK: - Realtime Channel
+
+    func messagesChannel(conversationId: UUID) -> RealtimeChannelV2 {
+        return client.realtimeV2.channel("messages:\(conversationId.uuidString)")
     }
 }

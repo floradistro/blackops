@@ -31,6 +31,20 @@ struct SwagManagerApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
+
+        // Ensure window accepts keyboard input
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let window = NSApp.windows.first {
+                window.makeKeyAndOrderFront(nil)
+                window.makeFirstResponder(window.contentView)
+            }
+        }
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        if let window = NSApp.windows.first {
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 }
 
