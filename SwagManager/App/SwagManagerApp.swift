@@ -7,12 +7,6 @@ struct SwagManagerApp: App {
     @StateObject private var appState = AppState.shared
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    init() {
-        DispatchQueue.main.async {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -36,18 +30,7 @@ struct SwagManagerApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Force dark appearance for all windows
         NSApp.appearance = NSAppearance(named: .darkAqua)
-
-        // Configure main window for inline title bar
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let window = NSApp.windows.first {
-                window.titlebarAppearsTransparent = true
-                window.titleVisibility = .hidden
-                window.styleMask.insert(.fullSizeContentView)
-                window.isMovableByWindowBackground = true
-            }
-        }
     }
 }
 

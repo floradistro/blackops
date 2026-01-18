@@ -1,6 +1,19 @@
 import Foundation
 import Supabase
 
+// MARK: - Supabase Configuration
+
+enum SupabaseConfig {
+    // Production: floradistro.com
+    static let url = URL(string: "https://uaednwpxursknmwdeejn.supabase.co")!
+
+    // Anon key - safe for client-side use (RLS protects data)
+    // SECURITY: Never use service_role key in client apps
+    static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTcyMzMsImV4cCI6MjA3NjU3MzIzM30.N8jPwlyCBB5KJB5I-XaK6m-mq88rSR445AWFJJmwRCg"
+}
+
+// MARK: - Supabase Service
+
 @MainActor
 class SupabaseService {
     static let shared = SupabaseService()
@@ -8,10 +21,16 @@ class SupabaseService {
     let client: SupabaseClient
 
     private init() {
-        // Using service role key for admin access (bypasses RLS)
+        // Using anon key - RLS policies enforce security
         client = SupabaseClient(
-            supabaseURL: URL(string: "https://uaednwpxursknmwdeejn.supabase.co")!,
-            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk5NzIzMywiZXhwIjoyMDc2NTczMjMzfQ.l0NvBbS2JQWPObtWeVD2M2LD866A2tgLmModARYNnbI"
+            supabaseURL: SupabaseConfig.url,
+            supabaseKey: SupabaseConfig.anonKey,
+            options: .init(
+                auth: .init(
+                    flowType: .implicit,
+                    autoRefreshToken: true
+                )
+            )
         )
     }
 
@@ -23,9 +42,11 @@ class SupabaseService {
         search: String? = nil,
         limit: Int = 100
     ) async throws -> [Creation] {
-        // Build query with filters applied before transforms
+        // Fetch all creations and filter client-side for soft deletes
+        var creations: [Creation]
+
         if let type = type, let status = status, let search = search, !search.isEmpty {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .eq("creation_type", value: type.rawValue)
                 .eq("status", value: status.rawValue)
@@ -35,7 +56,7 @@ class SupabaseService {
                 .execute()
                 .value
         } else if let type = type, let status = status {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .eq("creation_type", value: type.rawValue)
                 .eq("status", value: status.rawValue)
@@ -44,7 +65,7 @@ class SupabaseService {
                 .execute()
                 .value
         } else if let type = type, let search = search, !search.isEmpty {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .eq("creation_type", value: type.rawValue)
                 .ilike("name", pattern: "%\(search)%")
@@ -53,7 +74,7 @@ class SupabaseService {
                 .execute()
                 .value
         } else if let status = status, let search = search, !search.isEmpty {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .eq("status", value: status.rawValue)
                 .ilike("name", pattern: "%\(search)%")
@@ -62,7 +83,7 @@ class SupabaseService {
                 .execute()
                 .value
         } else if let type = type {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .eq("creation_type", value: type.rawValue)
                 .order("created_at", ascending: false)
@@ -70,7 +91,7 @@ class SupabaseService {
                 .execute()
                 .value
         } else if let status = status {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .eq("status", value: status.rawValue)
                 .order("created_at", ascending: false)
@@ -78,7 +99,7 @@ class SupabaseService {
                 .execute()
                 .value
         } else if let search = search, !search.isEmpty {
-            return try await client.from("creations")
+            creations = try await client.from("creations")
                 .select()
                 .ilike("name", pattern: "%\(search)%")
                 .order("created_at", ascending: false)
@@ -86,13 +107,16 @@ class SupabaseService {
                 .execute()
                 .value
         } else {
-            return try await client.from("creations")
-                .select("id, creation_type, name, slug, description, status, is_public, version, created_at, updated_at, thumbnail_url, deployed_url, react_code, visibility, view_count, install_count")
+            creations = try await client.from("creations")
+                .select("id, creation_type, name, slug, description, status, is_public, version, created_at, updated_at, thumbnail_url, deployed_url, react_code, visibility, view_count, install_count, deleted_at")
                 .order("created_at", ascending: false)
                 .limit(limit)
                 .execute()
                 .value
         }
+
+        // Filter out soft-deleted creations
+        return creations.filter { $0.deletedAt == nil }
     }
 
     func fetchCreation(id: UUID) async throws -> Creation {
@@ -124,21 +148,9 @@ class SupabaseService {
     }
 
     func deleteCreation(id: UUID) async throws {
-        // Delete related records first to avoid FK constraint violations
-        try await client.from("user_creation_relationships")
-            .delete()
-            .eq("creation_id", value: id)
-            .execute()
-
-        // Delete collection item references
-        try await client.from("creation_collection_items")
-            .delete()
-            .eq("creation_id", value: id)
-            .execute()
-
-        // Now delete the creation
+        // Soft delete: set deleted_at instead of hard delete
         try await client.from("creations")
-            .delete()
+            .update(["deleted_at": ISO8601DateFormatter().string(from: Date())])
             .eq("id", value: id)
             .execute()
     }
@@ -259,5 +271,122 @@ class SupabaseService {
         }
 
         return (creations.count, byType, byStatus)
+    }
+
+    // MARK: - Categories
+
+    func fetchCategories(storeId: UUID? = nil, limit: Int = 100) async throws -> [Category] {
+        if let storeId = storeId {
+            return try await client.from("categories")
+                .select("id, name, slug, description, parent_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
+                .eq("store_id", value: storeId)
+                .order("display_order", ascending: true)
+                .limit(limit)
+                .execute()
+                .value
+        } else {
+            return try await client.from("categories")
+                .select("id, name, slug, description, parent_id, image_url, banner_url, display_order, is_active, featured, product_count, store_id, icon, featured_image, created_at, updated_at")
+                .order("display_order", ascending: true)
+                .limit(limit)
+                .execute()
+                .value
+        }
+    }
+
+    func fetchCategory(id: UUID) async throws -> Category {
+        return try await client.from("categories")
+            .select()
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+
+    // MARK: - Products
+
+    func fetchProducts(
+        storeId: UUID? = nil,
+        categoryId: UUID? = nil,
+        search: String? = nil,
+        limit: Int = 100
+    ) async throws -> [Product] {
+        var query = client.from("products")
+            .select("id, name, slug, description, short_description, sku, type, status, regular_price, sale_price, on_sale, price, primary_category_id, store_id, featured_image, image_gallery, has_variations, manage_stock, stock_quantity, stock_status, weight, length, width, height, cost_price, wholesale_price, is_wholesale, wholesale_only, product_visibility, created_at, updated_at")
+
+        if let storeId = storeId {
+            query = query.eq("store_id", value: storeId)
+        }
+
+        if let categoryId = categoryId {
+            query = query.eq("primary_category_id", value: categoryId)
+        }
+
+        if let search = search, !search.isEmpty {
+            query = query.ilike("name", pattern: "%\(search)%")
+        }
+
+        return try await query
+            .order("name", ascending: true)
+            .limit(limit)
+            .execute()
+            .value
+    }
+
+    func fetchProduct(id: UUID) async throws -> Product {
+        return try await client.from("products")
+            .select("id, name, slug, description, short_description, sku, type, status, regular_price, sale_price, on_sale, price, primary_category_id, store_id, featured_image, image_gallery, has_variations, manage_stock, stock_quantity, stock_status, weight, length, width, height, cost_price, wholesale_price, is_wholesale, wholesale_only, product_visibility, created_at, updated_at")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+
+    func updateProduct(id: UUID, update: ProductUpdate) async throws -> Product {
+        return try await client.from("products")
+            .update(update)
+            .eq("id", value: id)
+            .select("id, name, slug, description, short_description, sku, type, status, regular_price, sale_price, on_sale, price, primary_category_id, store_id, featured_image, image_gallery, has_variations, manage_stock, stock_quantity, stock_status, weight, length, width, height, cost_price, wholesale_price, is_wholesale, wholesale_only, product_visibility, created_at, updated_at")
+            .single()
+            .execute()
+            .value
+    }
+
+    func deleteProduct(id: UUID) async throws {
+        try await client.from("products")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+    }
+
+    // MARK: - Stores
+
+    func fetchStores(limit: Int = 50) async throws -> [Store] {
+        // RLS policies automatically filter to stores the user owns or is a member of
+        // No explicit filter needed - auth token handles it
+        return try await client.from("stores")
+            .select("id, store_name, slug, email, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
+            .order("store_name", ascending: true)
+            .limit(limit)
+            .execute()
+            .value
+    }
+
+    func fetchStore(id: UUID) async throws -> Store {
+        return try await client.from("stores")
+            .select("id, store_name, slug, email, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+
+    func createStore(_ store: StoreInsert) async throws -> Store {
+        return try await client.from("stores")
+            .insert(store)
+            .select("id, store_name, slug, email, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
+            .single()
+            .execute()
+            .value
     }
 }

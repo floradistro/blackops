@@ -11,105 +11,63 @@ struct AuthView: View {
     @State private var errorMessage = ""
 
     var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [Color.accentColor.opacity(0.1), Color.clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        VStack(spacing: 24) {
+            Spacer()
 
-            VStack(spacing: 0) {
-                Spacer()
+            // Logo
+            Image(systemName: "cube.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
 
-                // Logo and title
-                VStack(spacing: 12) {
-                    Image(systemName: "sparkles.rectangle.stack")
-                        .font(.system(size: 64))
-                        .foregroundStyle(Color.accentColor)
-                        .symbolEffect(.pulse)
+            Text("Swag Manager")
+                .font(.title)
+                .fontWeight(.semibold)
 
-                    Text("Swag Manager")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+            // Form
+            VStack(spacing: 12) {
+                TextField("Email", text: $email)
+                    .textFieldStyle(.roundedBorder)
 
-                    Text("Manage your creations")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 48)
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.roundedBorder)
 
-                // Auth form
-                VStack(spacing: 16) {
-                    TextField("Email", text: $email)
+                if isSignUp {
+                    SecureField("Confirm Password", text: $confirmPassword)
                         .textFieldStyle(.roundedBorder)
-                        .textContentType(.emailAddress)
-                        .autocorrectionDisabled()
-
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(.roundedBorder)
-                        .textContentType(isSignUp ? .newPassword : .password)
-
-                    if isSignUp {
-                        SecureField("Confirm Password", text: $confirmPassword)
-                            .textFieldStyle(.roundedBorder)
-                            .textContentType(.newPassword)
-                    }
-
-                    Button(action: submit) {
-                        if isLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            Text(isSignUp ? "Create Account" : "Sign In")
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(isLoading || !isFormValid)
-
-                    Button(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up") {
-                        withAnimation {
-                            isSignUp.toggle()
-                            password = ""
-                            confirmPassword = ""
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
-                    .font(.subheadline)
                 }
-                .frame(maxWidth: 320)
-                .padding(32)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.1), radius: 20, y: 10)
 
-                Spacer()
-                Spacer()
+                Button(isSignUp ? "Create Account" : "Sign In") {
+                    submit()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isLoading || !isFormValid)
             }
-            .padding()
+            .frame(width: 260)
+
+            Button(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up") {
+                isSignUp.toggle()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+
+            Spacer()
+            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
         .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
+            Button("OK") { }
         } message: {
             Text(errorMessage)
         }
     }
 
     private var isFormValid: Bool {
-        let emailValid = email.contains("@") && email.contains(".")
-        let passwordValid = password.count >= 6
-        let confirmValid = !isSignUp || password == confirmPassword
-
-        return emailValid && passwordValid && confirmValid
+        email.contains("@") && password.count >= 6 && (!isSignUp || password == confirmPassword)
     }
 
     private func submit() {
         guard isFormValid else { return }
-
         isLoading = true
         Task {
             do {
@@ -130,5 +88,4 @@ struct AuthView: View {
 #Preview {
     AuthView()
         .environmentObject(AuthManager.shared)
-        .frame(width: 600, height: 700)
 }

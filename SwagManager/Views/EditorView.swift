@@ -36,10 +36,11 @@ extension JSONDecoder {
 
 struct EditorView: View {
     @StateObject private var store = EditorStore()
+    @EnvironmentObject var authManager: AuthManager
     @State private var sidebarCollapsed = false
     @State private var selectedTab: EditorTab = .preview
 
-    private let contentBg = Color(white: 0.11)
+    private let contentBg = Color(white: 0.08)
 
     var body: some View {
         HStack(spacing: 0) {
@@ -55,49 +56,76 @@ struct EditorView: View {
                     .frame(width: 1)
             }
 
-            // Main Content
-            ZStack {
-                switch selectedTab {
-                case .preview:
-                    if let creation = store.selectedCreation {
-                        HotReloadRenderer(
-                            code: store.editedCode ?? creation.reactCode ?? "",
-                            creationId: creation.id.uuidString,
-                            refreshTrigger: store.refreshTrigger
-                        )
-                    } else {
-                        EmptyEditorView()
-                    }
+            // Main Content Area with Tabs
+            VStack(spacing: 0) {
+                // Tab Bar (Safari/Xcode style)
+                if !store.openTabs.isEmpty {
+                    OpenTabBar(store: store)
+                }
 
-                case .code:
-                    if store.selectedCreation != nil {
-                        CodeEditorPanel(
-                            code: Binding(
-                                get: { store.editedCode ?? store.selectedCreation?.reactCode ?? "" },
-                                set: { store.editedCode = $0 }
-                            ),
-                            onSave: { Task { await store.saveCurrentCreation() } }
-                        )
-                    } else {
-                        EmptyEditorView()
-                    }
+                // Content based on active tab or selection
+                ZStack {
+                    if let activeTab = store.activeTab {
+                        switch activeTab {
+                        case .creation(let creation):
+                            // Creation editor
+                            switch selectedTab {
+                            case .preview:
+                                HotReloadRenderer(
+                                    code: store.editedCode ?? creation.reactCode ?? "",
+                                    creationId: creation.id.uuidString,
+                                    refreshTrigger: store.refreshTrigger
+                                )
+                            case .code:
+                                CodeEditorPanel(
+                                    code: Binding(
+                                        get: { store.editedCode ?? store.selectedCreation?.reactCode ?? "" },
+                                        set: { store.editedCode = $0 }
+                                    ),
+                                    onSave: { Task { await store.saveCurrentCreation() } }
+                                )
+                            case .details:
+                                DetailsPanel(creation: creation, store: store)
+                            case .settings:
+                                SettingsPanel(creation: creation, store: store)
+                            }
 
-                case .details:
-                    if let creation = store.selectedCreation {
-                        DetailsPanel(creation: creation, store: store)
+                        case .product(let product):
+                            // Product editor
+                            ProductEditorPanel(product: product, store: store)
+                        }
+                    } else if let product = store.selectedProduct {
+                        // Show product even without tab
+                        ProductEditorPanel(product: product, store: store)
+                    } else if let creation = store.selectedCreation {
+                        // Show creation even without tab
+                        switch selectedTab {
+                        case .preview:
+                            HotReloadRenderer(
+                                code: store.editedCode ?? creation.reactCode ?? "",
+                                creationId: creation.id.uuidString,
+                                refreshTrigger: store.refreshTrigger
+                            )
+                        case .code:
+                            CodeEditorPanel(
+                                code: Binding(
+                                    get: { store.editedCode ?? creation.reactCode ?? "" },
+                                    set: { store.editedCode = $0 }
+                                ),
+                                onSave: { Task { await store.saveCurrentCreation() } }
+                            )
+                        case .details:
+                            DetailsPanel(creation: creation, store: store)
+                        case .settings:
+                            SettingsPanel(creation: creation, store: store)
+                        }
                     } else {
-                        EmptyEditorView()
-                    }
-
-                case .settings:
-                    if let creation = store.selectedCreation {
-                        SettingsPanel(creation: creation, store: store)
-                    } else {
-                        EmptyEditorView()
+                        // Welcome state
+                        WelcomeView(store: store)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(contentBg)
         }
         .background(contentBg)
@@ -161,12 +189,18 @@ struct EditorView: View {
         }
         .task {
             await store.loadCreations()
+            // RLS handles filtering - just load stores
+            await store.loadStores()
+            await store.loadCatalog()
         }
         .sheet(isPresented: $store.showNewCreationSheet) {
             NewCreationSheet(store: store)
         }
         .sheet(isPresented: $store.showNewCollectionSheet) {
             NewCollectionSheet(store: store)
+        }
+        .sheet(isPresented: $store.showNewStoreSheet) {
+            NewStoreSheet(store: store, authManager: authManager)
         }
         .alert("Error", isPresented: Binding(
             get: { store.error != nil },
@@ -195,24 +229,94 @@ enum EditorTab: String, CaseIterable {
     }
 }
 
+// MARK: - Open Tab Model (Safari/Xcode style tabs)
+
+enum OpenTabItem: Identifiable, Hashable {
+    case creation(Creation)
+    case product(Product)
+
+    var id: String {
+        switch self {
+        case .creation(let c): return "creation-\(c.id)"
+        case .product(let p): return "product-\(p.id)"
+        }
+    }
+
+    var name: String {
+        switch self {
+        case .creation(let c): return c.name
+        case .product(let p): return p.name
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .creation(let c):
+            switch c.creationType {
+            case .app: return "app.badge"
+            case .display: return "display"
+            case .email: return "envelope"
+            case .landing: return "globe"
+            case .dashboard: return "chart.bar.xaxis"
+            case .artifact: return "cube"
+            case .store: return "storefront"
+            }
+        case .product: return "leaf"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .creation(let c): return c.creationType.color
+        case .product: return .green
+        }
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: OpenTabItem, rhs: OpenTabItem) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 // MARK: - Editor Store
 
 @MainActor
 class EditorStore: ObservableObject {
+    // MARK: - Creations State
     @Published var creations: [Creation] = []
     @Published var collections: [CreationCollection] = []
     @Published var collectionItems: [UUID: [UUID]] = [:] // collectionId -> [creationId]
     @Published var selectedCreation: Creation?
     @Published var selectedCreationIds: Set<UUID> = []
     @Published var editedCode: String?
+
+    // MARK: - Catalog State (Products, Categories & Stores)
+    @Published var stores: [Store] = []
+    @Published var selectedStore: Store?
+    @Published var products: [Product] = []
+    @Published var categories: [Category] = []
+    @Published var selectedProduct: Product?
+    @Published var selectedProductIds: Set<UUID> = []
+
+    // MARK: - Tabs (Safari/Xcode style)
+    @Published var openTabs: [OpenTabItem] = []
+    @Published var activeTab: OpenTabItem?
+
+    // MARK: - UI State
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var refreshTrigger = UUID()
     @Published var error: String?
+    @Published var sidebarCreationsExpanded = true
+    @Published var sidebarCatalogExpanded = true
 
     // Sheet states
     @Published var showNewCreationSheet = false
     @Published var showNewCollectionSheet = false
+    @Published var showNewStoreSheet = false
 
     var lastSelectedIndex: Int?
 
@@ -220,7 +324,7 @@ class EditorStore: ObservableObject {
     private var realtimeTask: Task<Void, Never>?
 
     // Default store ID for new items
-    private let defaultStoreId = UUID(uuidString: "cd2e1122-d511-4edb-be5d-98ef274b4baf")!
+    let defaultStoreId = UUID(uuidString: "cd2e1122-d511-4edb-be5d-98ef274b4baf")!
 
     init() {
         startRealtimeSubscription()
@@ -498,7 +602,10 @@ class EditorStore: ObservableObject {
         if selectedCreationIds.contains(creation.id) {
             selectedCreation = creation
             editedCode = creation.reactCode
+            selectedProduct = nil
+            selectedProductIds.removeAll()
             lastSelectedIndex = list.firstIndex(where: { $0.id == creation.id })
+            openTab(.creation(creation))
         }
     }
 
@@ -653,6 +760,523 @@ class EditorStore: ObservableObject {
         };
         """
     }
+
+    // MARK: - Catalog (Products, Categories & Stores)
+
+    func loadStores() async {
+        do {
+            // Check if user is authenticated first
+            let session = try? await supabase.client.auth.session
+            NSLog("[EditorStore] Auth session: %@", session != nil ? "authenticated" : "NOT authenticated")
+
+            // RLS automatically filters to stores the user owns/works at
+            stores = try await supabase.fetchStores()
+            NSLog("[EditorStore] Loaded %d stores", stores.count)
+            // Auto-select first store if none selected
+            if selectedStore == nil, let first = stores.first {
+                selectedStore = first
+                NSLog("[EditorStore] Auto-selected store: %@", first.storeName)
+            }
+        } catch {
+            NSLog("[EditorStore] Error loading stores: %@", String(describing: error))
+            self.error = "Failed to load stores: \(error.localizedDescription)"
+        }
+    }
+
+    func selectStore(_ store: Store) async {
+        selectedStore = store
+        // Reload catalog for new store
+        await loadCatalog()
+    }
+
+    func createStore(name: String, email: String, ownerUserId: UUID?) async {
+        do {
+            let slug = name.lowercased()
+                .replacingOccurrences(of: " ", with: "-")
+                .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
+
+            let insert = StoreInsert(
+                storeName: name,
+                slug: slug,
+                email: email,
+                ownerUserId: ownerUserId,
+                status: "active",
+                storeType: "standard"
+            )
+
+            let newStore = try await supabase.createStore(insert)
+            stores.append(newStore)
+            selectedStore = newStore
+            await loadCatalog()
+            NSLog("[EditorStore] Created store: %@", name)
+        } catch {
+            NSLog("[EditorStore] Error creating store: %@", String(describing: error))
+            self.error = "Failed to create store: \(error.localizedDescription)"
+        }
+    }
+
+    /// Current store ID for catalog queries
+    var currentStoreId: UUID {
+        selectedStore?.id ?? defaultStoreId
+    }
+
+    func loadCatalog() async {
+        do {
+            categories = try await supabase.fetchCategories(storeId: currentStoreId)
+            products = try await supabase.fetchProducts(storeId: currentStoreId)
+            NSLog("[EditorStore] Loaded %d categories, %d products for store %@", categories.count, products.count, selectedStore?.storeName ?? "default")
+        } catch {
+            NSLog("[EditorStore] Error loading catalog: %@", String(describing: error))
+            if self.error == nil {
+                self.error = "Failed to load catalog: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func productsForCategory(_ categoryId: UUID) -> [Product] {
+        products.filter { $0.primaryCategoryId == categoryId }
+    }
+
+    var uncategorizedProducts: [Product] {
+        products.filter { $0.primaryCategoryId == nil }
+    }
+
+    // MARK: - Category Hierarchy Helpers
+
+    /// Top-level categories (no parent)
+    var topLevelCategories: [Category] {
+        categories.filter { $0.parentId == nil }
+    }
+
+    /// Get child categories for a given parent
+    func childCategories(of parentId: UUID) -> [Category] {
+        categories.filter { $0.parentId == parentId }
+    }
+
+    /// Check if category has children
+    func hasChildCategories(_ categoryId: UUID) -> Bool {
+        categories.contains { $0.parentId == categoryId }
+    }
+
+    /// Get all descendant category IDs (recursive)
+    func allDescendantCategoryIds(of parentId: UUID) -> Set<UUID> {
+        var result = Set<UUID>()
+        let children = childCategories(of: parentId)
+        for child in children {
+            result.insert(child.id)
+            result.formUnion(allDescendantCategoryIds(of: child.id))
+        }
+        return result
+    }
+
+    /// Get products in a category and all its subcategories
+    func productsInCategoryTree(_ categoryId: UUID) -> [Product] {
+        var categoryIds = Set([categoryId])
+        categoryIds.formUnion(allDescendantCategoryIds(of: categoryId))
+        return products.filter { product in
+            guard let catId = product.primaryCategoryId else { return false }
+            return categoryIds.contains(catId)
+        }
+    }
+
+    /// Count of direct products in category (not including subcategories)
+    func directProductCount(_ categoryId: UUID) -> Int {
+        products.filter { $0.primaryCategoryId == categoryId }.count
+    }
+
+    /// Total count including all subcategory products
+    func totalProductCount(_ categoryId: UUID) -> Int {
+        productsInCategoryTree(categoryId).count
+    }
+
+    func selectProduct(_ product: Product) {
+        selectedProduct = product
+        selectedProductIds = [product.id]
+        selectedCreation = nil
+        selectedCreationIds.removeAll()
+        openTab(.product(product))
+    }
+
+    func deleteProduct(_ product: Product) async {
+        do {
+            try await supabase.deleteProduct(id: product.id)
+            if selectedProduct?.id == product.id {
+                selectedProduct = nil
+                closeTab(.product(product))
+            }
+            selectedProductIds.remove(product.id)
+            await loadCatalog()
+        } catch {
+            self.error = "Failed to delete '\(product.name)': \(error.localizedDescription)"
+        }
+    }
+
+    func updateProductField(id: UUID, field: String, value: Any?) async {
+        isSaving = true
+        do {
+            var update = ProductUpdate()
+            switch field {
+            case "name": update.name = value as? String
+            case "description": update.description = value as? String
+            case "sku": update.sku = value as? String
+            case "status": update.status = value as? String
+            case "price": update.price = value as? Double
+            case "regularPrice": update.regularPrice = value as? Double
+            case "salePrice": update.salePrice = value as? Double
+            case "stockQuantity": update.stockQuantity = value as? Double
+            case "stockStatus": update.stockStatus = value as? String
+            default: break
+            }
+            let updated = try await supabase.updateProduct(id: id, update: update)
+            if let idx = products.firstIndex(where: { $0.id == id }) {
+                products[idx] = updated
+            }
+            if selectedProduct?.id == id {
+                selectedProduct = updated
+                // Update in open tabs
+                if let tabIdx = openTabs.firstIndex(where: {
+                    if case .product(let p) = $0 { return p.id == id }
+                    return false
+                }) {
+                    openTabs[tabIdx] = .product(updated)
+                    if case .product = activeTab { activeTab = .product(updated) }
+                }
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSaving = false
+    }
+
+    // MARK: - Tab Management
+
+    func openTab(_ item: OpenTabItem) {
+        if !openTabs.contains(where: { $0.id == item.id }) {
+            openTabs.append(item)
+        }
+        activeTab = item
+    }
+
+    func closeTab(_ item: OpenTabItem) {
+        openTabs.removeAll { $0.id == item.id }
+        if activeTab?.id == item.id {
+            activeTab = openTabs.last
+            // Update selection based on active tab
+            if let tab = activeTab {
+                switch tab {
+                case .creation(let c):
+                    selectedCreation = c
+                    editedCode = c.reactCode
+                    selectedProduct = nil
+                case .product(let p):
+                    selectedProduct = p
+                    selectedCreation = nil
+                    editedCode = nil
+                }
+            } else {
+                selectedCreation = nil
+                selectedProduct = nil
+                editedCode = nil
+            }
+        }
+    }
+
+    func switchToTab(_ item: OpenTabItem) {
+        activeTab = item
+        switch item {
+        case .creation(let c):
+            selectedCreation = c
+            editedCode = c.reactCode
+            selectedProduct = nil
+        case .product(let p):
+            selectedProduct = p
+            selectedCreation = nil
+            editedCode = nil
+        }
+    }
+}
+
+// MARK: - Open Tab Bar (Safari/Xcode style)
+
+struct OpenTabBar: View {
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                ForEach(store.openTabs) { tab in
+                    OpenTabButton(
+                        tab: tab,
+                        isActive: store.activeTab?.id == tab.id,
+                        hasUnsavedChanges: tabHasUnsavedChanges(tab),
+                        onSelect: { store.switchToTab(tab) },
+                        onClose: { store.closeTab(tab) }
+                    )
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+        .frame(height: 28)
+        .background(Color(white: 0.06))
+        .overlay(
+            Rectangle()
+                .fill(Color.white.opacity(0.05))
+                .frame(height: 1),
+            alignment: .bottom
+        )
+    }
+
+    private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
+        if case .creation(let c) = tab, c.id == store.selectedCreation?.id {
+            return store.hasUnsavedChanges
+        }
+        return false
+    }
+}
+
+struct OpenTabButton: View {
+    let tab: OpenTabItem
+    let isActive: Bool
+    let hasUnsavedChanges: Bool
+    let onSelect: () -> Void
+    let onClose: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: tab.icon)
+                .font(.system(size: 9))
+                .foregroundStyle(tab.iconColor)
+
+            Text(tab.name)
+                .font(.system(size: 11))
+                .lineLimit(1)
+
+            if hasUnsavedChanges {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 6, height: 6)
+            }
+
+            Button {
+                onClose()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .opacity(isHovering || isActive ? 1 : 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isActive ? Color.white.opacity(0.1) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(isActive ? Color.white.opacity(0.1) : Color.clear, lineWidth: 1)
+        )
+        .foregroundStyle(isActive ? .primary : .secondary)
+        .onHover { isHovering = $0 }
+        .onTapGesture { onSelect() }
+    }
+}
+
+// MARK: - Product Editor Panel
+
+struct ProductEditorPanel: View {
+    let product: Product
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Header
+                HStack {
+                    if let imageUrl = product.featuredImage, let url = URL(string: imageUrl) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Color.gray.opacity(0.3)
+                        }
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 80, height: 80)
+                            .overlay(
+                                Image(systemName: "leaf")
+                                    .font(.system(size: 24))
+                                    .foregroundStyle(.tertiary)
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(product.name)
+                            .font(.title2.bold())
+                        if let sku = product.sku {
+                            Text("SKU: \(sku)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        HStack(spacing: 8) {
+                            Text(product.displayPrice)
+                                .font(.headline)
+                                .foregroundStyle(.green)
+                            Text(product.stockStatusLabel)
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(product.stockStatusColor.opacity(0.2))
+                                .foregroundStyle(product.stockStatusColor)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Spacer()
+                }
+                .padding()
+                .background(Color.white.opacity(0.03))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                // Details Section
+                GroupBox("Details") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ProductFieldRow(label: "Name", value: product.name)
+                        ProductFieldRow(label: "SKU", value: product.sku ?? "-")
+                        ProductFieldRow(label: "Status", value: product.status ?? "draft")
+                        ProductFieldRow(label: "Type", value: product.type ?? "simple")
+                    }
+                }
+
+                // Pricing Section
+                GroupBox("Pricing") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ProductFieldRow(label: "Regular Price", value: product.regularPrice.map { String(format: "$%.2f", $0) } ?? "-")
+                        ProductFieldRow(label: "Sale Price", value: product.salePrice.map { String(format: "$%.2f", $0) } ?? "-")
+                        ProductFieldRow(label: "Cost Price", value: product.costPrice.map { String(format: "$%.2f", $0) } ?? "-")
+                    }
+                }
+
+                // Inventory Section
+                GroupBox("Inventory") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ProductFieldRow(label: "Stock Status", value: product.stockStatusLabel)
+                        ProductFieldRow(label: "Stock Quantity", value: product.stockQuantity.map { String(format: "%.0f", $0) } ?? "-")
+                        ProductFieldRow(label: "Manage Stock", value: (product.manageStock ?? false) ? "Yes" : "No")
+                    }
+                }
+
+                // Description
+                if let description = product.description, !description.isEmpty {
+                    GroupBox("Description") {
+                        Text(description)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding()
+        }
+        .background(Color(white: 0.08))
+    }
+}
+
+struct ProductFieldRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .foregroundStyle(.secondary)
+                .frame(width: 120, alignment: .leading)
+            Text(value)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.system(size: 12))
+    }
+}
+
+// MARK: - Welcome View
+
+struct WelcomeView: View {
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "square.grid.2x2")
+                .font(.system(size: 48))
+                .foregroundStyle(.tertiary)
+
+            Text("Select an item from the sidebar")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("Or create something new")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+
+            HStack(spacing: 12) {
+                Button {
+                    store.showNewCreationSheet = true
+                } label: {
+                    Label("New Creation", systemImage: "plus.square")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    store.showNewCollectionSheet = true
+                } label: {
+                    Label("New Collection", systemImage: "folder.badge.plus")
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.top, 8)
+
+            // Quick stats
+            if !store.creations.isEmpty || !store.products.isEmpty {
+                VStack(spacing: 8) {
+                    Divider()
+                        .padding(.vertical, 12)
+
+                    HStack(spacing: 24) {
+                        VStack {
+                            Text("\(store.creations.count)")
+                                .font(.title2.bold())
+                            Text("Creations")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        VStack {
+                            Text("\(store.products.count)")
+                                .font(.title2.bold())
+                            Text("Products")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        VStack {
+                            Text("\(store.categories.count)")
+                                .font(.title2.bold())
+                            Text("Categories")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(white: 0.08))
+    }
 }
 
 // MARK: - Sidebar Panel
@@ -662,6 +1286,7 @@ struct SidebarPanel: View {
     @Binding var sidebarCollapsed: Bool
     @State private var searchText = ""
     @State private var expandedCollectionIds: Set<UUID> = []
+    @State private var expandedCategoryIds: Set<UUID> = []
 
     var filteredCreations: [Creation] {
         if searchText.isEmpty { return store.creations }
@@ -681,37 +1306,11 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with actions
-            HStack(spacing: 4) {
-                Text("Explorer")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+            // MARK: Store Switcher (Top-level environment)
+            StoreEnvironmentHeader(store: store)
 
-                Spacer()
-
-                // New button with menu
-                Menu {
-                    Button {
-                        store.showNewCreationSheet = true
-                    } label: {
-                        Label("New Creation", systemImage: "plus.square")
-                    }
-                    Button {
-                        store.showNewCollectionSheet = true
-                    } label: {
-                        Label("New Collection", systemImage: "folder.badge.plus")
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 16)
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
+            Divider()
+                .background(Color.white.opacity(0.1))
 
             // Search
             HStack(spacing: 6) {
@@ -727,10 +1326,34 @@ struct SidebarPanel: View {
             .background(Color(white: 0.12))
             .cornerRadius(4)
             .padding(.horizontal, 8)
-            .padding(.bottom, 6)
+            .padding(.vertical, 6)
 
-            // Unified file tree
-            if store.isLoading {
+            // Content tree (only show if store is selected)
+            if store.selectedStore == nil && store.stores.isEmpty {
+                // No stores - prompt to create
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "storefront")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.tertiary)
+                    Text("No Store Selected")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Text("Create a store to get started")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    Button {
+                        store.showNewStoreSheet = true
+                    } label: {
+                        Label("Create Store", systemImage: "plus")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else if store.isLoading {
                 Spacer()
                 ProgressView()
                     .scaleEffect(0.7)
@@ -738,81 +1361,118 @@ struct SidebarPanel: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        // Collections as folders with their creations inside
-                        ForEach(store.collections) { collection in
-                            let isExpanded = expandedCollectionIds.contains(collection.id)
-                            let collectionCreations = filteredCreationsForCollection(collection.id)
+                        // MARK: CATALOG Section
+                        TreeSectionHeader(
+                            title: "CATALOG",
+                            isExpanded: $store.sidebarCatalogExpanded,
+                            count: store.products.count
+                        )
 
-                            // Collection folder row
-                            CollectionTreeItem(
-                                collection: collection,
-                                isExpanded: isExpanded,
-                                itemCount: collectionCreations.count,
-                                onToggle: {
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        if expandedCollectionIds.contains(collection.id) {
-                                            expandedCollectionIds.remove(collection.id)
-                                        } else {
-                                            expandedCollectionIds.insert(collection.id)
-                                        }
-                                    }
-                                }
-                            )
-                            .contextMenu {
-                                Button("Delete", role: .destructive) {
-                                    Task { await store.deleteCollection(collection) }
-                                }
+                        if store.sidebarCatalogExpanded {
+                            // Show only top-level categories first
+                            ForEach(store.topLevelCategories) { category in
+                                CategoryHierarchyView(
+                                    category: category,
+                                    store: store,
+                                    expandedCategoryIds: $expandedCategoryIds,
+                                    indentLevel: 0
+                                )
                             }
 
-                            // Creations inside this collection (when expanded)
-                            if isExpanded {
-                                ForEach(collectionCreations) { creation in
-                                    CreationTreeItem(
-                                        creation: creation,
-                                        isSelected: store.selectedCreationIds.contains(creation.id),
-                                        isActive: store.selectedCreation?.id == creation.id,
-                                        indentLevel: 1
+                            // Uncategorized products at the bottom
+                            if !store.uncategorizedProducts.isEmpty {
+                                ForEach(store.uncategorizedProducts) { product in
+                                    ProductTreeItem(
+                                        product: product,
+                                        isSelected: store.selectedProductIds.contains(product.id),
+                                        isActive: store.selectedProduct?.id == product.id,
+                                        indentLevel: 0
                                     )
                                     .onTapGesture {
-                                        store.selectCreation(creation, in: store.creations)
+                                        store.selectProduct(product)
                                     }
                                     .contextMenu {
                                         Button("Delete", role: .destructive) {
-                                            Task { await store.deleteCreation(creation) }
+                                            Task { await store.deleteProduct(product) }
                                         }
                                     }
                                 }
                             }
+
+                            // Empty state for catalog
+                            if store.categories.isEmpty && store.products.isEmpty {
+                                HStack {
+                                    Spacer()
+                                    Text("No products yet")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.tertiary)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 8)
+                            }
                         }
 
-                        // Orphan creations (not in any collection)
-                        if !filteredOrphanCreations.isEmpty {
-                            if !store.collections.isEmpty {
-                                Divider()
-                                    .padding(.vertical, 6)
-                                    .padding(.horizontal, 8)
+                        // MARK: CREATIONS Section
+                        TreeSectionHeader(
+                            title: "CREATIONS",
+                            isExpanded: $store.sidebarCreationsExpanded,
+                            count: store.creations.count
+                        )
+                        .padding(.top, 8)
+
+                        if store.sidebarCreationsExpanded {
+                            // Collections as folders with their creations inside
+                            ForEach(store.collections) { collection in
+                                let isExpanded = expandedCollectionIds.contains(collection.id)
+                                let collectionCreations = filteredCreationsForCollection(collection.id)
+
+                                CollectionTreeItem(
+                                    collection: collection,
+                                    isExpanded: isExpanded,
+                                    itemCount: collectionCreations.count,
+                                    onToggle: {
+                                        withAnimation(.easeInOut(duration: 0.15)) {
+                                            if expandedCollectionIds.contains(collection.id) {
+                                                expandedCollectionIds.remove(collection.id)
+                                            } else {
+                                                expandedCollectionIds.insert(collection.id)
+                                            }
+                                        }
+                                    }
+                                )
+                                .contextMenu {
+                                    Button("Delete", role: .destructive) {
+                                        Task { await store.deleteCollection(collection) }
+                                    }
+                                }
+
+                                if isExpanded {
+                                    ForEach(collectionCreations) { creation in
+                                        CreationTreeItem(
+                                            creation: creation,
+                                            isSelected: store.selectedCreationIds.contains(creation.id),
+                                            isActive: store.selectedCreation?.id == creation.id,
+                                            indentLevel: 1
+                                        )
+                                        .onTapGesture {
+                                            store.selectCreation(creation, in: store.creations)
+                                        }
+                                        .contextMenu {
+                                            Button("Delete", role: .destructive) {
+                                                Task { await store.deleteCreation(creation) }
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
+                            // Orphan creations (not in any collection)
                             ForEach(filteredOrphanCreations) { creation in
                                 CreationTreeItem(
                                     creation: creation,
                                     isSelected: store.selectedCreationIds.contains(creation.id),
                                     isActive: store.selectedCreation?.id == creation.id,
                                     indentLevel: 0
-                                )
-                                .gesture(
-                                    TapGesture()
-                                        .modifiers(.command)
-                                        .onEnded { _ in
-                                            store.selectCreation(creation, add: true, in: store.creations)
-                                        }
-                                )
-                                .gesture(
-                                    TapGesture()
-                                        .modifiers(.shift)
-                                        .onEnded { _ in
-                                            store.selectCreation(creation, range: true, in: store.creations)
-                                        }
                                 )
                                 .onTapGesture {
                                     store.selectCreation(creation, in: store.creations)
@@ -829,13 +1489,382 @@ struct SidebarPanel: View {
                                     }
                                 }
                             }
+
+                            // Empty state for creations
+                            if store.creations.isEmpty {
+                                HStack {
+                                    Spacer()
+                                    VStack(spacing: 4) {
+                                        Text("No creations yet")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.tertiary)
+                                        Button {
+                                            store.showNewCreationSheet = true
+                                        } label: {
+                                            Text("Create one")
+                                                .font(.system(size: 10))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .foregroundStyle(.blue)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 8)
+                            }
                         }
                     }
                     .padding(.vertical, 4)
                 }
             }
         }
-        .background(Color(white: 0.11))
+        .background(Color(white: 0.03))
+    }
+}
+
+// MARK: - Store Environment Header (Slack/Discord style workspace switcher)
+
+struct StoreEnvironmentHeader: View {
+    @ObservedObject var store: EditorStore
+    @State private var isHovering = false
+
+    var body: some View {
+        Menu {
+            // Current stores
+            if !store.stores.isEmpty {
+                Section("Your Stores") {
+                    ForEach(store.stores) { s in
+                        Button {
+                            Task { await store.selectStore(s) }
+                        } label: {
+                            HStack {
+                                if let logoUrl = s.logoUrl, let url = URL(string: logoUrl) {
+                                    AsyncImage(url: url) { image in
+                                        image.resizable().aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Image(systemName: "storefront.fill")
+                                    }
+                                    .frame(width: 16, height: 16)
+                                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                                } else {
+                                    Image(systemName: "storefront.fill")
+                                        .frame(width: 16, height: 16)
+                                }
+                                Text(s.storeName)
+                                Spacer()
+                                if store.selectedStore?.id == s.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+            }
+
+            // Create new store
+            Button {
+                store.showNewStoreSheet = true
+            } label: {
+                Label("Create New Store", systemImage: "plus.circle")
+            }
+
+            // Store settings (if store selected)
+            if store.selectedStore != nil {
+                Divider()
+                Button {
+                    // TODO: Open store settings
+                } label: {
+                    Label("Store Settings", systemImage: "gear")
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                // Store icon/logo
+                if let selectedStore = store.selectedStore {
+                    if let logoUrl = selectedStore.logoUrl, let url = URL(string: logoUrl) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            storeIconPlaceholder
+                        }
+                        .frame(width: 28, height: 28)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        storeIconPlaceholder
+                    }
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(selectedStore.storeName)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text(selectedStore.storeType?.capitalized ?? "Store")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                } else {
+                    storeIconPlaceholder
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Select Store")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        Text("No store selected")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(isHovering ? Color.white.opacity(0.05) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+    }
+
+    private var storeIconPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(Color.green.opacity(0.2))
+            .frame(width: 28, height: 28)
+            .overlay(
+                Image(systemName: "storefront.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.green)
+            )
+    }
+}
+
+
+// MARK: - Category Hierarchy View (Recursive)
+
+struct CategoryHierarchyView: View {
+    let category: Category
+    @ObservedObject var store: EditorStore
+    @Binding var expandedCategoryIds: Set<UUID>
+    var indentLevel: Int = 0
+
+    @State private var isHovering = false
+
+    private var isExpanded: Bool {
+        expandedCategoryIds.contains(category.id)
+    }
+
+    private var childCategories: [Category] {
+        store.childCategories(of: category.id)
+    }
+
+    private var directProducts: [Product] {
+        store.productsForCategory(category.id)
+    }
+
+    private var hasChildren: Bool {
+        !childCategories.isEmpty || !directProducts.isEmpty
+    }
+
+    private var totalCount: Int {
+        store.totalProductCount(category.id)
+    }
+
+    private var directCount: Int {
+        store.directProductCount(category.id)
+    }
+
+    private var subCategoryCount: Int {
+        childCategories.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Category header row
+            HStack(spacing: 4) {
+                // Chevron - only show if has children
+                if hasChildren {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 12)
+                } else {
+                    Spacer().frame(width: 12)
+                }
+
+                // Folder icon
+                Image(systemName: category.icon ?? (isExpanded ? "folder.fill" : "folder"))
+                    .font(.system(size: 10))
+                    .foregroundStyle(isHovering ? .green : .green.opacity(0.8))
+                    .frame(width: 14)
+
+                Text(category.name)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+
+                Spacer()
+
+                // Show subcategory count on hover, otherwise total product count
+                if isHovering && subCategoryCount > 0 {
+                    Text("\(subCategoryCount) sub")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.tertiary)
+                        .padding(.trailing, 2)
+                }
+
+                // Show total count (including subcategories)
+                if totalCount > 0 {
+                    Text("\(totalCount)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                        .padding(.trailing, 4)
+                }
+            }
+            .padding(.leading, CGFloat(8 + indentLevel * 16))
+            .padding(.trailing, 4)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isHovering ? Color.white.opacity(0.04) : Color.clear)
+            )
+            .contentShape(Rectangle())
+            .onHover { isHovering = $0 }
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    if expandedCategoryIds.contains(category.id) {
+                        expandedCategoryIds.remove(category.id)
+                    } else {
+                        expandedCategoryIds.insert(category.id)
+                    }
+                }
+            }
+
+            // Expanded content: subcategories first, then products
+            if isExpanded {
+                // Child categories (recursive)
+                ForEach(childCategories) { childCategory in
+                    CategoryHierarchyView(
+                        category: childCategory,
+                        store: store,
+                        expandedCategoryIds: $expandedCategoryIds,
+                        indentLevel: indentLevel + 1
+                    )
+                }
+
+                // Direct products in this category
+                ForEach(directProducts) { product in
+                    ProductTreeItem(
+                        product: product,
+                        isSelected: store.selectedProductIds.contains(product.id),
+                        isActive: store.selectedProduct?.id == product.id,
+                        indentLevel: indentLevel + 1
+                    )
+                    .onTapGesture {
+                        store.selectProduct(product)
+                    }
+                    .contextMenu {
+                        Button("Delete", role: .destructive) {
+                            Task { await store.deleteProduct(product) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Category Tree Item (Simple - for non-recursive use)
+
+struct CategoryTreeItem: View {
+    let category: Category
+    let isExpanded: Bool
+    var itemCount: Int = 0
+    var indentLevel: Int = 0
+    let onToggle: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                .font(.system(size: 8))
+                .foregroundStyle(.tertiary)
+                .frame(width: 12)
+
+            Image(systemName: category.icon ?? (isExpanded ? "folder.fill" : "folder"))
+                .font(.system(size: 10))
+                .foregroundStyle(.green)
+                .frame(width: 14)
+
+            Text(category.name)
+                .font(.system(size: 11))
+                .lineLimit(1)
+
+            Spacer()
+
+            if itemCount > 0 {
+                Text("\(itemCount)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+                    .padding(.trailing, 4)
+            }
+        }
+        .padding(.leading, CGFloat(8 + indentLevel * 16))
+        .padding(.trailing, 4)
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .onTapGesture { onToggle() }
+    }
+}
+
+// MARK: - Product Tree Item
+
+struct ProductTreeItem: View {
+    let product: Product
+    let isSelected: Bool
+    let isActive: Bool
+    var indentLevel: Int = 0
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "leaf")
+                .font(.system(size: 9))
+                .foregroundStyle(.green)
+                .frame(width: 14)
+
+            Text(product.name)
+                .font(.system(size: 11))
+                .lineLimit(1)
+
+            Spacer()
+
+            // Price on hover
+            if isHovering || isActive {
+                Text(product.displayPrice)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+            }
+
+            // Stock indicator
+            Circle()
+                .fill(product.stockStatusColor)
+                .frame(width: 6, height: 6)
+        }
+        .padding(.leading, CGFloat(8 + indentLevel * 16))
+        .padding(.trailing, 8)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isActive ? Color.accentColor.opacity(0.3) :
+                      isSelected ? Color.white.opacity(0.08) :
+                      isHovering ? Color.white.opacity(0.04) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
     }
 }
 
@@ -1008,6 +2037,53 @@ struct FilterChip: View {
                 .cornerRadius(3)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Store Picker Row
+
+struct StorePickerRow: View {
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        Menu {
+            ForEach(store.stores) { s in
+                Button {
+                    Task { await store.selectStore(s) }
+                } label: {
+                    HStack {
+                        Text(s.storeName)
+                        if store.selectedStore?.id == s.id {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "storefront")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.green)
+
+                Text(store.selectedStore?.storeName ?? "Select Store")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color(white: 0.12))
+            .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .padding(.bottom, 4)
     }
 }
 
@@ -2487,5 +3563,113 @@ struct NewCollectionSheet: View {
         }
         .frame(width: 350, height: 250)
         .background(Color(white: 0.12))
+    }
+}
+
+// MARK: - New Store Sheet
+
+struct NewStoreSheet: View {
+    @ObservedObject var store: EditorStore
+    @ObservedObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var email = ""
+    @State private var isCreating = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Create New Store")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(white: 0.15))
+
+            // Form
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Store Name")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("My Store", text: $name)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(white: 0.18))
+                        .cornerRadius(6)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Contact Email")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    TextField("store@example.com", text: $email)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(white: 0.18))
+                        .cornerRadius(6)
+                }
+
+                Text("The store will be your workspace for managing products, creations, and settings.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+
+            Spacer()
+
+            // Actions
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button {
+                    isCreating = true
+                    Task {
+                        await store.createStore(
+                            name: name,
+                            email: email.isEmpty ? (authManager.currentUser?.email ?? "no-email@example.com") : email,
+                            ownerUserId: authManager.currentUser?.id
+                        )
+                        isCreating = false
+                        dismiss()
+                    }
+                } label: {
+                    if isCreating {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 60)
+                    } else {
+                        Text("Create Store")
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.isEmpty || isCreating)
+            }
+            .padding()
+            .background(Color(white: 0.15))
+        }
+        .frame(width: 350, height: 280)
+        .background(Color(white: 0.12))
+        .onAppear {
+            // Pre-fill email from current user
+            if let userEmail = authManager.currentUser?.email {
+                email = userEmail
+            }
+        }
     }
 }

@@ -117,6 +117,7 @@ struct Creation: Codable, Identifiable, Hashable {
     var isTemplate: Bool?
     var ownerUserId: UUID?
     var templateSourceId: UUID?
+    var deletedAt: String?  // Soft delete timestamp (as string to avoid decoding issues)
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -164,6 +165,7 @@ struct Creation: Codable, Identifiable, Hashable {
         case isTemplate = "is_template"
         case ownerUserId = "owner_user_id"
         case templateSourceId = "template_source_id"
+        case deletedAt = "deleted_at"
     }
 
     func hash(into hasher: inout Hasher) {

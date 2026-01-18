@@ -5,7 +5,28 @@ struct ContentView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        EditorView()
+        Group {
+            if authManager.isLoading {
+                loadingView
+            } else if authManager.isAuthenticated {
+                EditorView()
+            } else {
+                AuthView()
+            }
+        }
+    }
+
+    private var loadingView: some View {
+        VStack {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Loading...")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(white: 0.08))
     }
 }
 
