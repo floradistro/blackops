@@ -1,0 +1,25 @@
+# Build artifacts
+.build/
+.swiftpm/
+DerivedData/
+
+# macOS
+.DS_Store
+*.xcuserstate
+
+# Xcode
+*.xcworkspace
+xcuserdata/
+
+# Environment files
+.env
+.env.*
+*.local
+
+# Node modules
+node_modules/
+
+# Secrets - do not commit
+*.pem
+*.key
+credentials.json
