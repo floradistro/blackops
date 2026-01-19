@@ -289,6 +289,7 @@ struct Product: Codable, Identifiable, Hashable {
     var stockStatusColor: Color {
         switch stockStatus {
         case "instock": return .green
+        case "lowstock": return .orange
         case "outofstock": return .red
         case "onbackorder": return .orange
         default: return .gray
@@ -298,6 +299,7 @@ struct Product: Codable, Identifiable, Hashable {
     var stockStatusLabel: String {
         switch stockStatus {
         case "instock": return "In Stock"
+        case "lowstock": return "Low Stock"
         case "outofstock": return "Out of Stock"
         case "onbackorder": return "Backorder"
         default: return stockStatus ?? "Unknown"
