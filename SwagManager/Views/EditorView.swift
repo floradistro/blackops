@@ -1584,10 +1584,10 @@ class EditorStore: ObservableObject {
             case "description": update.description = value as? String
             case "sku": update.sku = value as? String
             case "status": update.status = value as? String
-            case "price": update.price = value as? Double
-            case "regularPrice": update.regularPrice = value as? Double
-            case "salePrice": update.salePrice = value as? Double
-            case "stockQuantity": update.stockQuantity = value as? Double
+            case "stockQuantity":
+                if let doubleVal = value as? Double {
+                    update.stockQuantity = Int(doubleVal)
+                }
             case "stockStatus": update.stockStatus = value as? String
             default: break
             }
@@ -2211,199 +2211,346 @@ struct ProductEditorPanel: View {
     let product: Product
     @ObservedObject var store: EditorStore
 
-    @State private var customFields: [FieldSchema] = []
-    @State private var isLoadingExtras = true
+    @State private var editedName: String
+    @State private var editedSKU: String
+    @State private var editedDescription: String
+    @State private var editedShortDescription: String
+    @State private var hasChanges = false
+    @State private var fieldSchemas: [FieldSchema] = []
+    @State private var pricingSchemaName: String?
+    @State private var stockByLocation: [(locationName: String, quantity: Int)] = []
+
+    init(product: Product, store: EditorStore) {
+        self.product = product
+        self.store = store
+
+        _editedName = State(initialValue: product.name)
+        _editedSKU = State(initialValue: product.sku ?? "")
+        _editedDescription = State(initialValue: product.description ?? "")
+        _editedShortDescription = State(initialValue: product.shortDescription ?? "")
+    }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            LazyVStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    if let imageUrl = product.featuredImage, let url = URL(string: imageUrl) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Header with image and name
+                HStack(spacing: 16) {
+                    if let imageUrl = product.featuredImage {
+                        AsyncImage(url: URL(string: imageUrl)) { image in
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
                         } placeholder: {
-                            Theme.bgElevated
+                            Rectangle()
+                                .fill(Color(white: 0.15))
                         }
                         .frame(width: 80, height: 80)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Theme.bgElevated)
-                            .frame(width: 80, height: 80)
-                            .overlay(
-                                Image(systemName: "leaf")
-                                    .font(.system(size: 24))
-                                    .foregroundStyle(.tertiary)
-                            )
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(product.name)
-                            .font(.title2.bold())
-                        if let sku = product.sku {
-                            Text("SKU: \(sku)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        HStack(spacing: 8) {
-                            Text(product.displayPrice)
-                                .font(.headline)
-                                .foregroundStyle(.green)
-                            Text(product.stockStatusLabel)
-                                .font(.caption)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(product.stockStatusColor.opacity(0.2))
-                                .foregroundStyle(product.stockStatusColor)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(Theme.bgTertiary)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("Product Name", text: $editedName)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 18, weight: .semibold))
+                            .onChange(of: editedName) { _, _ in hasChanges = true }
 
-                // Details Section
-                GroupBox("Details") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ProductFieldRow(label: "Name", value: product.name)
-                        ProductFieldRow(label: "SKU", value: product.sku ?? "-")
-                        ProductFieldRow(label: "Status", value: product.status ?? "draft")
-                        ProductFieldRow(label: "Type", value: product.type ?? "simple")
+                        Text(product.sku ?? "No SKU")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
 
-                // Pricing Section
-                GroupBox("Pricing") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ProductFieldRow(label: "Regular Price", value: product.regularPrice.map { String(format: "$%.2f", $0) } ?? "-")
-                        ProductFieldRow(label: "Sale Price", value: product.salePrice.map { String(format: "$%.2f", $0) } ?? "-")
-                        ProductFieldRow(label: "Cost Price", value: product.costPrice.map { String(format: "$%.2f", $0) } ?? "-")
-                    }
-                }
+                Divider()
+                    .padding(.vertical, 8)
 
-                // Inventory Section
-                GroupBox("Inventory") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ProductFieldRow(label: "Stock Status", value: product.stockStatusLabel)
-                        ProductFieldRow(label: "Stock Quantity", value: product.stockQuantity.map { String(format: "%.0f", $0) } ?? "-")
-                        ProductFieldRow(label: "Manage Stock", value: (product.manageStock ?? false) ? "Yes" : "No")
-                    }
+                // Product Information
+                SectionHeader(title: "Product Information")
+                VStack(spacing: 10) {
+                    EditableRow(label: "SKU", text: $editedSKU, hasChanges: $hasChanges)
+                    InfoRow(label: "Type", value: product.type ?? "-")
+                    InfoRow(label: "Status", value: product.status ?? "-")
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+
+                Divider()
+                    .padding(.vertical, 8)
 
                 // Description
-                if let description = product.description, !description.isEmpty {
-                    GroupBox("Description") {
-                        Text(description)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
+                SectionHeader(title: "Description")
+                VStack(spacing: 16) {
+                    GlassTextEditor(
+                        label: "Full Description",
+                        text: $editedDescription,
+                        minHeight: 80,
+                        hasChanges: $hasChanges
+                    )
 
-                // Short Description
-                if let shortDesc = product.shortDescription, !shortDesc.isEmpty {
-                    GroupBox("Short Description") {
-                        Text(shortDesc)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    GlassTextEditor(
+                        label: "Short Description",
+                        text: $editedShortDescription,
+                        minHeight: 60,
+                        hasChanges: $hasChanges
+                    )
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
 
-                // Dimensions & Weight
-                if product.weight != nil || product.length != nil || product.width != nil || product.height != nil {
-                    GroupBox("Dimensions & Weight") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if let weight = product.weight {
-                                ProductFieldRow(label: "Weight", value: String(format: "%.2f lbs", weight))
-                            }
-                            if let length = product.length {
-                                ProductFieldRow(label: "Length", value: String(format: "%.2f in", length))
-                            }
-                            if let width = product.width {
-                                ProductFieldRow(label: "Width", value: String(format: "%.2f in", width))
-                            }
-                            if let height = product.height {
-                                ProductFieldRow(label: "Height", value: String(format: "%.2f in", height))
-                            }
-                        }
-                    }
-                }
+                Divider()
+                    .padding(.vertical, 8)
 
-                // Wholesale
-                if product.isWholesale == true || product.wholesalePrice != nil {
-                    GroupBox("Wholesale") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ProductFieldRow(label: "Is Wholesale", value: (product.isWholesale ?? false) ? "Yes" : "No")
-                            ProductFieldRow(label: "Wholesale Only", value: (product.wholesaleOnly ?? false) ? "Yes" : "No")
-                            if let wholesalePrice = product.wholesalePrice {
-                                ProductFieldRow(label: "Wholesale Price", value: String(format: "$%.2f", wholesalePrice))
-                            }
-                        }
-                    }
+                // Pricing
+                if let pricingData = product.pricingData {
+                    ProductPricingSection(pricingData: pricingData, schemaName: pricingSchemaName)
+                        .padding(.bottom, 16)
+
+                    Divider()
+                        .padding(.vertical, 8)
                 }
 
                 // Custom Fields
-                if !customFields.isEmpty {
-                    CustomFieldsSection(schemas: customFields, fieldValues: product.fieldValues)
+                if !fieldSchemas.isEmpty {
+                    CustomFieldsSection(schemas: fieldSchemas, fieldValues: product.customFields)
+                        .padding(.bottom, 16)
+
+                    Divider()
+                        .padding(.vertical, 8)
                 }
 
-                // Pricing Tiers (from product's pricing_data)
-                if let pricingData = product.pricingData {
-                    ProductPricingSection(pricingData: pricingData)
-                }
-
-                // Image Gallery
-                if let gallery = product.imageGallery, !gallery.isEmpty {
-                    GroupBox("Image Gallery") {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(gallery, id: \.self) { imageUrlString in
-                                    if let url = URL(string: imageUrlString) {
-                                        AsyncImage(url: url) { image in
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                        } placeholder: {
-                                            Theme.bgElevated
-                                        }
-                                        .frame(width: 100, height: 100)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    }
-                                }
+                // Stock by Location
+                if !stockByLocation.isEmpty {
+                    SectionHeader(title: "Stock by Location")
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(stockByLocation, id: \.locationName) { location in
+                            HStack {
+                                Text(location.locationName)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text("\(location.quantity)")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(location.quantity > 0 ? Theme.green : .secondary)
                             }
+                            .padding(.vertical, 4)
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+
+                    Divider()
+                        .padding(.vertical, 8)
                 }
 
-                Spacer()
+                // Costs & Wholesale
+                SectionHeader(title: "Costs")
+                VStack(spacing: 10) {
+                    if let costPrice = product.costPrice {
+                        InfoRow(label: "Cost Price", value: String(format: "$%.2f", NSDecimalNumber(decimal: costPrice).doubleValue))
+                    }
+                    if let wholesalePrice = product.wholesalePrice {
+                        InfoRow(label: "Wholesale Price", value: String(format: "$%.2f", NSDecimalNumber(decimal: wholesalePrice).doubleValue))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
-            .padding()
         }
-        .scrollContentBackground(.hidden)
-        .scrollIndicators(.automatic)
-        .task {
-            await loadProductExtras()
+        .toolbar {
+            if hasChanges {
+                ToolbarItemGroup(placement: .confirmationAction) {
+                    Button("Cancel") {
+                        resetChanges()
+                    }
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .onAppear {
+            loadData()
         }
     }
 
-    private func loadProductExtras() async {
-        guard let categoryId = product.primaryCategoryId else {
-            isLoadingExtras = false
-            return
+    private func loadData() {
+        Task {
+            // Load field schemas
+            if let categoryId = product.primaryCategoryId {
+                do {
+                    let schemas = try await store.supabase.fetchFieldSchemasForCategory(categoryId: categoryId)
+                    await MainActor.run {
+                        self.fieldSchemas = schemas
+                    }
+                } catch {
+                    print("Error loading field schemas: \(error)")
+                }
+            }
+
+            // Load pricing schema name
+            if let schemaId = product.pricingSchemaId {
+                do {
+                    let response = try await store.supabase.client
+                        .from("pricing_schemas")
+                        .select("name")
+                        .eq("id", value: schemaId.uuidString)
+                        .single()
+                        .execute()
+
+                    if let json = try? JSONSerialization.jsonObject(with: response.data) as? [String: Any],
+                       let name = json["name"] as? String {
+                        await MainActor.run {
+                            self.pricingSchemaName = name
+                        }
+                    }
+                } catch {
+                    print("Error loading pricing schema: \(error)")
+                }
+            }
+
+            // Load stock by location
+            do {
+                let response = try await store.supabase.client
+                    .from("inventory_products")
+                    .select("quantity, location:locations(name)")
+                    .eq("product_id", value: product.id.uuidString)
+                    .execute()
+
+                if let items = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
+                    var locations: [(String, Int)] = []
+                    for item in items {
+                        if let locationDict = item["location"] as? [String: Any],
+                           let locationName = locationDict["name"] as? String,
+                           let quantity = item["quantity"] as? Int {
+                            locations.append((locationName, quantity))
+                        }
+                    }
+                    await MainActor.run {
+                        self.stockByLocation = locations.sorted { $0.0 < $1.0 }
+                    }
+                }
+            } catch {
+                print("Error loading stock by location: \(error)")
+            }
         }
+    }
 
-        do {
-            // Load field schemas assigned to this category via junction table
-            customFields = try await store.supabase.fetchFieldSchemasForCategory(categoryId: categoryId)
+    private func resetChanges() {
+        editedName = product.name
+        editedSKU = product.sku ?? ""
+        editedDescription = product.description ?? ""
+        editedShortDescription = product.shortDescription ?? ""
+        hasChanges = false
+    }
 
-            isLoadingExtras = false
-        } catch {
-            print("Failed to load product extras: \(error)")
-            isLoadingExtras = false
+    private func saveChanges() {
+        Task {
+            do {
+                var updates: [String: Any] = [:]
+
+                if editedName != product.name {
+                    updates["name"] = editedName
+                }
+                if editedSKU != (product.sku ?? "") {
+                    updates["sku"] = editedSKU.isEmpty ? nil : editedSKU
+                }
+                if editedDescription != (product.description ?? "") {
+                    updates["description"] = editedDescription.isEmpty ? nil : editedDescription
+                }
+                if editedShortDescription != (product.shortDescription ?? "") {
+                    updates["short_description"] = editedShortDescription.isEmpty ? nil : editedShortDescription
+                }
+
+                if !updates.isEmpty {
+                    let jsonData = try JSONSerialization.data(withJSONObject: updates)
+                    try await store.supabase.client
+                        .from("products")
+                        .update(jsonData)
+                        .eq("id", value: product.id.uuidString)
+                        .execute()
+
+                    // Reload products
+                    await store.loadCatalogData()
+
+                    await MainActor.run {
+                        hasChanges = false
+                    }
+                }
+            } catch {
+                print("Error saving changes: \(error)")
+            }
+        }
+    }
+}
+
+// Helper components for clean list UI
+struct SectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .tracking(0.5)
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 10)
+    }
+}
+
+struct EditableRow: View {
+    let label: String
+    @Binding var text: String
+    @Binding var hasChanges: Bool
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .foregroundStyle(.secondary)
+                .frame(width: 120, alignment: .leading)
+                .font(.system(size: 12))
+
+            TextField("", text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .padding(.vertical, 7)
+                .padding(.horizontal, 10)
+                .background {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Theme.bgTertiary)
+
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Theme.glass)
+
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(isFocused ? Theme.accent.opacity(0.5) : Theme.borderSubtle, lineWidth: 1)
+                    }
+                }
+                .focused($isFocused)
+                .animation(.easeInOut(duration: 0.15), value: isFocused)
+                .onChange(of: text) { _, _ in hasChanges = true }
+        }
+    }
+}
+
+struct InfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .foregroundStyle(.secondary)
+                .frame(width: 120, alignment: .leading)
+                .font(.system(size: 12))
+            Text(value)
+                .font(.system(size: 12))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -2424,6 +2571,43 @@ struct ProductFieldRow: View {
     }
 }
 
+struct GlassTextEditor: View {
+    let label: String
+    @Binding var text: String
+    let minHeight: CGFloat
+    @Binding var hasChanges: Bool
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            TextEditor(text: $text)
+                .frame(minHeight: minHeight)
+                .font(.system(size: 12))
+                .padding(10)
+                .scrollContentBackground(.hidden)
+                .background {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.bgTertiary)
+
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.glass)
+
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isFocused ? Theme.accent.opacity(0.5) : Theme.borderSubtle, lineWidth: 1)
+                    }
+                }
+                .focused($isFocused)
+                .animation(.easeInOut(duration: 0.15), value: isFocused)
+                .onChange(of: text) { _, _ in hasChanges = true }
+        }
+    }
+}
+
 // MARK: - Custom Fields Section
 
 struct CustomFieldsSection: View {
@@ -2431,29 +2615,54 @@ struct CustomFieldsSection: View {
     let fieldValues: [String: AnyCodable]?
 
     var body: some View {
-        GroupBox("Custom Fields") {
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(schemas, id: \.id) { schema in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(schema.name)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.text)
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(title: "Custom Fields")
 
-                        ForEach(schema.fields, id: \.fieldId) { field in
-                            ProductFieldRow(
-                                label: field.displayLabel,
-                                value: getFieldValue(field)
-                            )
+            VStack(alignment: .leading, spacing: 18) {
+                ForEach(schemas, id: \.id) { schema in
+                    // Only show fields that have actual values
+                    let fieldsWithValues = schema.fields.filter { hasFieldValue($0) }
+
+                    if !fieldsWithValues.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(schema.name)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                                .tracking(0.3)
+
+                            VStack(spacing: 8) {
+                                ForEach(fieldsWithValues, id: \.fieldId) { field in
+                                    HStack(spacing: 12) {
+                                        Text(field.displayLabel)
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 120, alignment: .leading)
+                                            .font(.system(size: 12))
+                                        Text(getFieldValue(field))
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.primary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                            }
                         }
                     }
-                    .padding(.vertical, 4)
                 }
             }
+            .padding(.horizontal, 20)
         }
     }
 
+    private func hasFieldValue(_ field: FieldDefinition) -> Bool {
+        guard let fieldKey = field.key,
+              let fieldValues = fieldValues else {
+            return false
+        }
+        return fieldValues[fieldKey] != nil
+    }
+
     private func getFieldValue(_ field: FieldDefinition) -> String {
-        // Try to get actual value from product's field_values
+        // Try to get actual value from product's custom_fields
         if let fieldKey = field.key,
            let fieldValues = fieldValues,
            let actualValue = fieldValues[fieldKey] {
@@ -2473,34 +2682,55 @@ struct CustomFieldsSection: View {
 
 struct ProductPricingSection: View {
     let pricingData: AnyCodable
+    let schemaName: String?
 
     var body: some View {
         let tiers = extractTiers()
 
         if !tiers.isEmpty {
-            GroupBox("Pricing Tiers") {
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(tiers.enumerated()), id: \.offset) { index, tierDict in
-                        HStack {
-                            Text(extractLabel(from: tierDict))
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
+            let title = schemaName.map { "\($0) Pricing" } ?? "Pricing Tiers"
+            VStack(alignment: .leading, spacing: 0) {
+                SectionHeader(title: title)
 
-                            if let qty = extractQuantity(from: tierDict) {
-                                let unit = tierDict["unit"] as? String ?? "units"
-                                Text("(\(formatQuantity(qty)) \(unit))")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(tiers.enumerated()), id: \.offset) { index, tierDict in
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(extractLabel(from: tierDict))
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.primary)
+
+                                if let qty = extractQuantity(from: tierDict) {
+                                    let unit = tierDict["unit"] as? String ?? "units"
+                                    Text("(\(formatQuantity(qty)) \(unit))")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                }
                             }
 
                             Spacer()
 
                             Text(extractPrice(from: tierDict))
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Theme.green)
+                        }
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .background {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Theme.bgTertiary)
+
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Theme.glass)
+
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Theme.borderSubtle, lineWidth: 1)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 20)
             }
         }
     }
@@ -2541,20 +2771,34 @@ struct ProductPricingSection: View {
     }
 
     private func extractPrice(from dict: [String: Any]) -> String {
-        // Try default_price first
+        // Try default_price first (various types for PostgreSQL numeric compatibility)
         if let price = dict["default_price"] as? Double {
             return String(format: "$%.2f", price)
+        }
+        if let price = dict["default_price"] as? Decimal {
+            return String(format: "$%.2f", NSDecimalNumber(decimal: price).doubleValue)
         }
         if let price = dict["default_price"] as? Int {
             return String(format: "$%.2f", Double(price))
         }
+        if let priceStr = dict["default_price"] as? String, let price = Double(priceStr) {
+            return String(format: "$%.2f", price)
+        }
+
         // Try price field
         if let price = dict["price"] as? Double {
             return String(format: "$%.2f", price)
         }
+        if let price = dict["price"] as? Decimal {
+            return String(format: "$%.2f", NSDecimalNumber(decimal: price).doubleValue)
+        }
         if let price = dict["price"] as? Int {
             return String(format: "$%.2f", Double(price))
         }
+        if let priceStr = dict["price"] as? String, let price = Double(priceStr) {
+            return String(format: "$%.2f", price)
+        }
+
         return "-"
     }
 
@@ -6185,4 +6429,6 @@ struct BrowserAddressField: View {
         .cornerRadius(6)
     }
 }
+
+import SwiftUI
 
