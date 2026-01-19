@@ -2472,32 +2472,65 @@ struct CustomFieldsSection: View {
 // MARK: - Pricing Schemas Section
 
 struct ProductPricingSection: View {
-    let pricingData: [PricingTier]
+    let pricingData: [AnyCodable]
 
     var body: some View {
         GroupBox("Pricing Tiers") {
             VStack(alignment: .leading, spacing: 12) {
-                ForEach(pricingData, id: \.id) { tier in
-                    HStack {
-                        Text(tier.label ?? "\(tier.id)")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
+                ForEach(Array(pricingData.enumerated()), id: \.offset) { index, tierData in
+                    if let tierDict = tierData.value as? [String: Any] {
+                        HStack {
+                            Text(extractLabel(from: tierDict))
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
 
-                        if let qty = tier.quantity {
-                            Text("(\(formatQuantity(qty)) \(tier.unit ?? "units"))")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
+                            if let qty = extractQuantity(from: tierDict) {
+                                let unit = tierDict["unit"] as? String ?? "units"
+                                Text("(\(formatQuantity(qty)) \(unit))")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                            }
+
+                            Spacer()
+
+                            Text(extractPrice(from: tierDict))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Theme.green)
                         }
-
-                        Spacer()
-
-                        Text(String(format: "$%.2f", tier.defaultPrice ?? 0))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.green)
                     }
                 }
             }
         }
+    }
+
+    private func extractLabel(from dict: [String: Any]) -> String {
+        if let label = dict["label"] as? String {
+            return label
+        }
+        if let id = dict["id"] as? String {
+            return id
+        }
+        return "Tier"
+    }
+
+    private func extractQuantity(from dict: [String: Any]) -> Double? {
+        if let qty = dict["quantity"] as? Double {
+            return qty
+        }
+        if let qty = dict["quantity"] as? Int {
+            return Double(qty)
+        }
+        return nil
+    }
+
+    private func extractPrice(from dict: [String: Any]) -> String {
+        if let price = dict["default_price"] as? Double {
+            return String(format: "$%.2f", price)
+        }
+        if let price = dict["default_price"] as? Int {
+            return String(format: "$%.2f", Double(price))
+        }
+        return "-"
     }
 
     private func formatQuantity(_ qty: Double) -> String {
