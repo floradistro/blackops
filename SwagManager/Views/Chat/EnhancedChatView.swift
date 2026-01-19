@@ -6,10 +6,10 @@ import SwiftUI
 /// Uses unified components, eliminates 624 lines of duplicate code
 struct EnhancedChatView: View {
     @ObservedObject var store: EditorStore
-    @StateObject private var chatStore = EnhancedChatStore()
-    @State private var showCommandPalette = false
-    @State private var shouldScrollToBottom = false
-    @FocusState private var isInputFocused: Bool
+    @StateObject internal var chatStore = EnhancedChatStore()
+    @State internal var showCommandPalette = false
+    @State internal var shouldScrollToBottom = false
+    @FocusState internal var isInputFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -200,55 +200,6 @@ struct EnhancedChatView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Message List (OPTIMIZED with LazyVStack)
-
-    private var messageList: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    let groups = Formatters.groupMessagesByDate(chatStore.messages) { $0.createdAt }
-
-                    ForEach(groups) { group in
-                        ChatDateSeparator(date: group.date)
-
-                        let groupIndices = group.items.groupedIndices()
-
-                        ForEach(Array(group.items.enumerated()), id: \.element.id) { index, message in
-                            let grouping = groupIndices[index]
-                            let isPending = chatStore.pendingMessageIds.contains(message.id)
-
-                            ChatMessageBubble(
-                                message: message,
-                                config: .init(
-                                    isFromCurrentUser: message.senderId == chatStore.currentUserId,
-                                    showAvatar: true,
-                                    isFirstInGroup: grouping.first,
-                                    isLastInGroup: grouping.last,
-                                    isPending: isPending,
-                                    style: .enhanced
-                                )
-                            )
-                        }
-                    }
-
-                    Color.clear.frame(height: 1).id("bottom")
-                }
-                .padding(.horizontal, DesignSystem.Spacing.lg)
-            }
-            .scrollBounceBehavior(.always)
-            .onChange(of: shouldScrollToBottom) { _, shouldScroll in
-                if shouldScroll {
-                    withAnimation(DesignSystem.Animation.medium) {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
-                    shouldScrollToBottom = false
-                }
-            }
-            .onChange(of: chatStore.messages.count) { _, _ in
-                shouldScrollToBottom = true
-            }
-        }
-    }
 
     // MARK: - Quick Actions Bar
 
@@ -286,151 +237,21 @@ struct EnhancedChatView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Command Suggestions
 
-    private var commandSuggestionsView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(chatStore.filteredCommands.prefix(5), id: \.command) { cmd in
-                Button {
-                    chatStore.selectCommand(cmd)
-                } label: {
-                    HStack(spacing: DesignSystem.Spacing.sm) {
-                        Text(cmd.command)
-                            .font(DesignSystem.Typography.monoBody)
-                            .foregroundStyle(DesignSystem.Colors.accent)
-
-                        Text(cmd.description)
-                            .font(DesignSystem.Typography.caption1)
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-
-                        Spacer()
-                    }
-                    .padding(DesignSystem.Spacing.sm)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                }
-                .buttonStyle(HoverButtonStyle())
-            }
-        }
-        .background(DesignSystem.Colors.surfaceTertiary)
-    }
-
-    // MARK: - Mention Suggestions
-
-    private var mentionSuggestionsView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                mentionChip("Product", icon: "leaf")
-                mentionChip("Category", icon: "folder")
-                mentionChip("Store", icon: "building.2")
-            }
-            .padding(.horizontal, DesignSystem.Spacing.lg)
-        }
-        .padding(.vertical, DesignSystem.Spacing.sm)
-        .background(DesignSystem.Colors.surfaceTertiary)
-    }
-
-    private func mentionChip(_ label: String, icon: String) -> some View {
-        Button {
-            chatStore.insertMention(label)
-        } label: {
-            HStack(spacing: DesignSystem.Spacing.xs) {
-                Image(systemName: icon)
-                    .font(.system(size: DesignSystem.IconSize.small))
-                Text("@\(label)")
-                    .font(DesignSystem.Typography.caption1)
-            }
-            .foregroundStyle(DesignSystem.Colors.purple)
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xs)
-            .background(DesignSystem.Colors.purple.opacity(0.1))
-            .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Enhanced Message Input
-
-    private var enhancedMessageInput: some View {
-        VStack(spacing: 0) {
-            if let replyTo = chatStore.replyToMessage {
-                replyPreview(replyTo)
-            }
-
-            HStack(spacing: DesignSystem.Spacing.md) {
-                TextField("Message AI assistant...", text: $chatStore.draftMessage, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .font(DesignSystem.Typography.body)
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
-                    .padding(.horizontal, DesignSystem.Spacing.md)
-                    .padding(.vertical, DesignSystem.Spacing.sm)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.lg))
-                    .lineLimit(1...6)
-                    .focused($isInputFocused)
-                    .onSubmit {
-                        Task { await chatStore.sendMessage(supabase: store.supabase) }
-                    }
-                    .onChange(of: chatStore.draftMessage) { _, newValue in
-                        chatStore.updateSuggestions(newValue)
-                    }
-
-                Button {
-                    Task { await chatStore.sendMessage(supabase: store.supabase) }
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(
-                            chatStore.draftMessage.isEmpty
-                                ? DesignSystem.Colors.textQuaternary
-                                : DesignSystem.Colors.accent
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(chatStore.draftMessage.isEmpty)
-            }
-            .padding(.horizontal, DesignSystem.Spacing.lg)
-            .padding(.vertical, DesignSystem.Spacing.md)
-        }
-        .background(DesignSystem.Colors.surfaceTertiary)
-    }
-
-    private func replyPreview(_ message: ChatMessage) -> some View {
-        HStack {
-            Rectangle()
-                .fill(DesignSystem.Colors.accent)
-                .frame(width: 3)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Replying to")
-                    .font(DesignSystem.Typography.caption2)
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-
-                Text(message.content)
-                    .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            Button {
-                chatStore.replyToMessage = nil
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: DesignSystem.IconSize.small))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(DesignSystem.Spacing.sm)
-        .background(DesignSystem.Colors.surfaceElevated)
-    }
 }
 
 // MARK: - Enhanced Chat Store (KEPT - AI-Specific Logic)
 
 @MainActor
 class EnhancedChatStore: ObservableObject {
+    // MARK: - Local Types
+
+    struct ChatCommand: Identifiable {
+        let id = UUID()
+        let command: String
+        let description: String
+    }
+
     @Published var conversations: [Conversation] = []
     @Published var conversation: Conversation?
     @Published var messages: [ChatMessage] = []
@@ -445,14 +266,14 @@ class EnhancedChatStore: ObservableObject {
     @Published var showMentionSuggestions = false
     @Published var replyToMessage: ChatMessage?
 
-    @Published var filteredCommands: [AIService.SlashCommand] = []
+    @Published var filteredCommands: [ChatCommand] = []
 
     var currentUserId: UUID?
-    private var allCommands: [AIService.SlashCommand] = [
-        AIService.SlashCommand(command: "/search", description: "Search products"),
-        AIService.SlashCommand(command: "/analyze", description: "Analyze data"),
-        AIService.SlashCommand(command: "/report", description: "Generate report"),
-        AIService.SlashCommand(command: "/help", description: "Show help")
+    private var allCommands: [ChatCommand] = [
+        ChatCommand(command: "/search", description: "Search products"),
+        ChatCommand(command: "/analyze", description: "Analyze data"),
+        ChatCommand(command: "/report", description: "Generate report"),
+        ChatCommand(command: "/help", description: "Show help")
     ]
 
     // Context from EditorStore
@@ -479,7 +300,7 @@ class EnhancedChatStore: ObservableObject {
         showMentionSuggestions = text.contains("@")
     }
 
-    func selectCommand(_ command: AIService.SlashCommand) {
+    func selectCommand(_ command: ChatCommand) {
         draftMessage = command.command + " "
         showCommandSuggestions = false
     }
@@ -497,7 +318,10 @@ class EnhancedChatStore: ObservableObject {
             let user = try await supabase.client.auth.user()
             currentUserId = user.id
 
-            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: storeId)
+            conversations = try await supabase.fetchAllConversationsForStoreLocations(
+                storeId: storeId,
+                fetchLocations: supabase.fetchLocations
+            )
 
             if let first = conversations.first {
                 conversation = first
