@@ -7,26 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BF910 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF910 /* DesignSystem.swift */; };
-		BF911 /* CreationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF911 /* CreationStore.swift */; };
-		BF912 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF912 /* CatalogStore.swift */; };
-		BF913 /* BrowserStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF913 /* BrowserStore.swift */; };
-		BF914 /* TreeItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF914 /* TreeItems.swift */; };
-		BF915 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF915 /* StateViews.swift */; };
-		BF916 /* ChatComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF916 /* ChatComponents.swift */; };
-		BF917 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF917 /* ButtonStyles.swift */; };
-		BF918 /* EditorSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF918 /* EditorSheets.swift */; };
-		BF919 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF919 /* Formatters.swift */; };
-		BF920 /* EditorSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF920 /* EditorSidebarView.swift */; };
+		07D694322E9AC5B56006590D /* BrowserComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */; };
 		7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */; };
-		BF017 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF017 /* AIService.swift */; };
-		BF018 /* ChatDataCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF018 /* ChatDataCards.swift */; };
-		BF019 /* BrowserSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF019 /* BrowserSession.swift */; };
-		BF020 /* BrowserSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF020 /* BrowserSessionView.swift */; };
-		BF021 /* BrowserSessionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF021 /* BrowserSessionItem.swift */; };
-		BF022 /* SafariBrowserWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF022 /* SafariBrowserWindow.swift */; };
-		BF023 /* BrowserTabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF023 /* BrowserTabManager.swift */; };
-		BF024 /* BrowserTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF024 /* BrowserTabView.swift */; };
+		A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */; };
 		BF001 /* SwagManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF001 /* SwagManagerApp.swift */; };
 		BF002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF002 /* ContentView.swift */; };
 		BF003 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF003 /* AuthView.swift */; };
@@ -43,20 +26,30 @@
 		BF014 /* Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF013 /* Chat.swift */; };
 		BF015 /* TeamChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF014 /* TeamChatView.swift */; };
 		BF016 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF015 /* MarkdownText.swift */; };
+		BF017 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF017 /* AIService.swift */; };
+		BF018 /* ChatDataCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF018 /* ChatDataCards.swift */; };
+		BF019 /* BrowserSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF019 /* BrowserSession.swift */; };
+		BF020 /* BrowserSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF020 /* BrowserSessionView.swift */; };
+		BF021 /* BrowserSessionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF021 /* BrowserSessionItem.swift */; };
+		BF022 /* SafariBrowserWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF022 /* SafariBrowserWindow.swift */; };
+		BF023 /* BrowserTabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF023 /* BrowserTabManager.swift */; };
+		BF024 /* BrowserTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF024 /* BrowserTabView.swift */; };
+		BF910 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF910 /* DesignSystem.swift */; };
+		BF911 /* CreationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF911 /* CreationStore.swift */; };
+		BF912 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF912 /* CatalogStore.swift */; };
+		BF913 /* BrowserStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF913 /* BrowserStore.swift */; };
+		BF914 /* TreeItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF914 /* TreeItems.swift */; };
+		BF915 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF915 /* StateViews.swift */; };
+		BF916 /* ChatComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF916 /* ChatComponents.swift */; };
+		BF917 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF917 /* ButtonStyles.swift */; };
+		BF918 /* EditorSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF918 /* EditorSheets.swift */; };
+		BF919 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF919 /* Formatters.swift */; };
+		BF920 /* EditorSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF920 /* EditorSidebarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		SF910 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
-		SF911 /* CreationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreationStore.swift; sourceTree = "<group>"; };
-		SF912 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
-		SF913 /* BrowserStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserStore.swift; sourceTree = "<group>"; };
-		SF914 /* TreeItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreeItems.swift; sourceTree = "<group>"; };
-		SF915 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
-		SF916 /* ChatComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComponents.swift; sourceTree = "<group>"; };
-		SF917 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
-		SF918 /* EditorSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSheets.swift; sourceTree = "<group>"; };
-		SF919 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
-		SF920 /* EditorSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSidebarView.swift; sourceTree = "<group>"; };
+		3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorTabComponents.swift; sourceTree = "<group>"; };
+		53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserComponents.swift; sourceTree = "<group>"; };
 		8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryConfigView.swift; sourceTree = "<group>"; };
 		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		SF001 /* SwagManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManagerApp.swift; sourceTree = "<group>"; };
@@ -82,6 +75,17 @@
 		SF022 /* SafariBrowserWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariBrowserWindow.swift; sourceTree = "<group>"; };
 		SF023 /* BrowserTabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabManager.swift; sourceTree = "<group>"; };
 		SF024 /* BrowserTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabView.swift; sourceTree = "<group>"; };
+		SF910 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		SF911 /* CreationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreationStore.swift; sourceTree = "<group>"; };
+		SF912 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
+		SF913 /* BrowserStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserStore.swift; sourceTree = "<group>"; };
+		SF914 /* TreeItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreeItems.swift; sourceTree = "<group>"; };
+		SF915 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
+		SF916 /* ChatComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComponents.swift; sourceTree = "<group>"; };
+		SF917 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
+		SF918 /* EditorSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSheets.swift; sourceTree = "<group>"; };
+		SF919 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		SF920 /* EditorSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSidebarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,44 +101,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		GR020 /* Theme */ = {
-			isa = PBXGroup;
-			children = (
-				SF910 /* DesignSystem.swift */,
-			);
-			path = Theme;
-			sourceTree = "<group>";
-		};
-		GR021 /* Stores */ = {
-			isa = PBXGroup;
-			children = (
-				SF911 /* CreationStore.swift */,
-				SF912 /* CatalogStore.swift */,
-				SF913 /* BrowserStore.swift */,
-			);
-			path = Stores;
-			sourceTree = "<group>";
-		};
-		GR022 /* Components */ = {
-			isa = PBXGroup;
-			children = (
-				SF914 /* TreeItems.swift */,
-				SF915 /* StateViews.swift */,
-				SF916 /* ChatComponents.swift */,
-				SF917 /* ButtonStyles.swift */,
-				SF918 /* EditorSheets.swift */,
-			);
-			path = Components;
-			sourceTree = "<group>";
-		};
-		GR023 /* Editor */ = {
-			isa = PBXGroup;
-			children = (
-				SF920 /* EditorSidebarView.swift */,
-			);
-			path = Editor;
-			sourceTree = "<group>";
-		};
 		GR001 = {
 			isa = PBXGroup;
 			children = (
@@ -188,18 +154,6 @@
 				8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */,
 			);
 			path = Views;
-			sourceTree = "<group>";
-		};
-		GR012 /* Browser */ = {
-			isa = PBXGroup;
-			children = (
-				SF020 /* BrowserSessionView.swift */,
-				SF021 /* BrowserSessionItem.swift */,
-				SF022 /* SafariBrowserWindow.swift */,
-				SF023 /* BrowserTabManager.swift */,
-				SF024 /* BrowserTabView.swift */,
-			);
-			path = Browser;
 			sourceTree = "<group>";
 		};
 		GR006 /* Services */ = {
@@ -257,6 +211,58 @@
 				SF014 /* TeamChatView.swift */,
 			);
 			path = Chat;
+			sourceTree = "<group>";
+		};
+		GR012 /* Browser */ = {
+			isa = PBXGroup;
+			children = (
+				SF020 /* BrowserSessionView.swift */,
+				SF021 /* BrowserSessionItem.swift */,
+				SF022 /* SafariBrowserWindow.swift */,
+				SF023 /* BrowserTabManager.swift */,
+				SF024 /* BrowserTabView.swift */,
+			);
+			path = Browser;
+			sourceTree = "<group>";
+		};
+		GR020 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				SF910 /* DesignSystem.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		GR021 /* Stores */ = {
+			isa = PBXGroup;
+			children = (
+				SF911 /* CreationStore.swift */,
+				SF912 /* CatalogStore.swift */,
+				SF913 /* BrowserStore.swift */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		GR022 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				SF914 /* TreeItems.swift */,
+				SF915 /* StateViews.swift */,
+				SF916 /* ChatComponents.swift */,
+				SF917 /* ButtonStyles.swift */,
+				SF918 /* EditorSheets.swift */,
+				3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */,
+				53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		GR023 /* Editor */ = {
+			isa = PBXGroup;
+			children = (
+				SF920 /* EditorSidebarView.swift */,
+			);
+			path = Editor;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -358,6 +364,8 @@
 				BF023 /* BrowserTabManager.swift in Sources */,
 				BF024 /* BrowserTabView.swift in Sources */,
 				7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */,
+				A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */,
+				07D694322E9AC5B56006590D /* BrowserComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
