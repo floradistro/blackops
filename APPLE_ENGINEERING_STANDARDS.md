@@ -44,9 +44,9 @@ TextField, Toggle, Button, Menu, Picker            // All native, no custom hack
 ❌ CRITICAL:    >1000 lines  (Refactor immediately)
 ```
 
-### Current State
+### Current State (Updated 2026-01-19)
 ```
-❌ EditorView.swift:          4,516 lines  (3.3x over limit)
+⚠️  EditorView.swift:          3,150 lines  (DOWN 30% from 4,516)
 ❌ CategoryConfigView.swift:  1,319 lines  (1.3x over limit)
 ❌ SupabaseService.swift:     1,219 lines  (1.2x over limit)
 ⚠️  MarkdownText.swift:       1,066 lines  (Near limit)
@@ -54,6 +54,11 @@ TextField, Toggle, Button, Menu, Picker            // All native, no custom hack
 ⚠️  AIService.swift:            750 lines  (Near limit)
 ✅ All other files:           <700 lines
 ```
+
+**Recent Extractions (1,366 lines removed from EditorView):**
+- ✅ EditorTabComponents.swift (373 lines) - Tab UI components
+- ✅ BrowserComponents.swift (120 lines) - Browser controls
+- ✅ HotReloadComponents.swift (873 lines) - React live preview
 
 ### Target State
 ```
