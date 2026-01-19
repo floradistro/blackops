@@ -76,7 +76,7 @@ struct TeamChatView: View {
                 messageInput
             }
         }
-        .background(Color(white: 0.05))
+        .background(Theme.glass)
         .task {
             if let storeId = store.selectedStore?.id {
                 NSLog("[TeamChatView] Loading conversations for store: \(storeId)")
@@ -97,7 +97,7 @@ struct TeamChatView: View {
         VStack(spacing: 8) {
             Image(systemName: "building.2")
                 .font(.system(size: 24))
-                .foregroundStyle(Color.white.opacity(0.15))
+                .foregroundStyle(.tertiary)
             Text("Select a store")
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
@@ -109,7 +109,7 @@ struct TeamChatView: View {
         VStack(spacing: 8) {
             Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 24))
-                .foregroundStyle(Color.white.opacity(0.15))
+                .foregroundStyle(.tertiary)
             Text("No conversations")
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
@@ -174,14 +174,14 @@ struct TeamChatView: View {
                         .foregroundStyle(.quaternary)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.white.opacity(0.05))
+                        .background(Theme.bgTertiary)
                         .clipShape(Capsule())
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(white: 0.04))
+        .background(Theme.bgTertiary)
     }
 
     // MARK: - Message List
@@ -233,10 +233,10 @@ struct TeamChatView: View {
     private func dateSeparator(_ date: Date) -> some View {
         Text(formatDateHeader(date))
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.45))
+            .foregroundStyle(.tertiary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color(white: 0.12).opacity(0.8))
+            .background(Theme.bgElevated)
             .clipShape(Capsule())
             .padding(.vertical, 12)
     }
@@ -258,7 +258,7 @@ struct TeamChatView: View {
                 .font(.system(size: 14))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(Color(white: 0.12))
+                .background(Theme.bgElevated)
                 .clipShape(Capsule())
                 .lineLimit(1...5)
                 .onSubmit {
@@ -271,7 +271,7 @@ struct TeamChatView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 30))
-                    .foregroundStyle(chatStore.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.white.opacity(0.15) : Color.accentColor)
+                    .foregroundStyle(chatStore.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Theme.textQuaternary : Color.accentColor)
                     .scaleEffect(chatStore.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.9 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: chatStore.draftMessage.isEmpty)
             }
@@ -281,7 +281,7 @@ struct TeamChatView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            Color(white: 0.05)
+            Theme.bgTertiary
                 .shadow(color: .black.opacity(0.2), radius: 8, y: -2)
         )
     }
@@ -309,7 +309,7 @@ struct TeamChatView: View {
         VStack(spacing: 16) {
             Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 36))
-                .foregroundStyle(Color.white.opacity(0.15))
+                .foregroundStyle(.tertiary)
 
             VStack(spacing: 4) {
                 Text("No messages yet")
@@ -317,7 +317,7 @@ struct TeamChatView: View {
                     .foregroundStyle(.secondary)
                 Text("Start a conversation with your team")
                     .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.35))
+                    .foregroundStyle(.quaternary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -366,7 +366,7 @@ struct MessageBubble: View, Equatable {
     // Static helper to compute avatar color once
     static func computeAvatarColor(for message: ChatMessage) -> Color {
         if message.isFromAssistant {
-            return Color(white: 0.4)
+            return .secondary
         }
         let hash = message.senderId?.hashValue ?? 0
         let colors: [Color] = [.blue, .green, .orange, .teal, .indigo, .cyan]
@@ -434,7 +434,7 @@ struct MessageBubble: View, Equatable {
                     MarkdownText(message.content, isFromCurrentUser: false)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Color(white: 0.1))
+                        .background(Theme.bgTertiary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .opacity(isPending ? 0.6 : 1.0)
                 } else if message.isFromAssistant {
@@ -442,7 +442,7 @@ struct MessageBubble: View, Equatable {
                     MarkdownText(message.content, isFromCurrentUser: false)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(Color(white: 0.12))
+                        .background(Theme.bgElevated)
                         .clipShape(bubbleCorners)
                         .opacity(isPending ? 0.6 : 1.0)
                 } else {
@@ -462,7 +462,7 @@ struct MessageBubble: View, Equatable {
                     HStack(spacing: 4) {
                         Text(formatTime(createdAt))
                             .font(.system(size: 10))
-                            .foregroundStyle(Color.white.opacity(0.4))
+                            .foregroundStyle(.tertiary)
 
                         if isPending {
                             ProgressView()
@@ -470,7 +470,7 @@ struct MessageBubble: View, Equatable {
                         } else if isFromCurrentUser {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(0.4))
+                                .foregroundStyle(.tertiary)
                         }
                     }
                     .padding(.top, 2)
@@ -533,14 +533,14 @@ struct TypingIndicator: View {
         HStack(alignment: .bottom, spacing: 6) {
             // Avatar placeholder
             Circle()
-                .fill(Color(white: 0.2))
+                .fill(Theme.bgElevated)
                 .frame(width: 28, height: 28)
 
             // Typing bubble
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { index in
                     Circle()
-                        .fill(Color.white.opacity(0.5))
+                        .fill(Theme.textSecondary)
                         .frame(width: 7, height: 7)
                         .scaleEffect(animating ? 1.0 : 0.6)
                         .animation(
@@ -553,7 +553,7 @@ struct TypingIndicator: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
             .clipShape(RoundedCornerShape(topLeft: 18, topRight: 18, bottomLeft: 4, bottomRight: 18))
 
             Spacer()
@@ -592,7 +592,7 @@ struct StreamingMessageBubble: View {
                     .textSelection(.enabled)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color(white: 0.18))
+                    .background(Theme.bgElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
             }
 
@@ -640,7 +640,7 @@ struct TypingIndicatorBubble: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Color(white: 0.18))
+                .background(Theme.bgElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
 
@@ -858,7 +858,7 @@ struct ChatTabView: View {
             // Input
             enhancedMessageInput
         }
-        .background(Color(white: 0.05))
+        .background(Theme.bg)
         .task {
             await chatStore.loadConversationMessages(conversation, supabase: store.supabase)
             chatStore.updateContext(from: store)
@@ -899,7 +899,7 @@ struct ChatTabView: View {
             if let count = conversation.messageCount, count > 0 {
                 Text("\(count) messages")
                     .font(.system(size: 9))
-                    .foregroundStyle(Color.white.opacity(0.3))
+                    .foregroundStyle(.quaternary)
             }
 
             // Refresh button
@@ -915,7 +915,7 @@ struct ChatTabView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Color(white: 0.03))
+        .background(Theme.bgTertiary)
     }
 
     // MARK: - Message List
@@ -956,7 +956,7 @@ struct ChatTabView: View {
             .foregroundStyle(.tertiary)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(Color(white: 0.1))
+            .background(Theme.bgElevated)
             .clipShape(Capsule())
             .padding(.vertical, 8)
     }
@@ -1012,7 +1012,7 @@ struct ChatTabView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.05))
+                        .background(Theme.bgTertiary)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -1021,7 +1021,7 @@ struct ChatTabView: View {
             .padding(.horizontal, 12)
         }
         .padding(.vertical, 6)
-        .background(Color(white: 0.04))
+        .background(Theme.bgTertiary)
     }
 
     // MARK: - Command Suggestions
@@ -1054,7 +1054,7 @@ struct ChatTabView: View {
                 .buttonStyle(.plain)
             }
         }
-        .background(Color(white: 0.08))
+        .background(Theme.bgElevated)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 12)
         .padding(.bottom, 4)
@@ -1091,7 +1091,7 @@ struct ChatTabView: View {
             }
             .buttonStyle(.plain)
         }
-        .background(Color(white: 0.08))
+        .background(Theme.bgElevated)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 12)
         .padding(.bottom, 4)
@@ -1107,7 +1107,7 @@ struct ChatTabView: View {
                 .font(.system(size: 14))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(Color(white: 0.12))
+                .background(Theme.bgElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .lineLimit(1...5)
                 .onChange(of: chatStore.draftMessage) { _, newValue in
@@ -1136,12 +1136,12 @@ struct ChatTabView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color(white: 0.04))
+        .background(Theme.bgTertiary)
     }
 
     private var sendButtonColor: Color {
         let isEmpty = chatStore.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if isEmpty { return Color.white.opacity(0.1) }
+        if isEmpty { return Theme.bgTertiary }
         return .accentColor
     }
 
@@ -1225,7 +1225,7 @@ struct ChatTabView: View {
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.04))
+                            .background(Theme.bgHover)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)

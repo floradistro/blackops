@@ -109,6 +109,15 @@ struct SimpleWebView: NSViewRepresentable {
                 self.tab.currentURL = webView.url?.absoluteString
                 self.tab.pageTitle = webView.title
                 self.tab.isSecure = webView.url?.scheme == "https"
+
+                // Re-apply dark mode if it was enabled
+                if self.tab.isDarkMode {
+                    webView.evaluateJavaScript(InteractiveBrowserView.darkModeScript) { _, error in
+                        if let error = error {
+                            NSLog("[DarkMode] Failed to re-apply on navigation: \(error.localizedDescription)")
+                        }
+                    }
+                }
             }
         }
 

@@ -37,6 +37,13 @@ extension JSONDecoder {
 // MARK: - App Theme (Dark)
 
 struct Theme {
+    // Glass Materials - unified blur/vibrancy system
+    static let glassThin = Material.ultraThin                           // Lightest glass
+    static let glass = Material.thin                                    // Standard glass
+    static let glassMedium = Material.regular                           // Medium glass
+    static let glassThick = Material.thick                              // Thicker glass
+    static let glassUltraThick = Material.ultraThick                    // Thickest glass
+
     // Background hierarchy - transparent for frosted glass effect
     static let bg = Color.clear                                          // Fully transparent - shows glass
     static let bgSecondary = Color.clear                                 // Fully transparent - shows glass
@@ -276,25 +283,18 @@ struct EditorView: View {
     @StateObject private var store = EditorStore()
     @EnvironmentObject var authManager: AuthManager
     @State private var sidebarCollapsed = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var selectedTab: EditorTab = .preview
-    @State private var isHoveringToggle = false
     @State private var showStoreSelectorSheet = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Collapsible Sidebar
-            if !sidebarCollapsed {
-                SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
-                    .frame(width: 240)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .leading).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-
-                Divider()
-            }
-
-            // Main Content Area (no separate tab bar - tabs are in toolbar)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            // Sidebar
+            SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 300)
+                .toolbarBackground(.hidden, for: .windowToolbar)
+        } detail: {
+            // Main Content Area
             VStack(spacing: 0) {
                 // Content based on active tab or selection
                 ZStack {
@@ -382,34 +382,21 @@ struct EditorView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-        }
-        .background(VisualEffectBackground(material: .underWindowBackground))
-        .overlay(alignment: .topLeading) {
-            // Floating sidebar toggle button (Apple-style, appears on hover)
-            Button {
-                withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
-            } label: {
-                Image(systemName: sidebarCollapsed ? "sidebar.left" : "sidebar.leading")
-                    .font(.system(size: 13))
-                    .foregroundStyle(isHoveringToggle ? Theme.text : Theme.textSecondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(isHoveringToggle ? 0.12 : 0.05))
-                    )
-                    .contentShape(Circle())
+            .toolbar {
+                UnifiedToolbarContent(store: store)
             }
-            .buttonStyle(.plain)
-            .padding(12)
-            .opacity(isHoveringToggle || sidebarCollapsed ? 1 : 0.3)
-            .animation(.easeInOut(duration: 0.2), value: isHoveringToggle)
-            .onHover { isHoveringToggle = $0 }
-            .help("Toggle Sidebar (⌘\\)")
+            .toolbarBackground(.automatic, for: .windowToolbar)
         }
+        .navigationSplitViewStyle(.balanced)
+        .background(VisualEffectBackground(material: .underWindowBackground))
         .animation(Theme.spring, value: sidebarCollapsed)
+        .onChange(of: sidebarCollapsed) { _, collapsed in
+            columnVisibility = collapsed ? .detailOnly : .all
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleSidebar"))) { _ in
-            withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
+            withAnimation(Theme.spring) {
+                sidebarCollapsed.toggle()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SaveDocument"))) { _ in
             if store.hasUnsavedChanges {
@@ -1983,10 +1970,10 @@ struct SafariStyleTab: View {
                 ZStack {
                     if isActive {
                         // Glass-style active tab
-                        Color.white.opacity(0.08)
+                        Theme.bgActive
                     } else if isHovering {
                         // Subtle hover
-                        Color.white.opacity(0.03)
+                        Theme.bgTertiary
                     } else {
                         // Transparent
                         Color.clear
@@ -1996,7 +1983,7 @@ struct SafariStyleTab: View {
             .overlay(
                 Rectangle()
                     .frame(width: 0.5)
-                    .foregroundStyle(Color.white.opacity(0.06))
+                    .foregroundStyle(Theme.borderSubtle)
                 , alignment: .trailing
             )
         }
@@ -2127,7 +2114,7 @@ struct OpenTabButton: View {
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(isHovering ? .secondary : .quaternary)
                         .frame(width: 14, height: 14)
-                        .background(isHovering ? Color.white.opacity(0.1) : Color.clear)
+                        .background(isHovering ? Theme.bgHover : Color.clear)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                 }
                 .buttonStyle(.plain)
@@ -2139,7 +2126,7 @@ struct OpenTabButton: View {
         .padding(.vertical, 5)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(isActive ? Color(white: 0.12) : (isHovering ? Color.white.opacity(0.03) : Color.clear))
+                .fill(isActive ? Theme.bgElevated : (isHovering ? Theme.bgTertiary : Color.clear))
         )
         .foregroundStyle(isActive ? .primary : .secondary)
         .onHover { isHovering = $0 }
@@ -2208,7 +2195,7 @@ struct ProductEditorPanel: View {
                     Spacer()
                 }
                 .padding()
-                .background(Color.white.opacity(0.03))
+                .background(Theme.bgTertiary)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 // Details Section
@@ -2469,20 +2456,6 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Sleek header
-            HStack(spacing: 0) {
-                Text("SWAG MANAGER")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.textTertiary)
-                    .tracking(1.2)
-            }
-            .frame(height: 32)
-            .frame(maxWidth: .infinity)
-
-            Rectangle()
-                .fill(Theme.border)
-                .frame(height: 1)
-
             // Search bar
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
@@ -2505,7 +2478,7 @@ struct SidebarPanel: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 5)
             .background(Theme.bgSecondary)
 
             Rectangle()
@@ -2563,7 +2536,7 @@ struct SidebarPanel: View {
                             isExpanded: $store.sidebarCatalogExpanded,
                             count: store.catalogs.count
                         )
-                        .padding(.top, 8)
+                        .padding(.top, 4)
 
                         if store.sidebarCatalogExpanded {
                             if store.catalogs.isEmpty {
@@ -2631,7 +2604,7 @@ struct SidebarPanel: View {
                             isExpanded: $store.sidebarCreationsExpanded,
                             count: store.creations.count
                         )
-                        .padding(.top, 8)
+                        .padding(.top, 4)
 
                         if store.sidebarCreationsExpanded {
                             // Collections as folders with their creations inside
@@ -3052,7 +3025,7 @@ struct StoreEnvironmentHeader: View {
                     .foregroundStyle(Theme.textTertiary)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(isHovering ? Theme.bgHover : Color.clear)
@@ -3373,7 +3346,7 @@ struct TreeSectionHeader: View {
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
@@ -3514,7 +3487,7 @@ struct FilterChip: View {
                 .font(.system(size: 10, weight: .medium))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(isSelected ? Color.accentColor : Color(white: 0.15))
+                .background(isSelected ? Color.accentColor : Theme.bgElevated)
                 .foregroundStyle(isSelected ? .white : .secondary)
                 .cornerRadius(3)
         }
@@ -3579,8 +3552,8 @@ struct ChatSectionLabel: View {
             .font(.system(size: 9, weight: .semibold))
             .foregroundStyle(.tertiary)
             .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
+            .padding(.top, 6)
+            .padding(.bottom, 3)
     }
 }
 
@@ -3729,7 +3702,7 @@ struct LocationChatRow: View {
                     if let count = messageCount, count > 0 {
                         Text("\(count) messages")
                             .font(.system(size: 9))
-                            .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.white.opacity(0.4))
+                            .foregroundStyle(isSelected ? Theme.textSecondary : Theme.textTertiary)
                     }
                 }
 
@@ -3807,7 +3780,7 @@ struct EditorTabBar: View {
                 .buttonStyle(.plain)
 
                 Rectangle()
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Theme.border)
                     .frame(width: 1, height: 18)
                     .padding(.trailing, 8)
             }
@@ -3839,7 +3812,7 @@ struct EditorTabBar: View {
                         }
                         Text(creation.name)
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.4))
+                            .foregroundStyle(Theme.textTertiary)
                             .lineLimit(1)
                     }
 
@@ -3849,9 +3822,9 @@ struct EditorTabBar: View {
                     } label: {
                         Image(systemName: "arrow.down.doc")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(hasUnsavedChanges ? .primary : Color.white.opacity(0.25))
+                            .foregroundStyle(hasUnsavedChanges ? .primary : Theme.textQuaternary)
                             .frame(width: 28, height: 28)
-                            .background(hasUnsavedChanges ? Color.white.opacity(0.06) : Color.clear)
+                            .background(hasUnsavedChanges ? Theme.bgElevated : Color.clear)
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
@@ -3879,7 +3852,7 @@ struct TabButton: View {
             HStack(spacing: 5) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.white.opacity(0.5))
+                    .foregroundStyle(isSelected ? Color.accentColor : Theme.textSecondary)
                 Text(tab.rawValue)
                     .font(.system(size: 11, weight: .medium))
                 if hasChanges {
@@ -3888,12 +3861,12 @@ struct TabButton: View {
                         .frame(width: 5, height: 5)
                 }
             }
-            .foregroundStyle(isSelected ? .primary : Color.white.opacity(0.55))
+            .foregroundStyle(isSelected ? .primary : Theme.textSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Color.white.opacity(0.08) : (isHovering ? Color.white.opacity(0.04) : Color.clear))
+                    .fill(isSelected ? Theme.bgActive : (isHovering ? Theme.bgHover : Color.clear))
             )
         }
         .buttonStyle(.plain)
@@ -5072,7 +5045,7 @@ struct NewCreationSheet: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
-                                .background(selectedType == type ? Color.blue.opacity(0.3) : Color(white: 0.18))
+                                .background(selectedType == type ? Color.blue.opacity(0.3) : Theme.bgElevated)
                                 .foregroundStyle(selectedType == type ? .primary : .secondary)
                                 .cornerRadius(6)
                                 .overlay(
@@ -5413,7 +5386,7 @@ struct NewCatalogSheet: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
-                                .background(selectedVertical == vertical.0 ? Color.accentColor.opacity(0.2) : Color(white: 0.18))
+                                .background(selectedVertical == vertical.0 ? Color.accentColor.opacity(0.2) : Theme.bgElevated)
                                 .cornerRadius(6)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
@@ -5590,3 +5563,314 @@ struct VisualEffectBackground: NSViewRepresentable {
         nsView.material = material
     }
 }
+
+// MARK: - Browser Controls Bar (Above browser content only)
+
+struct BrowserControlsBar: View {
+    let sessionId: UUID
+    @State private var urlText: String = ""
+    @FocusState private var isURLFieldFocused: Bool
+
+    private var tabManager: BrowserTabManager {
+        BrowserTabManager.forSession(sessionId)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Back/Forward
+            Button(action: { tabManager.activeTab?.goBack() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .disabled(!(tabManager.activeTab?.canGoBack ?? false))
+            .foregroundStyle((tabManager.activeTab?.canGoBack ?? false) ? .primary : .tertiary)
+
+            Button(action: { tabManager.activeTab?.goForward() }) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .disabled(!(tabManager.activeTab?.canGoForward ?? false))
+            .foregroundStyle((tabManager.activeTab?.canGoForward ?? false) ? .primary : .tertiary)
+
+            // Address bar
+            BrowserAddressField(
+                urlText: $urlText,
+                isSecure: tabManager.activeTab?.isSecure ?? false,
+                isLoading: tabManager.activeTab?.isLoading ?? false,
+                isURLFieldFocused: $isURLFieldFocused,
+                onSubmit: { navigateToURL() }
+            )
+            .onChange(of: tabManager.activeTab?.currentURL) { _, newURL in
+                if !isURLFieldFocused {
+                    urlText = newURL ?? ""
+                }
+            }
+            .onAppear {
+                urlText = tabManager.activeTab?.currentURL ?? ""
+            }
+
+            // Dark mode & New tab
+            Button(action: { tabManager.activeTab?.toggleDarkMode() }) {
+                Image(systemName: tabManager.activeTab?.isDarkMode == true ? "moon.fill" : "moon")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.plain)
+
+            Button(action: { tabManager.newTab() }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(VisualEffectBackground(material: .titlebar))
+    }
+
+    private func navigateToURL() {
+        guard !urlText.isEmpty else { return }
+        var urlString = urlText.trimmingCharacters(in: .whitespaces)
+        if !urlString.hasPrefix("http://") && !urlString.hasPrefix("https://") {
+            if urlString.contains(".") {
+                urlString = "https://" + urlString
+            } else {
+                urlString = "https://www.google.com/search?q=" + urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            }
+        }
+        tabManager.activeTab?.navigate(to: urlString)
+        isURLFieldFocused = false
+    }
+}
+
+// MARK: - Unified Toolbar Content (Baked into Window Titlebar)
+
+struct UnifiedToolbarContent: CustomizableToolbarContent {
+    @ObservedObject var store: EditorStore
+    @State private var urlText: String = ""
+    @FocusState private var isURLFieldFocused: Bool
+
+    private var isBrowserActive: Bool {
+        if case .browserSession = store.activeTab {
+            return true
+        }
+        return store.selectedBrowserSession != nil
+    }
+
+    private var tabManager: BrowserTabManager? {
+        if case .browserSession(let session) = store.activeTab {
+            return BrowserTabManager.forSession(session.id)
+        } else if let session = store.selectedBrowserSession {
+            return BrowserTabManager.forSession(session.id)
+        }
+        return nil
+    }
+
+    var body: some CustomizableToolbarContent {
+        if let activeTab = store.activeTab {
+            switch activeTab {
+            case .browserSession(let session):
+                let tabManager = BrowserTabManager.forSession(session.id)
+                // Back
+                ToolbarItem(id: "back") {
+                    Button(action: { tabManager.activeTab?.goBack() }) {
+                        Image(systemName: "chevron.left")
+                    }
+                    .disabled(!(tabManager.activeTab?.canGoBack ?? false))
+                }
+
+                // Forward
+                ToolbarItem(id: "forward") {
+                    Button(action: { tabManager.activeTab?.goForward() }) {
+                        Image(systemName: "chevron.right")
+                    }
+                    .disabled(!(tabManager.activeTab?.canGoForward ?? false))
+                }
+
+                // Address bar (centered)
+                ToolbarItem(id: "address", placement: .principal) {
+                    BrowserAddressField(
+                        urlText: $urlText,
+                        isSecure: tabManager.activeTab?.isSecure ?? false,
+                        isLoading: tabManager.activeTab?.isLoading ?? false,
+                        isURLFieldFocused: $isURLFieldFocused,
+                        onSubmit: { navigateToURL(tabManager: tabManager) }
+                    )
+                    .frame(maxWidth: 600)
+                    .onChange(of: tabManager.activeTab?.currentURL) { _, newURL in
+                        if !isURLFieldFocused {
+                            urlText = newURL ?? ""
+                        }
+                    }
+                    .onAppear {
+                        urlText = tabManager.activeTab?.currentURL ?? ""
+                    }
+                }
+
+                // Dark mode
+                ToolbarItem(id: "darkMode") {
+                    Button(action: { tabManager.activeTab?.toggleDarkMode() }) {
+                        Image(systemName: tabManager.activeTab?.isDarkMode == true ? "moon.fill" : "moon")
+                    }
+                }
+
+                // New tab
+                ToolbarItem(id: "newTab") {
+                    Button(action: { tabManager.newTab() }) {
+                        Image(systemName: "plus")
+                    }
+                }
+
+            case .product(let product):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(product.name, systemImage: "leaf")
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .conversation(let conversation):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(conversation.displayTitle, systemImage: conversation.chatTypeIcon)
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .category(let category):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(category.name, systemImage: "folder")
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .creation(let creation):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(creation.name, systemImage: creation.creationType.icon)
+                        .font(.system(size: 13, weight: .medium))
+                }
+            }
+        } else if let browserSession = store.selectedBrowserSession {
+            let tabManager = BrowserTabManager.forSession(browserSession.id)
+            // Browser controls for selected session
+            ToolbarItem(id: "back") {
+                Button(action: { tabManager.activeTab?.goBack() }) {
+                    Image(systemName: "chevron.left")
+                }
+                .disabled(!(tabManager.activeTab?.canGoBack ?? false))
+            }
+
+            ToolbarItem(id: "forward") {
+                Button(action: { tabManager.activeTab?.goForward() }) {
+                    Image(systemName: "chevron.right")
+                }
+                .disabled(!(tabManager.activeTab?.canGoForward ?? false))
+            }
+
+            ToolbarItem(id: "address", placement: .principal) {
+                BrowserAddressField(
+                    urlText: $urlText,
+                    isSecure: tabManager.activeTab?.isSecure ?? false,
+                    isLoading: tabManager.activeTab?.isLoading ?? false,
+                    isURLFieldFocused: $isURLFieldFocused,
+                    onSubmit: { navigateToURL(tabManager: tabManager) }
+                )
+                .frame(maxWidth: 600)
+                .onChange(of: tabManager.activeTab?.currentURL) { _, newURL in
+                    if !isURLFieldFocused {
+                        urlText = newURL ?? ""
+                    }
+                }
+                .onAppear {
+                    urlText = tabManager.activeTab?.currentURL ?? ""
+                }
+            }
+
+            ToolbarItem(id: "darkMode") {
+                Button(action: { tabManager.activeTab?.toggleDarkMode() }) {
+                    Image(systemName: tabManager.activeTab?.isDarkMode == true ? "moon.fill" : "moon")
+                }
+            }
+
+            ToolbarItem(id: "newTab") {
+                Button(action: { tabManager.newTab() }) {
+                    Image(systemName: "plus")
+                }
+            }
+        } else {
+            // Empty state - no toolbar items
+            ToolbarItem(id: "empty", placement: .principal) {
+                Text("")
+            }
+        }
+    }
+
+    private var contextTitle: String {
+        if let activeTab = store.activeTab {
+            switch activeTab {
+            case .creation: return "Creation"
+            case .product: return "Product"
+            case .conversation: return "Team Chat"
+            case .category: return "Category"
+            case .browserSession: return "Browser"
+            }
+        } else if store.selectedBrowserSession != nil {
+            return "Browser"
+        } else if store.selectedConversation != nil {
+            return "Team Chat"
+        } else if store.selectedProduct != nil {
+            return "Product"
+        } else if store.selectedCreation != nil {
+            return "Creation"
+        } else if store.selectedCategory != nil {
+            return "Category"
+        }
+        return ""
+    }
+
+    private func navigateToURL(tabManager: BrowserTabManager) {
+        guard !urlText.isEmpty else { return }
+        var urlString = urlText.trimmingCharacters(in: .whitespaces)
+        if !urlString.hasPrefix("http://") && !urlString.hasPrefix("https://") {
+            if urlString.contains(".") {
+                urlString = "https://" + urlString
+            } else {
+                urlString = "https://www.google.com/search?q=" + urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            }
+        }
+        tabManager.activeTab?.navigate(to: urlString)
+        isURLFieldFocused = false
+    }
+}
+
+// MARK: - Browser Address Field (Titlebar-integrated)
+
+struct BrowserAddressField: View {
+    @Binding var urlText: String
+    let isSecure: Bool
+    let isLoading: Bool
+    @FocusState.Binding var isURLFieldFocused: Bool
+    let onSubmit: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
+                .font(.system(size: 10))
+                .foregroundStyle(isSecure ? Theme.green : Theme.textTertiary)
+
+            TextField("Search or enter website name", text: $urlText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text)
+                .focused($isURLFieldFocused)
+                .onSubmit(onSubmit)
+
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.6)
+                    .frame(width: 16, height: 16)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Theme.bgTertiary)
+        .cornerRadius(6)
+    }
+}
+

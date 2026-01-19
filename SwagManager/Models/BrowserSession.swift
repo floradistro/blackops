@@ -100,6 +100,13 @@ struct BrowserSession: Codable, Identifiable, Equatable, Hashable {
         }
     }
 
+    var isSecure: Bool {
+        if let url = currentUrl, let urlObj = URL(string: url) {
+            return urlObj.scheme == "https"
+        }
+        return false
+    }
+
     // MARK: - Hashable
 
     func hash(into hasher: inout Hasher) {

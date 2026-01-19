@@ -22,18 +22,12 @@ struct SafariBrowserWindow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Thin divider line at top
+            // Thin top border for visual separation
             Rectangle()
                 .fill(Theme.border)
                 .frame(height: 1)
 
-            // Compact unified toolbar with tabs in same row
-            CompactSafariToolbar(
-                tabManager: tabManager,
-                showTabs: $showTabs
-            )
-
-            // Active tab content
+            // Active tab content (controls are now in unified header)
             if let activeTab = tabManager.activeTab {
                 BrowserTabView(tab: activeTab)
                     .id(activeTab.id)

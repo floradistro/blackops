@@ -14,13 +14,13 @@ struct ProductDataCard: View {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Color.white.opacity(0.1)
+                    Theme.bgElevated
                 }
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(0.06))
+                    .fill(Theme.bgElevated)
                     .frame(width: 56, height: 56)
                     .overlay(
                         Image(systemName: "leaf")
@@ -50,7 +50,7 @@ struct ProductDataCard: View {
                         .font(.system(size: 10))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(product.stockStatusColor.opacity(0.2))
+                        .background(product.stockStatusColor.opacity(0.15))
                         .foregroundStyle(product.stockStatusColor)
                         .clipShape(Capsule())
                 }
@@ -80,11 +80,11 @@ struct ProductDataCard: View {
             }
         }
         .padding(12)
-        .background(Color.white.opacity(0.04))
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Theme.border, lineWidth: 1)
         )
     }
 }
@@ -167,11 +167,11 @@ struct OrderDataCard: View {
             .buttonStyle(.plain)
         }
         .padding(12)
-        .background(Color.white.opacity(0.04))
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Theme.border, lineWidth: 1)
         )
     }
 
@@ -411,7 +411,7 @@ struct ActionCard: View {
             .buttonStyle(.plain)
         }
         .padding(12)
-        .background(Color.white.opacity(0.03))
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -494,11 +494,11 @@ struct ChartPlaceholderCard: View {
             }
         }
         .padding(14)
-        .background(Color.white.opacity(0.03))
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(Theme.borderSubtle, lineWidth: 1)
         )
     }
 }

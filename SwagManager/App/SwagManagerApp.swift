@@ -15,7 +15,7 @@ struct SwagManagerApp: App {
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(.dark)
         }
-        .windowToolbarStyle(.unified)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Store...") {
@@ -111,26 +111,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureWindow(_ window: NSWindow) {
-        // Terminal-style minimal window chrome with glass effect
+        // Minimal unified titlebar
         window.titlebarAppearsTransparent = false
         window.titleVisibility = .hidden
+        window.toolbarStyle = .unifiedCompact
         window.isMovableByWindowBackground = true
-        window.backgroundColor = .clear
+
+        // Set proper background color for titlebar visibility
+        window.backgroundColor = NSColor.windowBackgroundColor
         window.isOpaque = false
 
-        // Configure toolbar - slim and minimal like Safari
+        // Configure toolbar appearance
         if let toolbar = window.toolbar {
-            toolbar.showsBaselineSeparator = true
-
-            // Make toolbar slimmer by setting size mode
-            if #available(macOS 11.0, *) {
-                toolbar.displayMode = .iconOnly
-            }
+            toolbar.showsBaselineSeparator = false
         }
 
         // Set the window's titlebar to be compact
         if let contentView = window.contentView {
             contentView.wantsLayer = true
+            contentView.layer?.backgroundColor = NSColor.clear.cgColor
+        }
+
+        // Handle fullscreen transitions properly
+        window.collectionBehavior.insert(.fullScreenPrimary)
+
+        // Add observer for fullscreen changes
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willEnterFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            window.titlebarAppearsTransparent = false
+            window.backgroundColor = NSColor.windowBackgroundColor
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didExitFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            window.titlebarAppearsTransparent = false
+            window.backgroundColor = NSColor.windowBackgroundColor
         }
 
         // Ensure window is key and accepts input

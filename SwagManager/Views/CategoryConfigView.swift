@@ -20,11 +20,6 @@ struct CategoryConfigView: View {
     @State private var expandedFieldSchemaId: UUID?
     @State private var expandedPricingSchemaId: UUID?
 
-    private let bgColor = Color(white: 0.08)
-    private let cardBg = Color.white.opacity(0.03)
-    private let inputBg = Color(white: 0.12)
-    private let hoverBg = Color.white.opacity(0.05)
-
     var body: some View {
         Group {
             if isLoading {
@@ -58,7 +53,7 @@ struct CategoryConfigView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(bgColor)
+        .background(Theme.glass)
         .task { await loadData() }
         .onChange(of: category.id) { _, _ in Task { await loadData() } }
         .sheet(item: $editingFieldSchema) { schema in
@@ -88,7 +83,7 @@ struct CategoryConfigView: View {
     private var headerSection: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.white.opacity(0.06))
+                .fill(Theme.bgElevated)
                 .frame(width: 48, height: 48)
                 .overlay(
                     Image(systemName: "folder.fill")
@@ -116,7 +111,7 @@ struct CategoryConfigView: View {
             .foregroundStyle(.secondary)
         }
         .padding(16)
-        .background(cardBg)
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -194,7 +189,7 @@ struct CategoryConfigView: View {
                 }
             }
         }
-        .background(cardBg)
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -249,7 +244,7 @@ struct CategoryConfigView: View {
                 }
             }
         }
-        .background(cardBg)
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -282,7 +277,7 @@ struct CategoryConfigView: View {
             }
             .padding(.vertical, 4)
         }
-        .background(cardBg)
+        .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -486,7 +481,7 @@ private struct FieldSchemaRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isHovering ? Color.white.opacity(0.03) : Color.clear)
+            .background(isHovering ? Theme.bgTertiary : Color.clear)
             .onHover { isHovering = $0 }
 
             // Expanded fields
@@ -616,7 +611,7 @@ private struct PricingSchemaRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isHovering ? Color.white.opacity(0.03) : Color.clear)
+            .background(isHovering ? Theme.bgTertiary : Color.clear)
             .onHover { isHovering = $0 }
 
             // Expanded tiers

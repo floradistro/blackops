@@ -20,38 +20,50 @@ struct BrowserSessionItem: View {
             onTap()
         } label: {
             HStack(spacing: 8) {
-                Text(session.statusIcon)
-                    .font(.system(size: 8))
-                    .foregroundColor(statusColor)
+                // Status indicator circle
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 6, height: 6)
 
-                Image(systemName: "globe")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.cyan)
-
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
+                    // Title/URL
                     Text(session.displayName)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11, weight: isSelected ? .medium : .regular))
                         .foregroundStyle(isSelected ? Theme.text : Theme.textSecondary)
                         .lineLimit(1)
 
+                    // Shortened URL with better formatting
                     if let url = session.currentUrl, !url.isEmpty {
-                        Text(shortenUrl(url))
-                            .font(.system(size: 10))
-                            .foregroundStyle(Theme.textTertiary)
-                            .lineLimit(1)
+                        HStack(spacing: 3) {
+                            if session.isSecure {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 7))
+                                    .foregroundStyle(Theme.green.opacity(0.6))
+                            }
+                            Text(shortenUrl(url))
+                                .font(.system(size: 9))
+                                .foregroundStyle(Theme.textTertiary)
+                                .lineLimit(1)
+                        }
                     }
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
+                // Right side: close button or timestamp
                 if isHovering && session.isActive {
                     Button {
                         onClose()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(Theme.textTertiary)
-                            .contentShape(Rectangle())
+                            .frame(width: 16, height: 16)
+                            .background(
+                                Circle()
+                                    .fill(Theme.bgHover)
+                            )
+                            .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
                     .help("Close session")
@@ -59,19 +71,22 @@ struct BrowserSessionItem: View {
                     Text(timeAgo(lastActivity))
                         .font(.system(size: 9))
                         .foregroundStyle(Theme.textTertiary)
+                        .monospacedDigit()
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Theme.selectionActive : Color.clear)
+                    .fill(isSelected ? Theme.selectionActive : (isHovering ? Theme.bgHover : Color.clear))
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(TreeItemButtonStyle())
+        .buttonStyle(.plain)
         .onHover { hovering in
-            isHovering = hovering
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
         }
     }
 
@@ -113,6 +128,8 @@ struct BrowserSessionsSectionHeader: View {
     let count: Int
     let onNewSession: () -> Void
 
+    @State private var isHovering = false
+
     var body: some View {
         Button {
             withAnimation(Theme.spring) { isExpanded.toggle() }
@@ -130,29 +147,40 @@ struct BrowserSessionsSectionHeader: View {
                     .foregroundStyle(Theme.textSecondary)
                     .tracking(0.5)
 
-                if count > 0 {
-                    Text("(\(count))")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(Theme.textTertiary)
-                }
+                Text("\(count)")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Theme.textTertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Theme.bgElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
 
                 Spacer()
 
                 Button(action: onNewSession) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .frame(width: 20, height: 20)
+                        .background(
+                            Circle()
+                                .fill(isHovering ? Theme.bgHover : Color.clear)
+                        )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("New browser session")
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TreeItemButtonStyle())
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
+        }
     }
 }
 

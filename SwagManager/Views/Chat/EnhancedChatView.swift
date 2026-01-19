@@ -84,7 +84,7 @@ struct EnhancedChatView: View {
                 enhancedMessageInput
             }
         }
-        .background(Color(white: 0.05))
+        .background(Theme.glass)
         .task {
             if let storeId = store.selectedStore?.id {
                 await chatStore.loadConversations(storeId: storeId, supabase: store.supabase)
@@ -151,7 +151,7 @@ struct EnhancedChatView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.bgElevated)
                     .clipShape(Capsule())
                 }
             } else {
@@ -162,7 +162,7 @@ struct EnhancedChatView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(white: 0.06))
+        .background(Theme.bgTertiary)
     }
 
     // MARK: - Message List
@@ -215,7 +215,7 @@ struct EnhancedChatView: View {
             .foregroundStyle(.tertiary)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(Color(white: 0.1))
+            .background(Theme.bgElevated)
             .clipShape(Capsule())
             .padding(.vertical, 8)
     }
@@ -237,14 +237,14 @@ struct EnhancedChatView: View {
             HStack(spacing: 3) {
                 ForEach(0..<3) { i in
                     Circle()
-                        .fill(Color.white.opacity(0.4))
+                        .fill(Theme.textTertiary)
                         .frame(width: 6, height: 6)
                         .offset(y: chatStore.typingAnimationOffset(for: i))
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(white: 0.12))
+            .background(Theme.bgElevated)
             .clipShape(RoundedRectangle(cornerRadius: 16))
 
             Spacer()
@@ -272,7 +272,7 @@ struct EnhancedChatView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.06))
+                        .background(Theme.bgElevated)
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -281,7 +281,7 @@ struct EnhancedChatView: View {
             .padding(.horizontal, 12)
         }
         .padding(.vertical, 6)
-        .background(Color(white: 0.04))
+        .background(Theme.bgTertiary)
     }
 
     // MARK: - Command Suggestions
@@ -311,12 +311,12 @@ struct EnhancedChatView: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.03))
+                    .background(Theme.bgTertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .background(Color(white: 0.08))
+        .background(Theme.bgElevated)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 12)
         .padding(.bottom, 4)
@@ -352,14 +352,14 @@ struct EnhancedChatView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Color.white.opacity(0.03))
+                .background(Theme.bgTertiary)
             }
             .buttonStyle(.plain)
 
             // Team members would go here
             // ForEach(chatStore.teamMembers) { ... }
         }
-        .background(Color(white: 0.08))
+        .background(Theme.bgElevated)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 12)
         .padding(.bottom, 4)
@@ -391,7 +391,7 @@ struct EnhancedChatView: View {
                     .font(.system(size: 14))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)
-                    .background(Color(white: 0.12))
+                    .background(Theme.bgElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .lineLimit(1...5)
                     .focused($isInputFocused)
@@ -422,12 +422,12 @@ struct EnhancedChatView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
         }
-        .background(Color(white: 0.04))
+        .background(Theme.bgTertiary)
     }
 
     private var sendButtonColor: Color {
         let isEmpty = chatStore.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if isEmpty { return Color.white.opacity(0.1) }
+        if isEmpty { return Theme.bgTertiary }
         return chatStore.willInvokeAI ? .purple : .accentColor
     }
 
@@ -460,7 +460,7 @@ struct EnhancedChatView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.white.opacity(0.03))
+        .background(Theme.bgTertiary)
     }
 
     // MARK: - States
@@ -566,7 +566,7 @@ struct EnhancedChatView: View {
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.04))
+                            .background(Theme.bgHover)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
@@ -620,9 +620,9 @@ struct EnhancedMessageBubble: View, Equatable {
     private var isAI: Bool { message.isFromAssistant }
 
     private var bubbleColor: Color {
-        if isAI { return Color(white: 0.12) }
+        if isAI { return Theme.bgElevated }
         if isFromCurrentUser { return .accentColor }
-        return Color(white: 0.15)
+        return Theme.bgElevated
     }
 
     var body: some View {
@@ -694,7 +694,7 @@ struct EnhancedMessageBubble: View, Equatable {
             MarkdownText(message.content, isFromCurrentUser: false)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Color(white: 0.1))
+                .background(Theme.bgTertiary)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .opacity(isPending ? 0.6 : 1)
         } else {
