@@ -2349,61 +2349,12 @@ struct ProductEditorPanel: View {
 
                 // Custom Fields
                 if !customFields.isEmpty {
-                    GroupBox("Custom Fields") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            ForEach(customFields) { schema in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(schema.name)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Theme.text)
-
-                                    ForEach(schema.fields, id: \.fieldId) { field in
-                                        ProductFieldRow(
-                                            label: field.displayLabel,
-                                            value: field.defaultValue?.description ?? "-"
-                                        )
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    }
+                    CustomFieldsSection(schemas: customFields)
                 }
 
                 // Pricing Schemas
                 if !pricingSchemas.isEmpty {
-                    GroupBox("Pricing Tiers") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            ForEach(pricingSchemas) { schema in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(schema.name)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Theme.text)
-
-                                    ForEach(schema.tiers, id: \.tierId) { tier in
-                                        HStack {
-                                            Text(tier.displayLabel)
-                                                .font(.system(size: 11))
-                                                .foregroundStyle(.secondary)
-
-                                            if let qty = tier.quantity {
-                                                Text("(\(Int(qty)) \(tier.unit ?? "units"))")
-                                                    .font(.system(size: 10))
-                                                    .foregroundStyle(.tertiary)
-                                            }
-
-                                            Spacer()
-
-                                            Text(tier.formattedPrice)
-                                                .font(.system(size: 12, weight: .medium))
-                                                .foregroundStyle(Theme.green)
-                                        }
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    }
+                    PricingSchemasSection(schemas: pricingSchemas)
                 }
 
                 // Image Gallery
@@ -2491,6 +2442,75 @@ struct ProductFieldRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .font(.system(size: 12))
+    }
+}
+
+// MARK: - Custom Fields Section
+
+struct CustomFieldsSection: View {
+    let schemas: [FieldSchema]
+
+    var body: some View {
+        GroupBox("Custom Fields") {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(schemas, id: \.id) { schema in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(schema.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.text)
+
+                        ForEach(schema.fields, id: \.fieldId) { field in
+                            ProductFieldRow(
+                                label: field.displayLabel,
+                                value: field.defaultValue.map { "\($0.value)" } ?? "-"
+                            )
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Pricing Schemas Section
+
+struct PricingSchemasSection: View {
+    let schemas: [PricingSchema]
+
+    var body: some View {
+        GroupBox("Pricing Tiers") {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(schemas, id: \.id) { schema in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(schema.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.text)
+
+                        ForEach(schema.tiers, id: \.tierId) { tier in
+                            HStack {
+                                Text(tier.displayLabel)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+
+                                if let qty = tier.quantity {
+                                    Text("(\(Int(qty)) \(tier.unit ?? "units"))")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.tertiary)
+                                }
+
+                                Spacer()
+
+                                Text(tier.formattedPrice)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Theme.green)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
     }
 }
 
