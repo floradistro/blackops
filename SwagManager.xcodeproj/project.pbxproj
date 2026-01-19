@@ -45,10 +45,12 @@
 		BF918 /* EditorSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF918 /* EditorSheets.swift */; };
 		BF919 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF919 /* Formatters.swift */; };
 		BF920 /* EditorSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF920 /* EditorSidebarView.swift */; };
+		F3C6F109C9E4168D89840E85 /* HotReloadComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorTabComponents.swift; sourceTree = "<group>"; };
+		4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HotReloadComponents.swift; sourceTree = "<group>"; };
 		53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserComponents.swift; sourceTree = "<group>"; };
 		8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryConfigView.swift; sourceTree = "<group>"; };
 		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -261,6 +263,7 @@
 			isa = PBXGroup;
 			children = (
 				SF920 /* EditorSidebarView.swift */,
+				4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -366,6 +369,7 @@
 				7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */,
 				A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */,
 				07D694322E9AC5B56006590D /* BrowserComponents.swift in Sources */,
+				F3C6F109C9E4168D89840E85 /* HotReloadComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
