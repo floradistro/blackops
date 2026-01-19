@@ -34,8 +34,8 @@ struct TreeSectionHeader: View {
                     .frame(width: 12)
 
                 Text(title)
-                    .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .tracking(0.5)
 
                 Text("\(count)")
@@ -277,11 +277,11 @@ struct CollectionTreeItem: View {
                     .frame(width: 10)
 
                 Image(systemName: "folder.fill")
-                    .font(DesignSystem.Typography.caption2)
+                    .font(.system(size: 11))
                     .foregroundStyle(DesignSystem.Colors.warning)
 
                 Text(collection.name)
-                    .font(DesignSystem.Typography.caption1)
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                     .lineLimit(1)
 
@@ -289,7 +289,7 @@ struct CollectionTreeItem: View {
 
                 if itemCount > 0 {
                     Text("\(itemCount)")
-                        .font(DesignSystem.Typography.caption1)
+                        .font(.system(size: 9))
                         .foregroundStyle(DesignSystem.Colors.textTertiary)
                 }
             }
@@ -320,12 +320,12 @@ struct CreationTreeItem: View {
                 }
 
                 Image(systemName: creation.creationType.icon)
-                    .font(DesignSystem.Typography.caption2)
+                    .font(.system(size: 10))
                     .foregroundStyle(creation.creationType.color)
                     .frame(width: 16)
 
                 Text(creation.name)
-                    .font(DesignSystem.Typography.caption1)
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 
@@ -398,7 +398,7 @@ struct ConversationRow: View {
         Button(action: onTap) {
             HStack(spacing: DesignSystem.Spacing.xs) {
                 Text("#")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
 
                 Text(conversation.displayTitle)
@@ -434,7 +434,8 @@ struct ChatSectionLabel: View {
     var body: some View {
         Text(title.uppercased())
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(DesignSystem.Colors.textTertiary)
+            .tracking(0.5)
             .padding(.horizontal, DesignSystem.Spacing.md)
             .padding(.top, DesignSystem.Spacing.xs)
             .padding(.bottom, 3)
