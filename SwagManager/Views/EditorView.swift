@@ -386,8 +386,14 @@ struct EditorView: View {
                 .toolbarBackground(.hidden, for: .windowToolbar)
         } detail: {
             // Main Content Area
-            VStack(spacing: 0) {
-                mainContentView
+            ZStack {
+                // Unified glass background for all content
+                VisualEffectBackground(material: .underWindowBackground)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    mainContentView
+                }
             }
             .toolbar {
                 UnifiedToolbarContent(store: store)
@@ -395,7 +401,6 @@ struct EditorView: View {
             .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
-        .background(VisualEffectBackground(material: .underWindowBackground))
         .animation(Theme.spring, value: sidebarCollapsed)
         .onChange(of: sidebarCollapsed) { _, collapsed in
             columnVisibility = collapsed ? .detailOnly : .all
@@ -2215,13 +2220,13 @@ struct ProductEditorPanel: View {
                         AsyncImage(url: url) { image in
                             image.resizable().aspectRatio(contentMode: .fill)
                         } placeholder: {
-                            Color.gray.opacity(0.3)
+                            Theme.bgElevated
                         }
                         .frame(width: 80, height: 80)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     } else {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
+                            .fill(Theme.bgElevated)
                             .frame(width: 80, height: 80)
                             .overlay(
                                 Image(systemName: "leaf")
@@ -2301,7 +2306,6 @@ struct ProductEditorPanel: View {
         }
         .scrollContentBackground(.hidden)
         .scrollIndicators(.automatic)
-        .background(Theme.bgTertiary)
     }
 }
 
@@ -4825,21 +4829,24 @@ struct CodeEditorPanel: View {
             HStack {
                 Text("React Code")
                     .font(.headline)
+                    .foregroundStyle(Theme.text)
                 Spacer()
                 Text("\(code.count) characters")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.textTertiary)
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(Theme.bgTertiary)
 
-            Divider()
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
 
             // Editor
             TextEditor(text: $code)
                 .font(.system(size: 13, design: .monospaced))
                 .scrollContentBackground(.hidden)
-                .background(Color(NSColor.textBackgroundColor))
+                .background(Theme.bgElevated)
         }
     }
 }
@@ -4903,7 +4910,6 @@ struct DetailsPanel: View {
         }
         .scrollContentBackground(.hidden)
         .scrollIndicators(.automatic)
-        .background(Theme.bgTertiary)
     }
 }
 
