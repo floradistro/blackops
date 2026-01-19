@@ -436,7 +436,7 @@ struct EditorView: View {
             if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
                 if case .browserSession(let s) = tab { return s } else { return nil }
             } : nil) {
-                BrowserTabManager.forSession(session.id).activeTab?.reload()
+                BrowserTabManager.forSession(session.id).activeTab?.refresh()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserBack"))) { _ in
