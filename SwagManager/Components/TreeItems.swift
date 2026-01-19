@@ -27,7 +27,7 @@ struct TreeSectionHeader: View {
         } label: {
             HStack(spacing: DesignSystem.Spacing.sm) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: DesignSystem.IconSize.small, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .animation(DesignSystem.Animation.fast, value: isExpanded)
@@ -39,7 +39,7 @@ struct TreeSectionHeader: View {
                     .tracking(0.5)
 
                 Text("\(count)")
-                    .font(.system(size: DesignSystem.IconSize.small, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .padding(.horizontal, DesignSystem.Spacing.xs)
                     .padding(.vertical, 2)
@@ -105,7 +105,7 @@ struct CategoryHierarchyView: View {
                     // Chevron
                     if hasChildren {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: DesignSystem.IconSize.small))
+                            .font(.system(size: 9))
                             .foregroundStyle(.tertiary)
                             .frame(width: 10)
                     } else {
@@ -113,14 +113,14 @@ struct CategoryHierarchyView: View {
                     }
 
                     Text(category.name)
-                        .font(.system(size: 11))
+                        .font(DesignSystem.Typography.caption2)
                         .lineLimit(1)
 
                     Spacer()
 
                     if totalCount > 0 {
                         Text("\(totalCount)")
-                            .font(.system(size: DesignSystem.IconSize.small))
+                            .font(.system(size: 9))
                             .foregroundStyle(.tertiary)
                             .padding(.trailing, DesignSystem.Spacing.xxs)
                     }
@@ -178,24 +178,24 @@ struct CategoryTreeItem: View {
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.xxs) {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: DesignSystem.IconSize.small))
+                .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
                 .frame(width: 12)
 
             Image(systemName: category.icon ?? (isExpanded ? "folder.fill" : "folder"))
-                .font(.system(size: DesignSystem.IconSize.small))
+                .font(.system(size: 9))
                 .foregroundStyle(.green)
                 .frame(width: 14)
 
             Text(category.name)
-                .font(.system(size: 11))
+                .font(DesignSystem.Typography.caption2)
                 .lineLimit(1)
 
             Spacer()
 
             if itemCount > 0 {
                 Text("\(itemCount)")
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
                     .padding(.trailing, DesignSystem.Spacing.xxs)
             }
@@ -223,19 +223,19 @@ struct ProductTreeItem: View {
         } label: {
             HStack(spacing: DesignSystem.Spacing.xs) {
                 Image(systemName: "leaf.fill")
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(DesignSystem.Colors.success)
                     .frame(width: 14)
 
                 Text(product.name)
-                    .font(.system(size: 11))
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text(product.displayPrice)
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
 
                 Circle()
@@ -270,18 +270,18 @@ struct CollectionTreeItem: View {
         } label: {
             HStack(spacing: DesignSystem.Spacing.sm) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: DesignSystem.IconSize.small, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .animation(DesignSystem.Animation.fast, value: isExpanded)
                     .frame(width: 10)
 
                 Image(systemName: "folder.fill")
-                    .font(.system(size: DesignSystem.IconSize.medium))
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(DesignSystem.Colors.warning)
 
                 Text(collection.name)
-                    .font(DesignSystem.Typography.body)
+                    .font(DesignSystem.Typography.caption1)
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                     .lineLimit(1)
 
@@ -320,12 +320,12 @@ struct CreationTreeItem: View {
                 }
 
                 Image(systemName: creation.creationType.icon)
-                    .font(.system(size: 11))
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(creation.creationType.color)
                     .frame(width: 16)
 
                 Text(creation.name)
-                    .font(DesignSystem.Typography.body)
+                    .font(DesignSystem.Typography.caption1)
                     .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 
@@ -362,19 +362,19 @@ struct CatalogRow: View {
         Button(action: onTap) {
             HStack(spacing: DesignSystem.Spacing.xxs) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
                     .frame(width: 10)
 
                 Text(catalog.name)
-                    .font(.system(size: 11))
+                    .font(DesignSystem.Typography.caption2)
                     .lineLimit(1)
 
                 Spacer()
 
                 if let count = itemCount, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: DesignSystem.IconSize.small))
+                        .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -398,18 +398,18 @@ struct ConversationRow: View {
         Button(action: onTap) {
             HStack(spacing: DesignSystem.Spacing.xs) {
                 Text("#")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.tertiary)
 
                 Text(conversation.displayTitle)
-                    .font(.system(size: 11))
+                    .font(DesignSystem.Typography.caption2)
                     .lineLimit(1)
 
                 Spacer()
 
                 if let count = conversation.messageCount, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: DesignSystem.IconSize.small))
+                        .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -433,7 +433,7 @@ struct ChatSectionLabel: View {
 
     var body: some View {
         Text(title.uppercased())
-            .font(.system(size: DesignSystem.IconSize.small, weight: .semibold))
+            .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(.tertiary)
             .padding(.horizontal, DesignSystem.Spacing.md)
             .padding(.top, DesignSystem.Spacing.xs)
@@ -463,7 +463,7 @@ struct StorePickerRow: View {
         } label: {
             HStack(spacing: DesignSystem.Spacing.xxs) {
                 Image(systemName: "storefront")
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(.green)
 
                 Text(store.selectedStore?.storeName ?? "Select Store")
@@ -474,7 +474,7 @@ struct StorePickerRow: View {
                 Spacer()
 
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, DesignSystem.Spacing.sm)
@@ -517,12 +517,12 @@ struct CollectionListItem: View {
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.xs) {
             Image(systemName: "folder.fill")
-                .font(.system(size: 11))
+                .font(DesignSystem.Typography.caption2)
                 .foregroundStyle(.orange)
                 .frame(width: 16)
 
             Text(collection.name)
-                .font(.system(size: 11))
+                .font(DesignSystem.Typography.caption2)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
 
@@ -530,7 +530,7 @@ struct CollectionListItem: View {
 
             if collection.isPublic == true {
                 Image(systemName: "globe")
-                    .font(.system(size: DesignSystem.IconSize.small))
+                    .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             }
         }

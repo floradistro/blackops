@@ -33,12 +33,12 @@ struct SidebarPanel: View {
             // Search bar
             HStack(spacing: DesignSystem.Spacing.sm) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11))
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
 
                 TextField("Search", text: $searchText)
                     .textFieldStyle(.plain)
-                    .font(DesignSystem.Typography.body)
+                    .font(DesignSystem.Typography.caption1)
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                     .focused($isSearchFocused)
 
@@ -47,7 +47,7 @@ struct SidebarPanel: View {
                         withAnimation(DesignSystem.Animation.fast) { searchText = "" }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
+                            .font(DesignSystem.Typography.caption2)
                             .foregroundStyle(DesignSystem.Colors.textTertiary)
                     }
                     .buttonStyle(.plain)
@@ -95,7 +95,7 @@ struct SidebarPanel: View {
             Spacer()
 
             Image(systemName: "building.2")
-                .font(.system(size: DesignSystem.IconSize.xlarge))
+                .font(.system(size: 48))
                 .foregroundStyle(DesignSystem.Colors.textQuaternary)
 
             Text("No Store Selected")
@@ -133,7 +133,7 @@ struct SidebarPanel: View {
                 .scaleEffect(0.8)
                 .tint(DesignSystem.Colors.accent)
             Text("Loading...")
-                .font(.system(size: 11))
+                .font(DesignSystem.Typography.caption2)
                 .foregroundStyle(DesignSystem.Colors.textTertiary)
         }
         Spacer()
@@ -421,7 +421,7 @@ struct SidebarPanel: View {
                         .font(DesignSystem.Typography.caption1)
                         .foregroundStyle(.tertiary)
                     Text("Sessions will appear here when AI browses the web")
-                        .font(.system(size: DesignSystem.IconSize.small))
+                        .font(DesignSystem.Typography.caption2)
                         .foregroundStyle(.quaternary)
                 }
                 .padding(.horizontal, DesignSystem.Spacing.md)
