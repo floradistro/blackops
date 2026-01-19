@@ -33,6 +33,14 @@ struct TeamChatView: View {
                 }
             }
         }
+        .onChange(of: store.selectedConversation) { _, newConversation in
+            if let conversation = newConversation {
+                Task {
+                    NSLog("[TeamChatView] Syncing selected conversation from store: \(conversation.displayTitle)")
+                    await chatStore.selectConversation(conversation, supabase: store.supabase)
+                }
+            }
+        }
     }
 
     // MARK: - Header
