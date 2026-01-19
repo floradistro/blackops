@@ -24,7 +24,7 @@ struct SafariBrowserWindow: View {
         VStack(spacing: 0) {
             // Thin top border for visual separation
             Rectangle()
-                .fill(Theme.border)
+                .fill(DesignSystem.Colors.border)
                 .frame(height: 1)
 
             // Active tab content (controls are now in unified header)
@@ -60,7 +60,7 @@ struct CompactSafariToolbar: View {
                 Button(action: { tabManager.activeTab?.goBack() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(canGoBack ? Theme.text : Theme.textTertiary)
+                        .foregroundStyle(canGoBack ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
                         .frame(width: 32, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -69,7 +69,7 @@ struct CompactSafariToolbar: View {
                 Button(action: { tabManager.activeTab?.goForward() }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(canGoForward ? Theme.text : Theme.textTertiary)
+                        .foregroundStyle(canGoForward ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
                         .frame(width: 32, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -80,12 +80,12 @@ struct CompactSafariToolbar: View {
             HStack(spacing: 6) {
                 Image(systemName: tabManager.activeTab?.isSecure ?? false ? "lock.fill" : "magnifyingglass")
                     .font(.system(size: 10))
-                    .foregroundStyle(tabManager.activeTab?.isSecure ?? false ? Theme.green : Theme.textTertiary)
+                    .foregroundStyle(tabManager.activeTab?.isSecure ?? false ? DesignSystem.Colors.green : DesignSystem.Colors.textTertiary)
 
                 TextField("Search or enter website name", text: $urlText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
-                    .foregroundStyle(Theme.text)
+                    .foregroundStyle(DesignSystem.Colors.textPrimary)
                     .focused($isURLFieldFocused)
                     .onSubmit(navigateToURL)
 
@@ -97,7 +97,7 @@ struct CompactSafariToolbar: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Theme.bgTertiary)
+            .background(DesignSystem.Colors.surfaceTertiary)
             .cornerRadius(6)
             .padding(.horizontal, 8)
 
@@ -106,7 +106,7 @@ struct CompactSafariToolbar: View {
                 Button(action: { tabManager.activeTab?.toggleDarkMode() }) {
                     Image(systemName: tabManager.activeTab?.isDarkMode == true ? "moon.fill" : "moon")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(tabManager.activeTab?.isDarkMode == true ? Theme.accent : Theme.textSecondary)
+                        .foregroundStyle(tabManager.activeTab?.isDarkMode == true ? DesignSystem.Colors.accent : DesignSystem.Colors.textSecondary)
                         .frame(width: 32, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -114,7 +114,7 @@ struct CompactSafariToolbar: View {
                 Button(action: { tabManager.newTab() }) {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(DesignSystem.Colors.textSecondary)
                         .frame(width: 32, height: 36)
                 }
                 .buttonStyle(.plain)
@@ -186,14 +186,14 @@ struct SquareTabItem: View {
                 } else {
                     Image(systemName: tab.isSecure ? "lock.fill" : "globe")
                         .font(.system(size: 9))
-                        .foregroundStyle(tab.isSecure ? Theme.green : Theme.textTertiary)
+                        .foregroundStyle(tab.isSecure ? DesignSystem.Colors.green : DesignSystem.Colors.textTertiary)
                         .frame(width: 14, height: 14)
                 }
 
                 // Title with URL fallback
                 Text(tab.pageTitle ?? tab.currentURL ?? "New Tab")
                     .font(.system(size: 11))
-                    .foregroundStyle(isActive ? Theme.text : Theme.textSecondary)
+                    .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -201,7 +201,7 @@ struct SquareTabItem: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(Theme.textTertiary)
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
@@ -209,11 +209,11 @@ struct SquareTabItem: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 36)
-            .background(isActive ? Theme.bgTertiary : Theme.bgSecondary)
+            .background(isActive ? DesignSystem.Colors.surfaceTertiary : DesignSystem.Colors.surfaceSecondary)
             .overlay(
                 Rectangle()
                     .frame(width: 1)
-                    .foregroundStyle(Theme.border)
+                    .foregroundStyle(DesignSystem.Colors.border)
                 , alignment: .trailing
             )
         }
@@ -236,7 +236,7 @@ struct SafariToolbar: View {
                 Button(action: { tabManager.activeTab?.goBack() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(canGoBack ? Theme.text : Theme.textTertiary)
+                        .foregroundStyle(canGoBack ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -245,7 +245,7 @@ struct SafariToolbar: View {
                 Button(action: { tabManager.activeTab?.goForward() }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(canGoForward ? Theme.text : Theme.textTertiary)
+                        .foregroundStyle(canGoForward ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -270,7 +270,7 @@ struct SafariToolbar: View {
                 Button(action: { tabManager.activeTab?.toggleDarkMode() }) {
                     Image(systemName: tabManager.activeTab?.isDarkMode == true ? "moon.fill" : "moon")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(tabManager.activeTab?.isDarkMode == true ? Theme.accent : Theme.textSecondary)
+                        .foregroundStyle(tabManager.activeTab?.isDarkMode == true ? DesignSystem.Colors.accent : DesignSystem.Colors.textSecondary)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -279,7 +279,7 @@ struct SafariToolbar: View {
                 Button(action: { tabManager.newTab() }) {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(DesignSystem.Colors.textSecondary)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -290,11 +290,11 @@ struct SafariToolbar: View {
                         ZStack {
                             Image(systemName: "square.on.square")
                                 .font(.system(size: 13))
-                                .foregroundStyle(Theme.textSecondary)
+                                .foregroundStyle(DesignSystem.Colors.textSecondary)
 
                             Text("\(tabManager.tabs.count)")
                                 .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(Theme.text)
+                                .foregroundStyle(DesignSystem.Colors.textPrimary)
                                 .offset(y: 8)
                         }
                         .frame(width: 28, height: 28)
@@ -305,7 +305,7 @@ struct SafariToolbar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Theme.bg)
+        .background(DesignSystem.Colors.surfacePrimary)
         .onChange(of: tabManager.activeTab?.currentURL) { _, newURL in
             if !isURLFieldFocused {
                 urlText = newURL ?? ""
@@ -360,13 +360,13 @@ struct SafariAddressBar: View {
             // Security icon
             Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
                 .font(.system(size: 11))
-                .foregroundStyle(isSecure ? Theme.green : Theme.textTertiary)
+                .foregroundStyle(isSecure ? DesignSystem.Colors.green : DesignSystem.Colors.textTertiary)
 
             // URL / Title field
             TextField("Search or enter website name", text: $urlText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
-                .foregroundStyle(Theme.text)
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
                 .focused($isURLFieldFocused)
                 .onSubmit(onSubmit)
 
@@ -374,7 +374,7 @@ struct SafariAddressBar: View {
             Button(action: isLoading ? onStop : onRefresh) {
                 Image(systemName: isLoading ? "xmark" : "arrow.clockwise")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(DesignSystem.Colors.textSecondary)
                     .frame(width: 20, height: 20)
             }
             .buttonStyle(.plain)
@@ -382,11 +382,11 @@ struct SafariAddressBar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(Theme.bgElevated.opacity(0.8))
+        .background(DesignSystem.Colors.surfaceElevated.opacity(0.8))
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(isURLFieldFocused ? Theme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                .strokeBorder(isURLFieldFocused ? DesignSystem.Colors.accent.opacity(0.3) : Color.clear, lineWidth: 1)
         )
     }
 }
@@ -412,7 +412,7 @@ struct SafariTabBar: View {
             }
         }
         .frame(height: 36)
-        .background(Theme.bg)
+        .background(DesignSystem.Colors.surfacePrimary)
     }
 }
 
@@ -435,20 +435,20 @@ struct SafariTabItem: View {
                 } else {
                     Image(systemName: "globe")
                         .font(.system(size: 10))
-                        .foregroundStyle(Theme.textTertiary)
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                 }
 
                 // Title
                 Text(tab.pageTitle ?? "New Tab")
                     .font(.system(size: 12))
-                    .foregroundStyle(isActive ? Theme.text : Theme.textSecondary)
+                    .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 
                 // Close button
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(Theme.textTertiary)
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
@@ -456,7 +456,7 @@ struct SafariTabItem: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isActive ? Theme.bgElevated.opacity(0.5) : Color.clear)
+            .background(isActive ? DesignSystem.Colors.surfaceElevated.opacity(0.5) : Color.clear)
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
@@ -472,11 +472,11 @@ struct EmptyBrowserView: View {
         VStack(spacing: 20) {
             Image(systemName: "safari")
                 .font(.system(size: 64))
-                .foregroundStyle(Theme.textTertiary)
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
 
             Text("No tabs open")
                 .font(.title2)
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(DesignSystem.Colors.textSecondary)
 
             Button(action: onNewTab) {
                 Text("New Tab")
@@ -484,13 +484,13 @@ struct EmptyBrowserView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
-                    .background(Theme.accent)
+                    .background(DesignSystem.Colors.accent)
                     .cornerRadius(8)
             }
             .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.bg)
+        .background(DesignSystem.Colors.surfacePrimary)
     }
 }
 

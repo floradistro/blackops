@@ -336,12 +336,12 @@ struct EditorView: View {
             .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
-        .animation(Theme.spring, value: sidebarCollapsed)
+        .animation(DesignSystem.Animation.spring, value: sidebarCollapsed)
         .onChange(of: sidebarCollapsed) { _, collapsed in
             columnVisibility = collapsed ? .detailOnly : .all
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleSidebar"))) { _ in
-            withAnimation(Theme.spring) {
+            withAnimation(DesignSystem.Animation.spring) {
                 sidebarCollapsed.toggle()
             }
         }
@@ -1880,7 +1880,7 @@ struct ToolbarTabStrip: View {
             if store.openTabs.isEmpty {
                 Text("Swag Manager")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(DesignSystem.Colors.textSecondary)
                     .frame(maxWidth: .infinity)
             } else {
                 // Safari-style proportional tabs - each tab gets equal width
@@ -1897,7 +1897,7 @@ struct ToolbarTabStrip: View {
             }
         }
         .frame(height: 26)
-        .animation(Theme.animationFast, value: store.openTabs.count)
+        .animation(DesignSystem.Animation.fast, value: store.openTabs.count)
     }
 
     private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
@@ -1927,12 +1927,12 @@ struct SafariStyleTab: View {
                 // Icon
                 Image(systemName: tab.icon)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isActive ? Theme.text : Theme.textTertiary)
+                    .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
 
                 // Title
                 Text(tab.name)
                     .font(.system(size: 11.5, weight: isActive ? .medium : .regular))
-                    .foregroundStyle(isActive ? Theme.text : Theme.textSecondary)
+                    .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -1942,7 +1942,7 @@ struct SafariStyleTab: View {
                 ZStack {
                     if hasUnsavedChanges && !isHovering {
                         Circle()
-                            .fill(Theme.orange)
+                            .fill(DesignSystem.Colors.orange)
                             .frame(width: 6, height: 6)
                     } else if isHovering || isActive {
                         Button {
@@ -1950,11 +1950,11 @@ struct SafariStyleTab: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 7.5, weight: .semibold))
-                                .foregroundStyle(isActive ? Theme.textSecondary : Theme.textTertiary)
+                                .foregroundStyle(isActive ? DesignSystem.Colors.textSecondary : DesignSystem.Colors.textTertiary)
                                 .frame(width: 16, height: 16)
                                 .background(
                                     Circle()
-                                        .fill(isHovering ? Theme.bgHover : Color.clear)
+                                        .fill(isHovering ? DesignSystem.Colors.surfaceHover : Color.clear)
                                 )
                                 .contentShape(Circle())
                         }
@@ -1970,10 +1970,10 @@ struct SafariStyleTab: View {
                 ZStack {
                     if isActive {
                         // Glass-style active tab
-                        Theme.bgActive
+                        DesignSystem.Colors.surfaceActive
                     } else if isHovering {
                         // Subtle hover
-                        Theme.bgTertiary
+                        DesignSystem.Colors.surfaceTertiary
                     } else {
                         // Transparent
                         Color.clear
@@ -1983,7 +1983,7 @@ struct SafariStyleTab: View {
             .overlay(
                 Rectangle()
                     .frame(width: 0.5)
-                    .foregroundStyle(Theme.borderSubtle)
+                    .foregroundStyle(DesignSystem.Colors.borderSubtle)
                 , alignment: .trailing
             )
         }
@@ -2007,30 +2007,30 @@ struct EditorModeStrip: View {
         HStack(spacing: 1) {
             ForEach(EditorTab.allCases, id: \.self) { tab in
                 Button {
-                    withAnimation(Theme.spring) { selectedTab = tab }
+                    withAnimation(DesignSystem.Animation.spring) { selectedTab = tab }
                 } label: {
                     Image(systemName: tab.icon)
                         .font(.system(size: 11))
-                        .foregroundStyle(selectedTab == tab ? Theme.accent : Theme.textTertiary)
+                        .foregroundStyle(selectedTab == tab ? DesignSystem.Colors.accent : DesignSystem.Colors.textTertiary)
                         .frame(width: 28, height: 24)
                         .background(
                             RoundedRectangle(cornerRadius: 5)
-                                .fill(selectedTab == tab ? Theme.selectionActive : (hoveringTab == tab ? Theme.bgHover : Color.clear))
+                                .fill(selectedTab == tab ? DesignSystem.Colors.selectionActive : (hoveringTab == tab ? DesignSystem.Colors.surfaceHover : Color.clear))
                         )
                 }
                 .buttonStyle(.borderless)
                 .help(tab.rawValue)
                 .onHover { hovering in
-                    withAnimation(Theme.animationFast) { hoveringTab = hovering ? tab : nil }
+                    withAnimation(DesignSystem.Animation.fast) { hoveringTab = hovering ? tab : nil }
                 }
             }
         }
         .padding(3)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Theme.border, lineWidth: 1)
+                .stroke(DesignSystem.Colors.border, lineWidth: 1)
         )
     }
 }
@@ -2060,7 +2060,7 @@ struct OpenTabBar: View {
             .padding(.vertical, 4)
         }
         .frame(height: 32)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .contextMenu {
             Button("Close All Tabs") {
                 store.closeAllTabs()
@@ -2114,7 +2114,7 @@ struct OpenTabButton: View {
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(isHovering ? .secondary : .quaternary)
                         .frame(width: 14, height: 14)
-                        .background(isHovering ? Theme.bgHover : Color.clear)
+                        .background(isHovering ? DesignSystem.Colors.surfaceHover : Color.clear)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                 }
                 .buttonStyle(.plain)
@@ -2126,7 +2126,7 @@ struct OpenTabButton: View {
         .padding(.vertical, 5)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(isActive ? Theme.bgElevated : (isHovering ? Theme.bgTertiary : Color.clear))
+                .fill(isActive ? DesignSystem.Colors.surfaceElevated : (isHovering ? DesignSystem.Colors.surfaceTertiary : Color.clear))
         )
         .foregroundStyle(isActive ? .primary : .secondary)
         .onHover { isHovering = $0 }
@@ -2266,7 +2266,7 @@ struct ProductEditorPanel: View {
                                 Spacer()
                                 Text("\(location.quantity)")
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(location.quantity > 0 ? Theme.green : .secondary)
+                                    .foregroundStyle(location.quantity > 0 ? DesignSystem.Colors.green : .secondary)
                             }
                             .padding(.vertical, 4)
                         }
@@ -2457,13 +2457,13 @@ struct EditableRow: View {
                 .background {
                     ZStack {
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(Theme.bgTertiary)
+                            .fill(DesignSystem.Colors.surfaceTertiary)
 
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(Theme.glass)
+                            .fill(DesignSystem.Materials.thin)
 
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(isFocused ? Theme.accent.opacity(0.5) : Theme.borderSubtle, lineWidth: 1)
+                            .stroke(isFocused ? DesignSystem.Colors.accent.opacity(0.5) : DesignSystem.Colors.borderSubtle, lineWidth: 1)
                     }
                 }
                 .focused($isFocused)
@@ -2528,13 +2528,13 @@ struct GlassTextEditor: View {
                 .background {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Theme.bgTertiary)
+                            .fill(DesignSystem.Colors.surfaceTertiary)
 
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Theme.glass)
+                            .fill(DesignSystem.Materials.thin)
 
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(isFocused ? Theme.accent.opacity(0.5) : Theme.borderSubtle, lineWidth: 1)
+                            .stroke(isFocused ? DesignSystem.Colors.accent.opacity(0.5) : DesignSystem.Colors.borderSubtle, lineWidth: 1)
                     }
                 }
                 .focused($isFocused)
@@ -2648,20 +2648,20 @@ struct ProductPricingSection: View {
 
                             Text(extractPrice(from: tierDict))
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Theme.green)
+                                .foregroundStyle(DesignSystem.Colors.green)
                         }
                         .padding(.vertical, 10)
                         .padding(.horizontal, 14)
                         .background {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Theme.bgTertiary)
+                                    .fill(DesignSystem.Colors.surfaceTertiary)
 
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Theme.glass)
+                                    .fill(DesignSystem.Materials.thin)
 
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Theme.borderSubtle, lineWidth: 1)
+                                    .stroke(DesignSystem.Colors.borderSubtle, lineWidth: 1)
                             }
                         }
                     }
@@ -2763,34 +2763,34 @@ struct WelcomeView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Theme.accent.opacity(0.15))
+                            .fill(DesignSystem.Colors.accent.opacity(0.15))
                             .frame(width: 52, height: 52)
                         Image(systemName: "storefront.fill")
                             .font(.system(size: 22))
-                            .foregroundStyle(Theme.accent)
+                            .foregroundStyle(DesignSystem.Colors.accent)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(store.selectedStore?.storeName ?? "Swag Manager")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(Theme.text)
+                            .foregroundStyle(DesignSystem.Colors.textPrimary)
                         Text("Ready to build")
                             .font(.system(size: 12))
-                            .foregroundStyle(Theme.textSecondary)
+                            .foregroundStyle(DesignSystem.Colors.textSecondary)
                     }
                 }
 
                 // Stats
                 if !store.products.isEmpty || !store.categories.isEmpty || !store.creations.isEmpty {
                     HStack(spacing: 0) {
-                        statItem(value: store.products.count, label: "Products", color: Theme.green)
-                        Rectangle().fill(Theme.border).frame(width: 1, height: 40)
-                        statItem(value: store.categories.count, label: "Categories", color: Theme.yellow)
-                        Rectangle().fill(Theme.border).frame(width: 1, height: 40)
-                        statItem(value: store.creations.count, label: "Creations", color: Theme.cyan)
+                        statItem(value: store.products.count, label: "Products", color: DesignSystem.Colors.green)
+                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40)
+                        statItem(value: store.categories.count, label: "Categories", color: DesignSystem.Colors.yellow)
+                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40)
+                        statItem(value: store.creations.count, label: "Creations", color: DesignSystem.Colors.cyan)
                     }
                     .padding(.vertical, 16)
-                    .background(Theme.bgElevated)
+                    .background(DesignSystem.Colors.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
 
@@ -2798,7 +2798,7 @@ struct WelcomeView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Quick Actions")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.textTertiary)
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                         .textCase(.uppercase)
                         .tracking(0.5)
 
@@ -2813,11 +2813,11 @@ struct WelcomeView: View {
                 }
             }
             .padding(32)
-            .background(Theme.bgTertiary)
+            .background(DesignSystem.Colors.surfaceTertiary)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Theme.border, lineWidth: 1)
+                    .stroke(DesignSystem.Colors.border, lineWidth: 1)
             )
             .frame(maxWidth: 440)
             .opacity(appeared ? 1 : 0)
@@ -2838,7 +2838,7 @@ struct WelcomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            withAnimation(Theme.animationSlow.delay(0.1)) {
+            withAnimation(DesignSystem.Animation.slow.delay(0.1)) {
                 appeared = true
             }
         }
@@ -2851,7 +2851,7 @@ struct WelcomeView: View {
                 .foregroundStyle(color)
             Text(label)
                 .font(.system(size: 10))
-                .foregroundStyle(Theme.textTertiary)
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -2861,19 +2861,19 @@ struct WelcomeView: View {
             ForEach(keys, id: \.self) { key in
                 Text(key)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(DesignSystem.Colors.textSecondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
-                    .background(Theme.bgTertiary)
+                    .background(DesignSystem.Colors.surfaceTertiary)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .overlay(
                         RoundedRectangle(cornerRadius: 5)
-                            .stroke(Theme.border, lineWidth: 1)
+                            .stroke(DesignSystem.Colors.border, lineWidth: 1)
                     )
             }
             Text(action)
                 .font(.system(size: 10))
-                .foregroundStyle(Theme.textTertiary)
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
         }
     }
 }
@@ -2892,21 +2892,21 @@ struct QuickActionButton: View {
             VStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(DesignSystem.Colors.accent)
                 Text(label)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.text)
+                    .foregroundStyle(DesignSystem.Colors.textPrimary)
                 Text(shortcut)
                     .font(.system(size: 10))
-                    .foregroundStyle(Theme.textTertiary)
+                    .foregroundStyle(DesignSystem.Colors.textTertiary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
-            .background(isHovering ? Theme.bgElevated : Theme.bgSecondary)
+            .background(isHovering ? DesignSystem.Colors.surfaceElevated : DesignSystem.Colors.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(isHovering ? Theme.border : Color.clear, lineWidth: 1)
+                    .stroke(isHovering ? DesignSystem.Colors.border : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -2974,7 +2974,7 @@ struct EditorTabBar: View {
                 .buttonStyle(.plain)
 
                 Rectangle()
-                    .fill(Theme.border)
+                    .fill(DesignSystem.Colors.border)
                     .frame(width: 1, height: 18)
                     .padding(.trailing, 8)
             }
@@ -3006,7 +3006,7 @@ struct EditorTabBar: View {
                         }
                         Text(creation.name)
                             .font(.system(size: 11))
-                            .foregroundStyle(Theme.textTertiary)
+                            .foregroundStyle(DesignSystem.Colors.textTertiary)
                             .lineLimit(1)
                     }
 
@@ -3016,9 +3016,9 @@ struct EditorTabBar: View {
                     } label: {
                         Image(systemName: "arrow.down.doc")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(hasUnsavedChanges ? .primary : Theme.textQuaternary)
+                            .foregroundStyle(hasUnsavedChanges ? .primary : DesignSystem.Colors.textQuaternary)
                             .frame(width: 28, height: 28)
-                            .background(hasUnsavedChanges ? Theme.bgElevated : Color.clear)
+                            .background(hasUnsavedChanges ? DesignSystem.Colors.surfaceElevated : Color.clear)
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
@@ -3029,7 +3029,7 @@ struct EditorTabBar: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 38)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
     }
 }
 
@@ -3046,7 +3046,7 @@ struct TabButton: View {
             HStack(spacing: 5) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isSelected ? Color.accentColor : Theme.textSecondary)
+                    .foregroundStyle(isSelected ? Color.accentColor : DesignSystem.Colors.textSecondary)
                 Text(tab.rawValue)
                     .font(.system(size: 11, weight: .medium))
                 if hasChanges {
@@ -3055,12 +3055,12 @@ struct TabButton: View {
                         .frame(width: 5, height: 5)
                 }
             }
-            .foregroundStyle(isSelected ? .primary : Theme.textSecondary)
+            .foregroundStyle(isSelected ? .primary : DesignSystem.Colors.textSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Theme.bgActive : (isHovering ? Theme.bgHover : Color.clear))
+                    .fill(isSelected ? DesignSystem.Colors.surfaceActive : (isHovering ? DesignSystem.Colors.surfaceHover : Color.clear))
             )
         }
         .buttonStyle(.plain)
@@ -3955,24 +3955,24 @@ struct CodeEditorPanel: View {
             HStack {
                 Text("React Code")
                     .font(.headline)
-                    .foregroundStyle(Theme.text)
+                    .foregroundStyle(DesignSystem.Colors.textPrimary)
                 Spacer()
                 Text("\(code.count) characters")
                     .font(.caption)
-                    .foregroundStyle(Theme.textTertiary)
+                    .foregroundStyle(DesignSystem.Colors.textTertiary)
             }
             .padding()
-            .background(Theme.bgTertiary)
+            .background(DesignSystem.Colors.surfaceTertiary)
 
             Rectangle()
-                .fill(Theme.border)
+                .fill(DesignSystem.Colors.border)
                 .frame(height: 1)
 
             // Editor
             TextEditor(text: $code)
                 .font(.system(size: 13, design: .monospaced))
                 .scrollContentBackground(.hidden)
-                .background(Theme.bgElevated)
+                .background(DesignSystem.Colors.surfaceElevated)
         }
     }
 }
@@ -4176,7 +4176,7 @@ struct EmptyEditorView: View {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
     }
 }
 
@@ -4490,12 +4490,12 @@ struct BrowserAddressField: View {
         HStack(spacing: 6) {
             Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
                 .font(.system(size: 10))
-                .foregroundStyle(isSecure ? Theme.green : Theme.textTertiary)
+                .foregroundStyle(isSecure ? DesignSystem.Colors.green : DesignSystem.Colors.textTertiary)
 
             TextField("Search or enter website name", text: $urlText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
-                .foregroundStyle(Theme.text)
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
                 .focused($isURLFieldFocused)
                 .onSubmit(onSubmit)
 
@@ -4507,7 +4507,7 @@ struct BrowserAddressField: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .cornerRadius(6)
     }
 }

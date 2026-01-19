@@ -53,7 +53,7 @@ struct CategoryConfigView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.glass)
+        .background(DesignSystem.Materials.thin)
         .task { await loadData() }
         .onChange(of: category.id) { _, _ in Task { await loadData() } }
         .sheet(item: $editingFieldSchema) { schema in
@@ -125,13 +125,13 @@ struct CategoryConfigView: View {
             .foregroundStyle(.secondary)
         }
         .padding(16)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var fallbackIcon: some View {
         RoundedRectangle(cornerRadius: 8)
-            .fill(Theme.bgElevated)
+            .fill(DesignSystem.Colors.surfaceElevated)
             .overlay(
                 Image(systemName: "folder.fill")
                     .font(.system(size: 20))
@@ -188,7 +188,7 @@ struct CategoryConfigView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Theme.bgHover)
+            .background(DesignSystem.Colors.surfaceHover)
 
             // Content
             if availableFieldSchemas.isEmpty {
@@ -213,7 +213,7 @@ struct CategoryConfigView: View {
                 }
             }
         }
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -243,7 +243,7 @@ struct CategoryConfigView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Theme.bgHover)
+            .background(DesignSystem.Colors.surfaceHover)
 
             // Content
             if availablePricingSchemas.isEmpty {
@@ -268,7 +268,7 @@ struct CategoryConfigView: View {
                 }
             }
         }
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -287,7 +287,7 @@ struct CategoryConfigView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Theme.bgHover)
+            .background(DesignSystem.Colors.surfaceHover)
 
             VStack(spacing: 0) {
                 DetailRow(label: "Name", value: category.name)
@@ -301,7 +301,7 @@ struct CategoryConfigView: View {
             }
             .padding(.vertical, 4)
         }
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -472,7 +472,7 @@ private struct FieldSchemaRow: View {
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(Theme.bgElevated)
+                    .background(DesignSystem.Colors.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 3))
 
                 Spacer()
@@ -505,7 +505,7 @@ private struct FieldSchemaRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isHovering ? Theme.bgTertiary : Color.clear)
+            .background(isHovering ? DesignSystem.Colors.surfaceTertiary : Color.clear)
             .onHover { isHovering = $0 }
 
             // Expanded fields
@@ -540,7 +540,7 @@ private struct FieldSchemaRow: View {
                     }
                 }
                 .padding(.vertical, 6)
-                .background(Theme.bgHover)
+                .background(DesignSystem.Colors.surfaceHover)
             }
         }
         .alert("Delete Schema", isPresented: $showDeleteConfirm) {
@@ -602,7 +602,7 @@ private struct PricingSchemaRow: View {
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(Theme.bgElevated)
+                    .background(DesignSystem.Colors.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 3))
 
                 Spacer()
@@ -635,7 +635,7 @@ private struct PricingSchemaRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isHovering ? Theme.bgTertiary : Color.clear)
+            .background(isHovering ? DesignSystem.Colors.surfaceTertiary : Color.clear)
             .onHover { isHovering = $0 }
 
             // Expanded tiers
@@ -652,7 +652,7 @@ private struct PricingSchemaRow: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
-                        .background(Theme.bgTertiary)
+                        .background(DesignSystem.Colors.surfaceTertiary)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
                     if schema.tiers.count > 8 {
@@ -665,7 +665,7 @@ private struct PricingSchemaRow: View {
                 .padding(.horizontal, 12)
                 .padding(.leading, 34)
                 .padding(.vertical, 8)
-                .background(Theme.bgHover)
+                .background(DesignSystem.Colors.surfaceHover)
             }
         }
         .alert("Delete Schema", isPresented: $showDeleteConfirm) {
@@ -730,21 +730,21 @@ private struct FieldSchemaEditor: View {
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         TextField("Description", text: $description)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         TextField("Icon (emoji)", text: $icon)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .frame(width: 100)
                     }
@@ -799,7 +799,7 @@ private struct FieldSchemaEditor: View {
             .padding(16)
         }
         .frame(width: 420, height: 500)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
     }
 
     private func save() async {
@@ -855,7 +855,7 @@ private struct FieldEditor: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(8)
-            .background(Theme.bgTertiary)
+            .background(DesignSystem.Colors.surfaceTertiary)
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
             if isExpanded {
@@ -865,14 +865,14 @@ private struct FieldEditor: View {
                             .textFieldStyle(.plain)
                             .font(.system(size: 11))
                             .padding(6)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 4))
 
                         TextField("Label", text: Binding(get: { field.label ?? "" }, set: { field.label = $0 }))
                             .textFieldStyle(.plain)
                             .font(.system(size: 11))
                             .padding(6)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
 
@@ -902,7 +902,7 @@ private struct FieldEditor: View {
                     }
                 }
                 .padding(8)
-                .background(Theme.bgHover)
+                .background(DesignSystem.Colors.surfaceHover)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             }
         }
@@ -957,14 +957,14 @@ private struct PricingSchemaEditor: View {
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         TextField("Description", text: $description)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
 
@@ -1012,7 +1012,7 @@ private struct PricingSchemaEditor: View {
             .padding(16)
         }
         .frame(width: 420, height: 500)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
     }
 
     private func save() async {
@@ -1040,7 +1040,7 @@ private struct TierEditor: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
                 .padding(6)
-                .background(Theme.bgElevated)
+                .background(DesignSystem.Colors.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .frame(width: 80)
 
@@ -1048,7 +1048,7 @@ private struct TierEditor: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 11, design: .monospaced))
                 .padding(6)
-                .background(Theme.bgElevated)
+                .background(DesignSystem.Colors.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .frame(width: 80)
 
@@ -1056,7 +1056,7 @@ private struct TierEditor: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
                 .padding(6)
-                .background(Theme.bgElevated)
+                .background(DesignSystem.Colors.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .frame(width: 60)
 
@@ -1070,7 +1070,7 @@ private struct TierEditor: View {
             .foregroundStyle(.tertiary)
         }
         .padding(8)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
@@ -1115,21 +1115,21 @@ private struct NewFieldSchemaSheet: View {
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         TextField("Description", text: $description)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         TextField("Icon (emoji)", text: $icon)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .frame(width: 100)
                     }
@@ -1185,7 +1185,7 @@ private struct NewFieldSchemaSheet: View {
             .padding(16)
         }
         .frame(width: 420, height: 500)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
     }
 
     private func save() async {
@@ -1240,14 +1240,14 @@ private struct NewPricingSchemaSheet: View {
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
                         TextField("Description", text: $description)
                             .textFieldStyle(.plain)
                             .font(.system(size: 12))
                             .padding(8)
-                            .background(Theme.bgElevated)
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
 
@@ -1302,7 +1302,7 @@ private struct NewPricingSchemaSheet: View {
             .padding(16)
         }
         .frame(width: 420, height: 500)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
     }
 
     private func save() async {

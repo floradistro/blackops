@@ -29,7 +29,7 @@ struct BrowserSessionItem: View {
                     // Title/URL
                     Text(session.displayName)
                         .font(.system(size: 11, weight: isSelected ? .medium : .regular))
-                        .foregroundStyle(isSelected ? Theme.text : DesignSystem.Colors.textSecondary)
+                        .foregroundStyle(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                         .lineLimit(1)
 
                     // Shortened URL with better formatting

@@ -14,13 +14,13 @@ struct ProductDataCard: View {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Theme.bgElevated
+                    DesignSystem.Colors.surfaceElevated
                 }
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Theme.bgElevated)
+                    .fill(DesignSystem.Colors.surfaceElevated)
                     .frame(width: 56, height: 56)
                     .overlay(
                         Image(systemName: "leaf")
@@ -80,11 +80,11 @@ struct ProductDataCard: View {
             }
         }
         .padding(12)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Theme.border, lineWidth: 1)
+                .stroke(DesignSystem.Colors.border, lineWidth: 1)
         )
     }
 }
@@ -167,11 +167,11 @@ struct OrderDataCard: View {
             .buttonStyle(.plain)
         }
         .padding(12)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Theme.border, lineWidth: 1)
+                .stroke(DesignSystem.Colors.border, lineWidth: 1)
         )
     }
 
@@ -411,7 +411,7 @@ struct ActionCard: View {
             .buttonStyle(.plain)
         }
         .padding(12)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -494,11 +494,11 @@ struct ChartPlaceholderCard: View {
             }
         }
         .padding(14)
-        .background(Theme.bgTertiary)
+        .background(DesignSystem.Colors.surfaceTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Theme.borderSubtle, lineWidth: 1)
+                .stroke(DesignSystem.Colors.borderSubtle, lineWidth: 1)
         )
     }
 }

@@ -45,7 +45,7 @@ struct BrowserSessionView: View {
 
             // Interactive browser view
             ZStack {
-                Theme.bg.ignoresSafeArea()
+                DesignSystem.Colors.surfacePrimary.ignoresSafeArea()
 
                 if let url = session.currentUrl, !url.isEmpty {
                     InteractiveBrowserView(
@@ -62,14 +62,14 @@ struct BrowserSessionView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "globe")
                             .font(.system(size: 48))
-                            .foregroundStyle(Theme.textTertiary)
+                            .foregroundStyle(DesignSystem.Colors.textTertiary)
                         Text("No URL available")
-                            .foregroundStyle(Theme.textSecondary)
+                            .foregroundStyle(DesignSystem.Colors.textSecondary)
 
                         if session.hasError, let error = session.errorMessage {
                             Text(error)
                                 .font(.caption)
-                                .foregroundColor(Theme.red.opacity(0.8))
+                                .foregroundColor(DesignSystem.Colors.error.opacity(0.8))
                                 .padding(.top, 8)
                         }
                     }
@@ -82,13 +82,13 @@ struct BrowserSessionView: View {
                             Spacer()
                             HStack(spacing: 6) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(Theme.red)
+                                    .foregroundColor(DesignSystem.Colors.error)
                                 Text("Error")
-                                    .foregroundColor(Theme.red)
+                                    .foregroundColor(DesignSystem.Colors.error)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(Theme.red.opacity(0.15))
+                            .background(DesignSystem.Colors.error.opacity(0.15))
                             .cornerRadius(6)
                             .padding()
                         }
@@ -625,7 +625,7 @@ struct BrowserControls: View {
         let backButton = Button(action: onBack) {
             Image(systemName: "chevron.left")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(canGoBack ? Theme.text : Theme.textTertiary)
+                .foregroundStyle(canGoBack ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
                 .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
@@ -635,7 +635,7 @@ struct BrowserControls: View {
         let forwardButton = Button(action: onForward) {
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(canGoForward ? Theme.text : Theme.textTertiary)
+                .foregroundStyle(canGoForward ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
                 .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
@@ -645,7 +645,7 @@ struct BrowserControls: View {
         let refreshButton = Button(action: isLoading ? onStop : onRefresh) {
             Image(systemName: isLoading ? "xmark" : "arrow.clockwise")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Theme.text)
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
                 .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
@@ -654,12 +654,12 @@ struct BrowserControls: View {
         let urlBar = HStack(spacing: 8) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 10))
-                .foregroundStyle(Theme.green.opacity(0.8))
+                .foregroundStyle(DesignSystem.Colors.green.opacity(0.8))
 
             TextField("Enter URL or search...", text: $urlText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
-                .foregroundStyle(Theme.text)
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
                 .focused($isURLFieldFocused)
                 .onSubmit {
                     navigateToURL()
@@ -670,20 +670,20 @@ struct BrowserControls: View {
                 Button(action: { urlText = "" }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
-                        .foregroundStyle(Theme.textTertiary)
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Theme.bgElevated)
+        .background(DesignSystem.Colors.surfaceElevated)
         .cornerRadius(8)
 
         let darkModeButton = Button(action: onToggleDarkMode) {
             Image(systemName: isDarkMode ? "moon.fill" : "moon")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isDarkMode ? Theme.accent : Theme.textSecondary)
+                .foregroundStyle(isDarkMode ? DesignSystem.Colors.accent : DesignSystem.Colors.textSecondary)
                 .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
@@ -692,7 +692,7 @@ struct BrowserControls: View {
         let newTabButton = Button(action: onNewTab) {
             Image(systemName: "plus")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(DesignSystem.Colors.textSecondary)
                 .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
@@ -713,7 +713,7 @@ struct BrowserControls: View {
                 .padding(.trailing, 8)
         }
         .frame(height: 44)
-        .background(Theme.bgSecondary)
+        .background(DesignSystem.Colors.surfaceSecondary)
         .onAppear {
             urlText = currentURL ?? ""
         }
