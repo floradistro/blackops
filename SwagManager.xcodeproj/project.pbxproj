@@ -10,6 +10,7 @@
 		07D694322E9AC5B56006590D /* BrowserComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */; };
 		7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */; };
 		A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */; };
+		B97C1754F3DA1DA5B21B78AE /* ProductEditorComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */; };
 		BF001 /* SwagManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF001 /* SwagManagerApp.swift */; };
 		BF002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF002 /* ContentView.swift */; };
 		BF003 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF003 /* AuthView.swift */; };
@@ -49,6 +50,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductEditorComponents.swift; sourceTree = "<group>"; };
 		3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorTabComponents.swift; sourceTree = "<group>"; };
 		4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HotReloadComponents.swift; sourceTree = "<group>"; };
 		53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserComponents.swift; sourceTree = "<group>"; };
@@ -264,6 +266,7 @@
 			children = (
 				SF920 /* EditorSidebarView.swift */,
 				4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */,
+				06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -370,6 +373,7 @@
 				A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */,
 				07D694322E9AC5B56006590D /* BrowserComponents.swift in Sources */,
 				F3C6F109C9E4168D89840E85 /* HotReloadComponents.swift in Sources */,
+				B97C1754F3DA1DA5B21B78AE /* ProductEditorComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
