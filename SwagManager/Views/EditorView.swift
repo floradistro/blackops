@@ -3142,9 +3142,3 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
         isURLFieldFocused = false
     }
 }
-
-// MARK: - Browser Address Field (Titlebar-integrated)
-
-
-import SwiftUI
-
