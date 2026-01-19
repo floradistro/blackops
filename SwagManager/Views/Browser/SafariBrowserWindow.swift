@@ -9,8 +9,16 @@ import SwiftUI
 import WebKit
 
 struct SafariBrowserWindow: View {
-    @StateObject private var tabManager = BrowserTabManager()
+    let sessionId: UUID
     @State private var showTabs = false
+    @ObservedObject var tabManager: BrowserTabManager
+
+    init(sessionId: UUID) {
+        self.sessionId = sessionId
+        // Get or create a unique tab manager for this session
+        self.tabManager = BrowserTabManager.forSession(sessionId)
+        NSLog("[SafariBrowserWindow] Initialized for session \(sessionId.uuidString.prefix(8))")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -493,6 +501,6 @@ struct EmptyBrowserView: View {
 }
 
 #Preview {
-    SafariBrowserWindow()
+    SafariBrowserWindow(sessionId: UUID())
         .frame(width: 1200, height: 800)
 }

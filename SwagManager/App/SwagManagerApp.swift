@@ -17,10 +17,42 @@ struct SwagManagerApp: App {
         }
         .windowToolbarStyle(.unified)
         .commands {
-            CommandGroup(replacing: .newItem) { }
+            CommandGroup(replacing: .newItem) {
+                Button("New Store...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowNewStore"), object: nil)
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            }
 
-            // Zoom commands for browser
+            // Store selector
+            CommandMenu("Store") {
+                Button("Switch Store...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowStoreSelector"), object: nil)
+                }
+                .keyboardShortcut("o", modifiers: [.command, .shift])
+
+                Divider()
+
+                Button("Store Settings...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowStoreSettings"), object: nil)
+                }
+                .keyboardShortcut(",", modifiers: [.command, .option])
+            }
+
+            // View commands
             CommandGroup(after: .sidebar) {
+                Button("Toggle Sidebar") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ToggleSidebar"), object: nil)
+                }
+                .keyboardShortcut("\\", modifiers: .command)
+
+                Button("Toggle Terminal") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ToggleTerminal"), object: nil)
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+
+                Divider()
+
                 Button("Zoom In") {
                     NotificationCenter.default.post(name: NSNotification.Name("ZoomIn"), object: nil)
                 }
@@ -35,6 +67,14 @@ struct SwagManagerApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("ZoomReset"), object: nil)
                 }
                 .keyboardShortcut("0", modifiers: .command)
+            }
+
+            // File commands
+            CommandGroup(replacing: .saveItem) {
+                Button("Save") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SaveDocument"), object: nil)
+                }
+                .keyboardShortcut("s", modifiers: .command)
             }
         }
 

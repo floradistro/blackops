@@ -11,6 +11,9 @@ struct BrowserSessionItem: View {
     let session: BrowserSession
     let isSelected: Bool
     let onTap: () -> Void
+    let onClose: () -> Void
+
+    @State private var isHovering = false
 
     var body: some View {
         Button {
@@ -41,7 +44,18 @@ struct BrowserSessionItem: View {
 
                 Spacer()
 
-                if let lastActivity = session.lastActivity {
+                if isHovering && session.isActive {
+                    Button {
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.textTertiary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Close session")
+                } else if let lastActivity = session.lastActivity {
                     Text(timeAgo(lastActivity))
                         .font(.system(size: 9))
                         .foregroundStyle(Theme.textTertiary)
@@ -56,6 +70,9 @@ struct BrowserSessionItem: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
+        .onHover { hovering in
+            isHovering = hovering
+        }
     }
 
     private var statusColor: Color {
@@ -173,7 +190,8 @@ struct BrowserSessionsSectionHeader: View {
                 updatedAt: Date()
             ),
             isSelected: true,
-            onTap: {}
+            onTap: {},
+            onClose: {}
         )
 
         BrowserSessionItem(
@@ -202,7 +220,8 @@ struct BrowserSessionsSectionHeader: View {
                 updatedAt: Date()
             ),
             isSelected: false,
-            onTap: {}
+            onTap: {},
+            onClose: {}
         )
     }
     .background(Theme.bgSecondary)

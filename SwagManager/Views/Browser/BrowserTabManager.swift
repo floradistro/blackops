@@ -73,14 +73,37 @@ class BrowserTabManager: ObservableObject {
     @Published var tabs: [BrowserTab] = []
     @Published var activeTab: BrowserTab?
 
+    // Global cache of tab managers per session
+    private static var sessionManagers: [UUID: BrowserTabManager] = [:]
+
+    // Get or create a tab manager for a session
+    static func forSession(_ sessionId: UUID) -> BrowserTabManager {
+        if let existing = sessionManagers[sessionId] {
+            NSLog("[BrowserTabManager] Reusing existing manager for session \(sessionId.uuidString.prefix(8)) with \(existing.tabs.count) tabs")
+            return existing
+        }
+
+        let manager = BrowserTabManager()
+        sessionManagers[sessionId] = manager
+        NSLog("[BrowserTabManager] Created new manager for session \(sessionId.uuidString.prefix(8))")
+        return manager
+    }
+
+    // Clean up a session's tab manager
+    static func removeSession(_ sessionId: UUID) {
+        sessionManagers.removeValue(forKey: sessionId)
+    }
+
     func newTab(url: String? = nil) {
         let tab = BrowserTab(url: url)
         tabs.append(tab)
         selectTab(tab)
+        NSLog("[BrowserTabManager] Created new tab \(tab.id.uuidString.prefix(8)), now have \(tabs.count) tabs")
     }
 
     func selectTab(_ tab: BrowserTab) {
         activeTab = tab
+        NSLog("[BrowserTabManager] Selected tab \(tab.id.uuidString.prefix(8)), URL: \(tab.currentURL ?? "none")")
     }
 
     func closeTab(_ tab: BrowserTab) {

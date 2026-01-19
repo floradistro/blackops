@@ -1162,4 +1162,58 @@ class SupabaseService {
             .eq("id", value: id)
             .execute()
     }
+
+    func createBrowserSession(storeId: UUID, name: String) async throws -> BrowserSession {
+        let now = Date()
+        let formatter = ISO8601DateFormatter()
+
+        struct InsertData: Encodable {
+            let store_id: String
+            let name: String
+            let status: String
+            let created_at: String
+            let updated_at: String
+        }
+
+        let insertData = InsertData(
+            store_id: storeId.uuidString,
+            name: name,
+            status: "active",
+            created_at: formatter.string(from: now),
+            updated_at: formatter.string(from: now)
+        )
+
+        let session: BrowserSession = try await client.from("browser_sessions")
+            .insert(insertData)
+            .select()
+            .single()
+            .execute()
+            .value
+
+        return session
+    }
+
+    func deleteBrowserSession(id: UUID) async throws {
+        try await client.from("browser_sessions")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func closeBrowserSession(id: UUID) async throws {
+        struct UpdateData: Encodable {
+            let status: String
+            let updated_at: String
+        }
+
+        let updateData = UpdateData(
+            status: "closed",
+            updated_at: ISO8601DateFormatter().string(from: Date())
+        )
+
+        try await client.from("browser_sessions")
+            .update(updateData)
+            .eq("id", value: id)
+            .execute()
+    }
 }

@@ -23,7 +23,17 @@ struct SimpleWebView: NSViewRepresentable {
     @ObservedObject var tab: BrowserTab
 
     func makeNSView(context: Context) -> WKWebView {
-        // Create simple WKWebView configuration
+        // Check if we already have a WebView for this tab
+        if let existingWebView = tab.webView {
+            // Reattach the coordinator
+            context.coordinator.webView = existingWebView
+            existingWebView.navigationDelegate = context.coordinator
+            existingWebView.uiDelegate = context.coordinator
+            NSLog("[SimpleWebView] Reusing existing WebView for tab \(tab.id.uuidString.prefix(8)), URL: \(tab.currentURL ?? "none")")
+            return existingWebView
+        }
+
+        // Create new WKWebView configuration
         let config = WKWebViewConfiguration()
 
         let preferences = WKPreferences()
@@ -51,11 +61,16 @@ struct SimpleWebView: NSViewRepresentable {
 
         // Store reference
         tab.webView = webView
+        context.coordinator.webView = webView
 
-        // Load URL
+        NSLog("[SimpleWebView] Created NEW WebView for tab \(tab.id.uuidString.prefix(8))")
+
+        // Load URL only for new WebViews
         if let urlString = tab.currentURL, let url = URL(string: urlString) {
+            NSLog("[SimpleWebView] Loading URL: \(urlString)")
             webView.load(URLRequest(url: url))
         } else {
+            NSLog("[SimpleWebView] Loading default Google")
             if let url = URL(string: "https://www.google.com") {
                 webView.load(URLRequest(url: url))
             }
@@ -74,6 +89,7 @@ struct SimpleWebView: NSViewRepresentable {
 
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let tab: BrowserTab
+        weak var webView: WKWebView?
 
         init(tab: BrowserTab) {
             self.tab = tab

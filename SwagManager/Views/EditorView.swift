@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import Supabase
+import Darwin
 
 // MARK: - JSON Decoder Extension for Supabase
 extension JSONDecoder {
@@ -275,6 +276,9 @@ struct EditorView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var sidebarCollapsed = false
     @State private var selectedTab: EditorTab = .preview
+    @State private var isHoveringToggle = false
+    @State private var showStoreSelectorSheet = false
+    @State private var terminalCollapsed = true
 
     var body: some View {
         HStack(spacing: 0) {
@@ -333,13 +337,13 @@ struct EditorView: View {
 
                         case .browserSession(let session):
                             // Safari-style browser
-                            SafariBrowserWindow()
-                                .id(session.id) // Force unique instance per session
+                            SafariBrowserWindow(sessionId: session.id)
+                                .id("browser-\(session.id)")
                         }
                     } else if let browserSession = store.selectedBrowserSession {
                         // Safari-style browser
-                        SafariBrowserWindow()
-                            .id(browserSession.id) // Force unique instance per session
+                        SafariBrowserWindow(sessionId: browserSession.id)
+                            .id("browser-\(browserSession.id)")
                     } else if let category = store.selectedCategory {
                         // Show category config even without tab
                         CategoryConfigView(category: category, store: store)
@@ -378,57 +382,81 @@ struct EditorView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+
+            // Collapsible Terminal Panel
+            if !terminalCollapsed {
+                Rectangle()
+                    .fill(Theme.border)
+                    .frame(width: 1)
+
+                TerminalPanel(terminalCollapsed: $terminalCollapsed)
+                    .frame(width: 500)
+                    .transition(.move(edge: .trailing))
+            }
         }
         .background(VisualEffectBackground(material: .underWindowBackground))
+        .overlay(alignment: .topLeading) {
+            // Floating sidebar toggle button (Apple-style, appears on hover)
+            Button {
+                withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
+            } label: {
+                Image(systemName: sidebarCollapsed ? "sidebar.left" : "sidebar.leading")
+                    .font(.system(size: 13))
+                    .foregroundStyle(isHoveringToggle ? Theme.text : Theme.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(isHoveringToggle ? 0.12 : 0.05))
+                    )
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(12)
+            .opacity(isHoveringToggle || sidebarCollapsed ? 1 : 0.3)
+            .animation(.easeInOut(duration: 0.2), value: isHoveringToggle)
+            .onHover { isHoveringToggle = $0 }
+            .help("Toggle Sidebar (⌘\\)")
+        }
+        .overlay(alignment: .topTrailing) {
+            // Floating terminal toggle button (Apple-style)
+            Button {
+                withAnimation(Theme.spring) { terminalCollapsed.toggle() }
+            } label: {
+                Image(systemName: terminalCollapsed ? "terminal" : "terminal.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.05))
+                    )
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(12)
+            .help("Toggle Terminal (⌘T)")
+        }
         .animation(Theme.spring, value: sidebarCollapsed)
-        .toolbar {
-            // Left: Sidebar toggle
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
-                } label: {
-                    Image(systemName: sidebarCollapsed ? "sidebar.left" : "sidebar.leading")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                .buttonStyle(.borderless)
-                .help("Toggle Sidebar (⌘\\)")
+        .animation(Theme.spring, value: terminalCollapsed)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleSidebar"))) { _ in
+            withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SaveDocument"))) { _ in
+            if store.hasUnsavedChanges {
+                Task { await store.saveCurrentCreation() }
             }
-
-            // Center: Open tabs
-            ToolbarItem(placement: .principal) {
-                ToolbarTabStrip(store: store)
-            }
-
-            // Right: Mode switcher + actions
-            ToolbarItemGroup(placement: .primaryAction) {
-                // Mode switcher (only show for creations)
-                if store.selectedCreation != nil || (store.activeTab != nil && store.activeTab!.isCreation) {
-                    EditorModeStrip(selectedTab: $selectedTab)
-                }
-
-                // Unsaved indicator
-                if store.hasUnsavedChanges {
-                    Circle()
-                        .fill(Theme.orange)
-                        .frame(width: 7, height: 7)
-                        .help("Unsaved changes")
-                        .transition(.scale.combined(with: .opacity))
-                }
-
-                // Save button
-                Button {
-                    Task { await store.saveCurrentCreation() }
-                } label: {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 12))
-                        .foregroundStyle(store.hasUnsavedChanges ? Theme.text : Theme.textQuaternary)
-                }
-                .buttonStyle(.borderless)
-                .keyboardShortcut("s", modifiers: .command)
-                .help("Save (⌘S)")
-                .disabled(!store.hasUnsavedChanges)
-            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowStoreSelector"))) { _ in
+            showStoreSelectorSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewStore"))) { _ in
+            store.showNewStoreSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleTerminal"))) { _ in
+            withAnimation(Theme.spring) { terminalCollapsed.toggle() }
+        }
+        .sheet(isPresented: $showStoreSelectorSheet) {
+            StoreSelectorSheet(store: store)
         }
         .task {
             await store.loadCreations()
@@ -1808,6 +1836,58 @@ class EditorStore: ObservableObject {
         openTab(.browserSession(session))
     }
 
+    func createNewBrowserSession() async {
+        guard let store = selectedStore else {
+            NSLog("[EditorStore] No store selected, cannot create browser session")
+            return
+        }
+
+        do {
+            let name = "Browser Session \(Date().formatted(date: .omitted, time: .shortened))"
+            let newSession = try await supabase.createBrowserSession(storeId: store.id, name: name)
+
+            // Add to list
+            browserSessions.insert(newSession, at: 0)
+
+            // Open the new session
+            openBrowserSession(newSession)
+
+            NSLog("[EditorStore] Created new browser session: \(newSession.id)")
+        } catch {
+            NSLog("[EditorStore] Failed to create browser session: \(error)")
+            self.error = "Failed to create browser session: \(error.localizedDescription)"
+        }
+    }
+
+    func closeBrowserSession(_ session: BrowserSession) async {
+        do {
+            try await supabase.closeBrowserSession(id: session.id)
+
+            // Update in list
+            if let index = browserSessions.firstIndex(where: { $0.id == session.id }) {
+                var updatedSession = session
+                updatedSession.status = "closed"
+                browserSessions[index] = updatedSession
+            }
+
+            // Close tab if open
+            closeTab(.browserSession(session))
+
+            // Clean up the tab manager for this session
+            BrowserTabManager.removeSession(session.id)
+
+            // Deselect if selected
+            if selectedBrowserSession?.id == session.id {
+                selectedBrowserSession = nil
+            }
+
+            NSLog("[EditorStore] Closed browser session: \(session.id)")
+        } catch {
+            NSLog("[EditorStore] Failed to close browser session: \(error)")
+            self.error = "Failed to close browser session: \(error.localizedDescription)"
+        }
+    }
+
     func refreshBrowserSession(_ session: BrowserSession) async {
         do {
             if let updated = try await supabase.fetchBrowserSession(id: session.id) {
@@ -1935,16 +2015,21 @@ struct SafariStyleTab: View {
             .background(
                 ZStack {
                     if isActive {
-                        Theme.bgTertiary
+                        // Glass-style active tab
+                        Color.white.opacity(0.08)
                     } else if isHovering {
-                        Theme.bgHover.opacity(0.5)
+                        // Subtle hover
+                        Color.white.opacity(0.03)
+                    } else {
+                        // Transparent
+                        Color.clear
                     }
                 }
             )
             .overlay(
                 Rectangle()
                     .frame(width: 0.5)
-                    .foregroundStyle(Theme.borderSubtle)
+                    .foregroundStyle(Color.white.opacity(0.06))
                 , alignment: .trailing
             )
         }
@@ -2417,9 +2502,15 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Store Switcher
-            StoreEnvironmentHeader(store: store)
-                .frame(height: 48)
+            // Sleek header
+            HStack(spacing: 0) {
+                Text("SWAG MANAGER")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .tracking(1.2)
+            }
+            .frame(height: 32)
+            .frame(maxWidth: .infinity)
 
             Rectangle()
                 .fill(Theme.border)
@@ -2741,7 +2832,9 @@ struct SidebarPanel: View {
                             isExpanded: $store.sidebarBrowserExpanded,
                             count: store.browserSessions.filter { $0.isActive }.count,
                             onNewSession: {
-                                // TODO: Create new browser session
+                                Task {
+                                    await store.createNewBrowserSession()
+                                }
                             }
                         )
 
@@ -2772,7 +2865,12 @@ struct SidebarPanel: View {
                                         BrowserSessionItem(
                                             session: session,
                                             isSelected: store.selectedBrowserSession?.id == session.id,
-                                            onTap: { store.openBrowserSession(session) }
+                                            onTap: { store.openBrowserSession(session) },
+                                            onClose: {
+                                                Task {
+                                                    await store.closeBrowserSession(session)
+                                                }
+                                            }
                                         )
                                     }
                                 }
@@ -2785,7 +2883,12 @@ struct SidebarPanel: View {
                                         BrowserSessionItem(
                                             session: session,
                                             isSelected: store.selectedBrowserSession?.id == session.id,
-                                            onTap: { store.openBrowserSession(session) }
+                                            onTap: { store.openBrowserSession(session) },
+                                            onClose: {
+                                                Task {
+                                                    await store.closeBrowserSession(session)
+                                                }
+                                            }
                                         )
                                     }
                                 }
@@ -2810,6 +2913,97 @@ struct SidebarPanel: View {
                 await store.loadBrowserSessions()
             }
         }
+    }
+}
+
+// MARK: - Store Selector Sheet
+
+struct StoreSelectorSheet: View {
+    @ObservedObject var store: EditorStore
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Switch Store")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Theme.bgHover))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(20)
+
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
+
+            // Store list
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(store.stores) { s in
+                        Button {
+                            Task {
+                                await store.selectStore(s)
+                                dismiss()
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                // Store icon
+                                Image(systemName: "building.2.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(Theme.accent)
+                                    .frame(width: 40, height: 40)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Theme.accent.opacity(0.15))
+                                    )
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(s.storeName)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(Theme.text)
+
+                                    if let storeType = s.storeType {
+                                        Text(storeType.capitalized)
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(Theme.textTertiary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                if store.selectedStore?.id == s.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Theme.accent)
+                                }
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(store.selectedStore?.id == s.id ? Theme.bgElevated : Theme.bgSecondary)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(20)
+            }
+        }
+        .frame(width: 400, height: 500)
+        .background(VisualEffectBackground(material: .hudWindow))
     }
 }
 
@@ -5427,5 +5621,212 @@ struct VisualEffectBackground: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
+    }
+}
+
+// MARK: - Terminal Panel
+
+struct TerminalPanel: View {
+    @Binding var terminalCollapsed: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Terminal header
+            HStack {
+                Image(systemName: "terminal.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.green)
+
+                Text("TERMINAL")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .tracking(1.2)
+
+                Spacer()
+
+                Button {
+                    withAnimation(Theme.spring) { terminalCollapsed.toggle() }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
+
+            // Embedded terminal
+            TerminalView()
+        }
+        .background(VisualEffectBackground(material: .sidebar))
+    }
+}
+
+// MARK: - Terminal View (Working embedded terminal)
+
+struct TerminalView: NSViewRepresentable {
+    func makeNSView(context: Context) -> TerminalContainerView {
+        let container = TerminalContainerView()
+        container.coordinator = context.coordinator
+        context.coordinator.setup(container: container)
+        return container
+    }
+
+    func updateNSView(_ nsView: TerminalContainerView, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator: NSObject {
+        var shellTask: Process?
+        var masterFD: Int32 = -1
+        var readSource: DispatchSourceRead?
+        weak var textView: NSTextView?
+
+        func setup(container: TerminalContainerView) {
+            // Create text view
+            let textView = NSTextView()
+            textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+            textView.textColor = NSColor(red: 0.9, green: 0.9, blue: 0.9, alpha: 1.0)
+            textView.backgroundColor = NSColor.clear
+            textView.isEditable = false
+            textView.isSelectable = true
+            textView.textContainerInset = NSSize(width: 12, height: 12)
+
+            let scrollView = NSScrollView()
+            scrollView.documentView = textView
+            scrollView.hasVerticalScroller = true
+            scrollView.drawsBackground = false
+            scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+            container.addSubview(scrollView)
+            NSLayoutConstraint.activate([
+                scrollView.topAnchor.constraint(equalTo: container.topAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor)
+            ])
+
+            self.textView = textView
+            startShell()
+        }
+
+        func startShell() {
+            var master: Int32 = 0
+            var slave: Int32 = 0
+            var name = [CChar](repeating: 0, count: 128)
+
+            guard openpty(&master, &slave, &name, nil, nil) == 0 else {
+                appendText("[Terminal] Failed to open PTY\n")
+                return
+            }
+
+            masterFD = master
+
+            var size = winsize()
+            size.ws_row = 40
+            size.ws_col = 100
+            ioctl(master, TIOCSWINSZ, &size)
+
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            task.arguments = ["-l", "-i"]
+            task.standardInput = FileHandle(fileDescriptor: slave)
+            task.standardOutput = FileHandle(fileDescriptor: slave)
+            task.standardError = FileHandle(fileDescriptor: slave)
+
+            var env = ProcessInfo.processInfo.environment
+            env["TERM"] = "xterm-256color"
+            task.environment = env
+
+            do {
+                try task.run()
+                shellTask = task
+                close(slave)
+                startReading()
+            } catch {
+                appendText("[Terminal] Failed to start: \(error)\n")
+                close(master)
+                close(slave)
+            }
+        }
+
+        func startReading() {
+            let source = DispatchSource.makeReadSource(fileDescriptor: masterFD, queue: .main)
+            source.setEventHandler { [weak self] in
+                guard let self = self else { return }
+                var buffer = [UInt8](repeating: 0, count: 4096)
+                let n = read(self.masterFD, &buffer, buffer.count)
+                if n > 0, let str = String(bytes: buffer[..<n], encoding: .utf8) {
+                    self.appendText(str)
+                }
+            }
+            source.resume()
+            readSource = source
+        }
+
+        func appendText(_ text: String) {
+            guard let textView = textView else { return }
+            let attrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor(red: 0.9, green: 0.9, blue: 0.9, alpha: 1.0),
+                .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+            ]
+            let attrStr = NSAttributedString(string: text, attributes: attrs)
+            textView.textStorage?.append(attrStr)
+            textView.scrollToEndOfDocument(nil)
+        }
+
+        func sendInput(_ text: String) {
+            guard masterFD >= 0, let data = text.data(using: .utf8) else { return }
+            data.withUnsafeBytes { write(masterFD, $0.baseAddress, data.count) }
+        }
+
+        deinit {
+            readSource?.cancel()
+            shellTask?.terminate()
+            if masterFD >= 0 { close(masterFD) }
+        }
+    }
+}
+
+class TerminalContainerView: NSView {
+    weak var coordinator: TerminalView.Coordinator?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func becomeFirstResponder() -> Bool {
+        return true
+    }
+
+    override func keyDown(with event: NSEvent) {
+        guard let coordinator = coordinator else { return }
+
+        // Handle special keys
+        switch event.keyCode {
+        case 126: coordinator.sendInput("\u{1B}[A") // Up
+        case 125: coordinator.sendInput("\u{1B}[B") // Down
+        case 124: coordinator.sendInput("\u{1B}[C") // Right
+        case 123: coordinator.sendInput("\u{1B}[D") // Left
+        case 51: coordinator.sendInput("\u{7F}") // Backspace
+        case 36, 76: coordinator.sendInput("\r") // Return/Enter
+        case 48: coordinator.sendInput("\t") // Tab
+        default:
+            if let chars = event.characters {
+                coordinator.sendInput(chars)
+            }
+        }
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Theme background
+        NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0).setFill()
+        dirtyRect.fill()
     }
 }
