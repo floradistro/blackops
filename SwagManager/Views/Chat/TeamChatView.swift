@@ -261,7 +261,9 @@ class ChatStore: ObservableObject {
             NSLog("[ChatStore] Current user: \(user.id)")
 
             // Fetch ALL conversations for this store AND its locations
-            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: storeId)
+            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: storeId, fetchLocations: { storeId in
+                try await supabase.fetchLocations(storeId: storeId)
+            })
             NSLog("[ChatStore] Found \(conversations.count) total conversations for store \(storeId)")
 
             // Auto-select first conversation if available

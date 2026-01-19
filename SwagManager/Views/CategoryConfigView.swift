@@ -328,8 +328,8 @@ struct CategoryConfigView: View {
         do {
             async let f1 = SupabaseService.shared.fetchFieldSchemasForCategory(categoryId: category.id)
             async let f2 = SupabaseService.shared.fetchPricingSchemasForCategory(categoryId: category.id)
-            async let f3 = SupabaseService.shared.fetchAvailableFieldSchemas(catalogId: catalogId, categoryName: category.name)
-            async let f4 = SupabaseService.shared.fetchAvailablePricingSchemas(catalogId: catalogId, categoryName: category.name)
+            async let f3 = SupabaseService.shared.fetchAvailableFieldSchemas(catalogId: catalogId ?? UUID(), categoryName: category.name)
+            async let f4 = SupabaseService.shared.fetchAvailablePricingSchemas(catalogId: catalogId ?? UUID(), categoryName: category.name)
 
             let (assigned1, assigned2, avail1, avail2) = try await (f1, f2, f3, f4)
 

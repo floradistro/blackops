@@ -1245,8 +1245,8 @@ class EditorStore: ObservableObject {
                 let wrongCatalogCount = allCategories.filter { $0.catalogId != defaultCatalog.id }.count
                 if wrongCatalogCount > 0 {
                     NSLog("[EditorStore] Found %d categories not in default catalog, migrating to %@...", wrongCatalogCount, defaultCatalog.name)
-                    let migrated = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: defaultCatalog.id, onlyOrphans: false)
-                    NSLog("[EditorStore] Migrated %d categories to %@", migrated, defaultCatalog.name)
+                    _ = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: defaultCatalog.id, onlyOrphans: false)
+                    NSLog("[EditorStore] Migrated %d categories to %@", wrongCatalogCount, defaultCatalog.name)
                 }
             }
 
@@ -1724,7 +1724,10 @@ class EditorStore: ObservableObject {
 
             // Load conversations
             NSLog("[EditorStore] Loading conversations for store: \(store.id)")
-            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: store.id)
+            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: store.id, fetchLocations: { [weak self] storeId in
+                guard let self = self else { return [] }
+                return try await self.supabase.fetchLocations(storeId: storeId)
+            })
             NSLog("[EditorStore] Loaded \(conversations.count) conversations")
         } catch {
             NSLog("[EditorStore] Failed to load conversations: \(error)")
