@@ -2352,7 +2352,7 @@ struct ProductEditorPanel: View {
                 }
 
                 // Pricing Tiers (from product's pricing_data)
-                if let pricingData = product.pricingData, !pricingData.isEmpty {
+                if let pricingData = product.pricingData {
                     ProductPricingSection(pricingData: pricingData)
                 }
 
@@ -2472,13 +2472,15 @@ struct CustomFieldsSection: View {
 // MARK: - Pricing Schemas Section
 
 struct ProductPricingSection: View {
-    let pricingData: [AnyCodable]
+    let pricingData: AnyCodable
 
     var body: some View {
-        GroupBox("Pricing Tiers") {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(pricingData.enumerated()), id: \.offset) { index, tierData in
-                    if let tierDict = tierData.value as? [String: Any] {
+        let tiers = extractTiers()
+
+        if !tiers.isEmpty {
+            GroupBox("Pricing Tiers") {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(tiers.enumerated()), id: \.offset) { index, tierDict in
                         HStack {
                             Text(extractLabel(from: tierDict))
                                 .font(.system(size: 12))
@@ -2503,6 +2505,21 @@ struct ProductPricingSection: View {
         }
     }
 
+    private func extractTiers() -> [[String: Any]] {
+        // Case 1: pricing_data is an array of tiers
+        if let tiersArray = pricingData.value as? [[String: Any]] {
+            return tiersArray
+        }
+
+        // Case 2: pricing_data is an object with a "tiers" property
+        if let pricingObject = pricingData.value as? [String: Any],
+           let tiersArray = pricingObject["tiers"] as? [[String: Any]] {
+            return tiersArray
+        }
+
+        return []
+    }
+
     private func extractLabel(from dict: [String: Any]) -> String {
         if let label = dict["label"] as? String {
             return label
@@ -2524,10 +2541,18 @@ struct ProductPricingSection: View {
     }
 
     private func extractPrice(from dict: [String: Any]) -> String {
+        // Try default_price first
         if let price = dict["default_price"] as? Double {
             return String(format: "$%.2f", price)
         }
         if let price = dict["default_price"] as? Int {
+            return String(format: "$%.2f", Double(price))
+        }
+        // Try price field
+        if let price = dict["price"] as? Double {
+            return String(format: "$%.2f", price)
+        }
+        if let price = dict["price"] as? Int {
             return String(format: "$%.2f", Double(price))
         }
         return "-"

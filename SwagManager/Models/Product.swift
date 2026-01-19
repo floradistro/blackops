@@ -243,7 +243,7 @@ struct Product: Codable, Identifiable, Hashable {
     var productVisibility: String?
     var fieldValues: [String: AnyCodable]?
     var pricingSchemaId: UUID?
-    var pricingData: [AnyCodable]?
+    var pricingData: AnyCodable?  // Can be array or object with tiers
     var createdAt: String?
     var updatedAt: String?
 
