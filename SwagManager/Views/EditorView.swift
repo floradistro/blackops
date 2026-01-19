@@ -386,7 +386,7 @@ struct EditorView: View {
             .toolbar {
                 UnifiedToolbarContent(store: store)
             }
-            .toolbarBackground(.automatic, for: .windowToolbar)
+            .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
         .background(VisualEffectBackground(material: .underWindowBackground))

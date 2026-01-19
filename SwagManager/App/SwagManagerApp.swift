@@ -143,14 +143,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureWindow(_ window: NSWindow) {
-        // Minimal unified titlebar
-        window.titlebarAppearsTransparent = false
+        // Minimal unified titlebar with glass effect
+        window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unifiedCompact
         window.isMovableByWindowBackground = true
 
-        // Set proper background color for titlebar visibility
-        window.backgroundColor = NSColor.windowBackgroundColor
+        // Transparent background for glass effect
+        window.backgroundColor = .clear
         window.isOpaque = false
 
         // Configure toolbar appearance
@@ -167,14 +167,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Handle fullscreen transitions properly
         window.collectionBehavior.insert(.fullScreenPrimary)
 
-        // Add observer for fullscreen changes
+        // Add observer for fullscreen changes - maintain glass effect
         NotificationCenter.default.addObserver(
             forName: NSWindow.willEnterFullScreenNotification,
             object: window,
             queue: .main
         ) { _ in
-            window.titlebarAppearsTransparent = false
-            window.backgroundColor = NSColor.windowBackgroundColor
+            window.titlebarAppearsTransparent = true
+            window.backgroundColor = .clear
         }
 
         NotificationCenter.default.addObserver(
@@ -182,8 +182,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: window,
             queue: .main
         ) { _ in
-            window.titlebarAppearsTransparent = false
-            window.backgroundColor = NSColor.windowBackgroundColor
+            window.titlebarAppearsTransparent = true
+            window.backgroundColor = .clear
         }
 
         // Ensure window is key and accepts input
