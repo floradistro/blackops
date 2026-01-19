@@ -2212,7 +2212,6 @@ struct ProductEditorPanel: View {
     @ObservedObject var store: EditorStore
 
     @State private var customFields: [FieldSchema] = []
-    @State private var pricingSchemas: [PricingSchema] = []
     @State private var isLoadingExtras = true
 
     var body: some View {
@@ -2352,9 +2351,9 @@ struct ProductEditorPanel: View {
                     CustomFieldsSection(schemas: customFields, fieldValues: product.fieldValues)
                 }
 
-                // Pricing Schemas
-                if !pricingSchemas.isEmpty {
-                    PricingSchemasSection(schemas: pricingSchemas)
+                // Pricing Tiers (from product's pricing_data)
+                if let pricingData = product.pricingData, !pricingData.isEmpty {
+                    ProductPricingSection(pricingData: pricingData)
                 }
 
                 // Image Gallery
@@ -2400,9 +2399,6 @@ struct ProductEditorPanel: View {
         do {
             // Load field schemas assigned to this category via junction table
             customFields = try await store.supabase.fetchFieldSchemasForCategory(categoryId: categoryId)
-
-            // Load pricing schemas assigned to this category via junction table
-            pricingSchemas = try await store.supabase.fetchPricingSchemasForCategory(categoryId: categoryId)
 
             isLoadingExtras = false
         } catch {
@@ -2475,41 +2471,40 @@ struct CustomFieldsSection: View {
 
 // MARK: - Pricing Schemas Section
 
-struct PricingSchemasSection: View {
-    let schemas: [PricingSchema]
+struct ProductPricingSection: View {
+    let pricingData: [PricingTier]
 
     var body: some View {
         GroupBox("Pricing Tiers") {
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(schemas, id: \.id) { schema in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(schema.name)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.text)
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(pricingData, id: \.id) { tier in
+                    HStack {
+                        Text(tier.label ?? "\(tier.id)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
 
-                        ForEach(schema.tiers, id: \.tierId) { tier in
-                            HStack {
-                                Text(tier.displayLabel)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-
-                                if let qty = tier.quantity {
-                                    Text("(\(Int(qty)) \(tier.unit ?? "units"))")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.tertiary)
-                                }
-
-                                Spacer()
-
-                                Text(tier.formattedPrice)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Theme.green)
-                            }
+                        if let qty = tier.quantity {
+                            Text("(\(formatQuantity(qty)) \(tier.unit ?? "units"))")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
                         }
+
+                        Spacer()
+
+                        Text(String(format: "$%.2f", tier.defaultPrice ?? 0))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.green)
                     }
-                    .padding(.vertical, 4)
                 }
             }
+        }
+    }
+
+    private func formatQuantity(_ qty: Double) -> String {
+        if qty.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", qty)
+        } else {
+            return String(format: "%.1f", qty)
         }
     }
 }
