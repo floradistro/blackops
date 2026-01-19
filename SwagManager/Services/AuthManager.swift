@@ -11,6 +11,8 @@ class AuthManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = true
     @Published var error: String?
+    @Published var email = ""
+    @Published var password = ""
 
     private var supabase: SupabaseClient { SupabaseService.shared.client }
 
@@ -61,6 +63,8 @@ class AuthManager: ObservableObject {
             session = authSession
             currentUser = authSession.user
             isAuthenticated = true
+            // Clear password for security
+            self.password = ""
         } catch {
             self.error = error.localizedDescription
             throw error

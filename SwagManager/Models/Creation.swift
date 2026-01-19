@@ -47,6 +47,32 @@ enum CreationType: String, Codable, CaseIterable, Identifiable {
         case .store: return .yellow
         }
     }
+
+    // Terminal-style icons (text-based)
+    var terminalIcon: String {
+        switch self {
+        case .app: return "◆"
+        case .display: return "▣"
+        case .email: return "✉"
+        case .landing: return "◎"
+        case .dashboard: return "▤"
+        case .artifact: return "◇"
+        case .store: return "⌂"
+        }
+    }
+
+    // Terminal-style colors
+    var terminalColor: Color {
+        switch self {
+        case .app: return Color(red: 0.4, green: 0.6, blue: 0.95)      // Blue
+        case .display: return Color(red: 0.7, green: 0.5, blue: 0.95)  // Purple
+        case .email: return Color(red: 0.95, green: 0.6, blue: 0.3)    // Orange
+        case .landing: return Color(red: 0.4, green: 0.85, blue: 0.4)  // Green
+        case .dashboard: return Color(red: 0.4, green: 0.85, blue: 0.9) // Cyan
+        case .artifact: return Color(red: 0.95, green: 0.5, blue: 0.7) // Pink
+        case .store: return Color(red: 0.95, green: 0.8, blue: 0.3)    // Yellow
+        }
+    }
 }
 
 enum CreationStatus: String, Codable, CaseIterable {
@@ -64,6 +90,13 @@ enum CreationStatus: String, Codable, CaseIterable {
         switch self {
         case .draft: return .gray
         case .published: return .green
+        }
+    }
+
+    var terminalColor: Color {
+        switch self {
+        case .draft: return Color.white.opacity(0.3)
+        case .published: return Color(red: 0.4, green: 0.85, blue: 0.4)
         }
     }
 }

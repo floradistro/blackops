@@ -32,6 +32,242 @@ extension JSONDecoder {
     }
 }
 
+// MARK: - App Theme (Dark)
+
+struct Theme {
+    // Background hierarchy - transparent for frosted glass effect
+    static let bg = Color.clear                                          // Fully transparent - shows glass
+    static let bgSecondary = Color.clear                                 // Fully transparent - shows glass
+    static let bgTertiary = Color.white.opacity(0.03)                    // Subtle tint for elevation
+    static let bgElevated = Color.white.opacity(0.05)                    // Subtle tint for hover/selected
+    static let bgHover = Color.white.opacity(0.04)                       // subtle hover
+    static let bgActive = Color.white.opacity(0.08)                      // active/pressed
+
+    // Border/divider
+    static let border = Color.white.opacity(0.08)
+    static let borderSubtle = Color.white.opacity(0.04)
+
+    // Text hierarchy
+    static let text = Color.white.opacity(0.92)
+    static let textSecondary = Color.white.opacity(0.65)
+    static let textTertiary = Color.white.opacity(0.40)
+    static let textQuaternary = Color.white.opacity(0.25)
+
+    // Accent colors - slightly muted for dark theme
+    static let accent = Color(red: 0.35, green: 0.68, blue: 1.0)        // soft blue
+    static let green = Color(red: 0.35, green: 0.78, blue: 0.48)        // soft green
+    static let yellow = Color(red: 0.95, green: 0.78, blue: 0.28)       // warm yellow
+    static let orange = Color(red: 0.95, green: 0.55, blue: 0.28)       // soft orange
+    static let red = Color(red: 0.95, green: 0.38, blue: 0.42)          // soft red
+    static let blue = Color(red: 0.35, green: 0.68, blue: 1.0)          // soft blue
+    static let purple = Color(red: 0.68, green: 0.52, blue: 0.95)       // soft purple
+    static let cyan = Color(red: 0.35, green: 0.82, blue: 0.88)         // soft cyan
+
+    // Selection states
+    static let selection = Color.white.opacity(0.08)
+    static let selectionActive = Color(red: 0.35, green: 0.68, blue: 1.0).opacity(0.20)
+    static let selectionSubtle = Color.white.opacity(0.04)
+
+    // Standard animation curve
+    static let animationFast = Animation.easeOut(duration: 0.15)
+    static let animationMedium = Animation.easeOut(duration: 0.25)
+    static let animationSlow = Animation.easeInOut(duration: 0.35)
+    static let spring = Animation.spring(response: 0.35, dampingFraction: 0.75)
+
+    // Font helpers - using system font (SF Pro)
+    static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight)
+    }
+
+    static func monoFont(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
+    }
+}
+
+// MARK: - Native Smooth ScrollView (60fps with elastic bounce)
+
+struct SmoothScrollView<Content: View>: NSViewRepresentable {
+    let content: Content
+    var showsIndicators: Bool = true
+
+    init(showsIndicators: Bool = true, @ViewBuilder content: () -> Content) {
+        self.showsIndicators = showsIndicators
+        self.content = content()
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = SmoothNSScrollView()
+        scrollView.hasVerticalScroller = showsIndicators
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.drawsBackground = false
+        scrollView.backgroundColor = .clear
+
+        // Overlay scrollers for modern look
+        scrollView.scrollerStyle = .overlay
+
+        // Enable elastic bounce on both ends
+        scrollView.verticalScrollElasticity = .allowed
+        scrollView.horizontalScrollElasticity = .none
+
+        // GPU acceleration
+        scrollView.wantsLayer = true
+        scrollView.layerContentsRedrawPolicy = .onSetNeedsDisplay
+        scrollView.contentView.wantsLayer = true
+        scrollView.contentView.layerContentsRedrawPolicy = .onSetNeedsDisplay
+
+        // Create hosting view for SwiftUI content
+        let hostingView = NSHostingView(rootView: content)
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Flipped clip view for natural scrolling direction
+        let flippedView = FlippedClipView()
+        flippedView.documentView = hostingView
+        flippedView.drawsBackground = false
+        flippedView.backgroundColor = .clear
+        flippedView.wantsLayer = true
+        scrollView.contentView = flippedView
+
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: flippedView.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: flippedView.trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: flippedView.topAnchor),
+        ])
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        if let hostingView = scrollView.documentView as? NSHostingView<Content> {
+            hostingView.rootView = content
+        }
+    }
+}
+
+// Custom NSScrollView with smooth scroll physics
+private class SmoothNSScrollView: NSScrollView {
+    override class var isCompatibleWithResponsiveScrolling: Bool { true }
+
+    override func scrollWheel(with event: NSEvent) {
+        // Use default smooth scrolling behavior
+        super.scrollWheel(with: event)
+    }
+}
+
+// Flipped clip view for correct coordinate system
+private class FlippedClipView: NSClipView {
+    override var isFlipped: Bool { true }
+}
+
+// MARK: - Performant Tree Item Button Style (no SwiftUI hover state)
+
+struct TreeItemButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                configuration.isPressed ? Theme.bgActive : Color.clear
+            )
+    }
+}
+
+// Hover effect using NSView tracking area (doesn't cause SwiftUI re-renders during scroll)
+struct HoverableView<Content: View>: NSViewRepresentable {
+    let content: (Bool) -> Content
+
+    func makeNSView(context: Context) -> NSHostingView<Content> {
+        let view = HoverTrackingHostingView(rootView: content(false), coordinator: context.coordinator)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSHostingView<Content>, context: Context) {
+        nsView.rootView = content(context.coordinator.isHovering)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator {
+        var isHovering = false
+    }
+}
+
+private class HoverTrackingHostingView<Content: View>: NSHostingView<Content> {
+    weak var coordinator: HoverableView<Content>.Coordinator?
+    private var trackingArea: NSTrackingArea?
+
+    init(rootView: Content, coordinator: HoverableView<Content>.Coordinator) {
+        self.coordinator = coordinator
+        super.init(rootView: rootView)
+    }
+
+    required init(rootView: Content) {
+        super.init(rootView: rootView)
+    }
+
+    @MainActor required dynamic init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = trackingArea {
+            removeTrackingArea(existing)
+        }
+        trackingArea = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeInActiveApp],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(trackingArea!)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        coordinator?.isHovering = true
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        coordinator?.isHovering = false
+    }
+}
+
+// MARK: - Native Chat ScrollView (60fps with auto-scroll)
+// Uses native SwiftUI ScrollView for efficient diffing - no NSViewRepresentable overhead
+
+struct SmoothChatScrollView<Content: View>: View {
+    let content: Content
+    @Binding var scrollToBottom: Bool
+
+    init(scrollToBottom: Binding<Bool>, @ViewBuilder content: () -> Content) {
+        self._scrollToBottom = scrollToBottom
+        self.content = content()
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                content
+                    .frame(maxWidth: .infinity)
+
+                // Invisible anchor at bottom
+                Color.clear
+                    .frame(height: 1)
+                    .id("bottom")
+            }
+            .scrollBounceBehavior(.always)
+            .onChange(of: scrollToBottom) { _, shouldScroll in
+                if shouldScroll {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
+                    scrollToBottom = false
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Main Editor View
 
 struct EditorView: View {
@@ -40,29 +276,22 @@ struct EditorView: View {
     @State private var sidebarCollapsed = false
     @State private var selectedTab: EditorTab = .preview
 
-    private let contentBg = Color(white: 0.08)
-
     var body: some View {
         HStack(spacing: 0) {
             // Collapsible Sidebar
             if !sidebarCollapsed {
                 SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
-                    .frame(width: 220)
-                    .background(contentBg)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    .frame(width: 240)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
 
-                Rectangle()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(width: 1)
+                Divider()
             }
 
-            // Main Content Area with Tabs
+            // Main Content Area (no separate tab bar - tabs are in toolbar)
             VStack(spacing: 0) {
-                // Tab Bar (Safari/Xcode style)
-                if !store.openTabs.isEmpty {
-                    OpenTabBar(store: store)
-                }
-
                 // Content based on active tab or selection
                 ZStack {
                     if let activeTab = store.activeTab {
@@ -101,7 +330,16 @@ struct EditorView: View {
                         case .category(let category):
                             // Category config editor
                             CategoryConfigView(category: category, store: store)
+
+                        case .browserSession(let session):
+                            // Safari-style browser
+                            SafariBrowserWindow()
+                                .id(session.id) // Force unique instance per session
                         }
+                    } else if let browserSession = store.selectedBrowserSession {
+                        // Safari-style browser
+                        SafariBrowserWindow()
+                            .id(browserSession.id) // Force unique instance per session
                     } else if let category = store.selectedCategory {
                         // Show category config even without tab
                         CategoryConfigView(category: category, store: store)
@@ -140,65 +378,56 @@ struct EditorView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(contentBg)
         }
-        .background(contentBg)
-        .animation(.easeOut(duration: 0.15), value: sidebarCollapsed)
+        .background(VisualEffectBackground(material: .underWindowBackground))
+        .animation(Theme.spring, value: sidebarCollapsed)
         .toolbar {
+            // Left: Sidebar toggle
             ToolbarItem(placement: .navigation) {
                 Button {
-                    withAnimation(.easeOut(duration: 0.15)) { sidebarCollapsed.toggle() }
+                    withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
                 } label: {
                     Image(systemName: sidebarCollapsed ? "sidebar.left" : "sidebar.leading")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 .buttonStyle(.borderless)
+                .help("Toggle Sidebar (⌘\\)")
             }
 
-            ToolbarItemGroup(placement: .principal) {
-                HStack(spacing: 0) {
-                    ForEach(EditorTab.allCases, id: \.self) { tab in
-                        Button {
-                            withAnimation(.easeOut(duration: 0.1)) { selectedTab = tab }
-                        } label: {
-                            HStack(spacing: 2) {
-                                Image(systemName: tab.icon)
-                                    .font(.system(size: 9))
-                                Text(tab.rawValue)
-                                    .font(.system(size: 11))
-                            }
-                            .foregroundStyle(selectedTab == tab ? .primary : .tertiary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                }
+            // Center: Open tabs
+            ToolbarItem(placement: .principal) {
+                ToolbarTabStrip(store: store)
             }
 
+            // Right: Mode switcher + actions
             ToolbarItemGroup(placement: .primaryAction) {
-                if let creation = store.selectedCreation {
-                    HStack(spacing: 4) {
-                        if store.hasUnsavedChanges {
-                            Circle()
-                                .fill(Color.orange)
-                                .frame(width: 5, height: 5)
-                        }
-                        Text(creation.name)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Button {
-                        Task { await store.saveCurrentCreation() }
-                    } label: {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 11))
-                    }
-                    .buttonStyle(.borderless)
-                    .keyboardShortcut("s", modifiers: .command)
+                // Mode switcher (only show for creations)
+                if store.selectedCreation != nil || (store.activeTab != nil && store.activeTab!.isCreation) {
+                    EditorModeStrip(selectedTab: $selectedTab)
                 }
+
+                // Unsaved indicator
+                if store.hasUnsavedChanges {
+                    Circle()
+                        .fill(Theme.orange)
+                        .frame(width: 7, height: 7)
+                        .help("Unsaved changes")
+                        .transition(.scale.combined(with: .opacity))
+                }
+
+                // Save button
+                Button {
+                    Task { await store.saveCurrentCreation() }
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 12))
+                        .foregroundStyle(store.hasUnsavedChanges ? Theme.text : Theme.textQuaternary)
+                }
+                .buttonStyle(.borderless)
+                .keyboardShortcut("s", modifiers: .command)
+                .help("Save (⌘S)")
+                .disabled(!store.hasUnsavedChanges)
             }
         }
         .task {
@@ -247,6 +476,15 @@ enum EditorTab: String, CaseIterable {
         case .settings: return "gear"
         }
     }
+
+    var terminalLabel: String {
+        switch self {
+        case .preview: return "▶"
+        case .code: return "</>"
+        case .details: return "ℹ"
+        case .settings: return "⚙"
+        }
+    }
 }
 
 // MARK: - Open Tab Model (Safari/Xcode style tabs)
@@ -256,6 +494,7 @@ enum OpenTabItem: Identifiable, Hashable {
     case product(Product)
     case conversation(Conversation)
     case category(Category)
+    case browserSession(BrowserSession)
 
     var id: String {
         switch self {
@@ -263,6 +502,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .product(let p): return "product-\(p.id)"
         case .conversation(let c): return "conversation-\(c.id)"
         case .category(let c): return "category-\(c.id)"
+        case .browserSession(let s): return "browser-\(s.id)"
         }
     }
 
@@ -272,6 +512,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .product(let p): return p.name
         case .conversation(let c): return c.displayTitle
         case .category(let c): return c.name
+        case .browserSession(let s): return s.displayName
         }
     }
 
@@ -290,6 +531,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .product: return "leaf"
         case .conversation(let c): return c.chatTypeIcon
         case .category: return "folder"
+        case .browserSession: return "globe"
         }
     }
 
@@ -299,6 +541,39 @@ enum OpenTabItem: Identifiable, Hashable {
         case .product: return .green
         case .conversation: return .blue
         case .category: return .orange
+        case .browserSession: return .cyan
+        }
+    }
+
+    var isCreation: Bool {
+        if case .creation = self { return true }
+        return false
+    }
+
+    var isBrowserSession: Bool {
+        if case .browserSession = self { return true }
+        return false
+    }
+
+    // Terminal-style icon
+    var terminalIcon: String {
+        switch self {
+        case .creation(let c): return c.creationType.terminalIcon
+        case .product: return "•"
+        case .conversation: return "◈"
+        case .category: return "▢"
+        case .browserSession: return "◎"
+        }
+    }
+
+    // Terminal-style color
+    var terminalColor: Color {
+        switch self {
+        case .creation(let c): return c.creationType.terminalColor
+        case .product: return .green
+        case .conversation: return .purple
+        case .category: return .yellow
+        case .browserSession: return .cyan
         }
     }
 
@@ -340,6 +615,11 @@ class EditorStore: ObservableObject {
 
     // MARK: - Category Config State
     @Published var selectedCategory: Category?
+
+    // MARK: - Browser Sessions State
+    @Published var browserSessions: [BrowserSession] = []
+    @Published var selectedBrowserSession: BrowserSession?
+    @Published var sidebarBrowserExpanded = true
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []
@@ -401,6 +681,11 @@ class EditorStore: ObservableObject {
             // Collection items table
             let collectionItemsInserts = channel.postgresChange(InsertAction.self, table: "creation_collection_items")
             let collectionItemsDeletes = channel.postgresChange(DeleteAction.self, table: "creation_collection_items")
+
+            // Browser sessions table
+            let browserSessionsInserts = channel.postgresChange(InsertAction.self, table: "browser_sessions")
+            let browserSessionsUpdates = channel.postgresChange(UpdateAction.self, table: "browser_sessions")
+            let browserSessionsDeletes = channel.postgresChange(DeleteAction.self, table: "browser_sessions")
 
             do {
                 try await channel.subscribeWithError()
@@ -558,6 +843,81 @@ class EditorStore: ObservableObject {
                                let creationId = UUID(uuidString: creationIdStr) {
                                 self.collectionItems[collectionId]?.removeAll { $0 == creationId }
                                 NSLog("[EditorStore] Realtime: Removed item from collection")
+                            }
+                        }
+                    }
+                }
+
+                // Handle browser sessions inserts
+                group.addTask {
+                    for await insert in browserSessionsInserts {
+                        NSLog("[EditorStore] Realtime: browser_session INSERT received")
+                        await MainActor.run {
+                            if let session = try? insert.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder) {
+                                // Only add if it belongs to current store
+                                if session.storeId == self.selectedStore?.id {
+                                    if !self.browserSessions.contains(where: { $0.id == session.id }) {
+                                        self.browserSessions.insert(session, at: 0)
+                                        NSLog("[EditorStore] Realtime: Added browser session '\(session.displayName)'")
+                                    }
+                                }
+                            } else {
+                                NSLog("[EditorStore] Realtime: Failed to decode browser session")
+                            }
+                        }
+                    }
+                }
+
+                // Handle browser sessions updates
+                group.addTask {
+                    for await update in browserSessionsUpdates {
+                        NSLog("[EditorStore] Realtime: browser_session UPDATE received")
+                        await MainActor.run {
+                            if let session = try? update.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder) {
+                                if let idx = self.browserSessions.firstIndex(where: { $0.id == session.id }) {
+                                    self.browserSessions[idx] = session
+                                    NSLog("[EditorStore] Realtime: Updated browser session '\(session.displayName)'")
+                                    // Update selected if this is the selected one
+                                    if self.selectedBrowserSession?.id == session.id {
+                                        self.selectedBrowserSession = session
+                                    }
+                                    // Update in open tabs
+                                    if let tabIndex = self.openTabs.firstIndex(where: {
+                                        if case .browserSession(let s) = $0, s.id == session.id { return true }
+                                        return false
+                                    }) {
+                                        self.openTabs[tabIndex] = .browserSession(session)
+                                    }
+                                    if case .browserSession(let s) = self.activeTab, s.id == session.id {
+                                        self.activeTab = .browserSession(session)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Handle browser sessions deletes
+                group.addTask {
+                    for await delete in browserSessionsDeletes {
+                        NSLog("[EditorStore] Realtime: browser_session DELETE received")
+                        await MainActor.run {
+                            let oldRecord = delete.oldRecord
+                            if let idString = oldRecord["id"]?.stringValue,
+                               let id = UUID(uuidString: idString) {
+                                self.browserSessions.removeAll { $0.id == id }
+                                if self.selectedBrowserSession?.id == id {
+                                    self.selectedBrowserSession = nil
+                                }
+                                // Close tab if open
+                                self.openTabs.removeAll {
+                                    if case .browserSession(let s) = $0, s.id == id { return true }
+                                    return false
+                                }
+                                if case .browserSession(let s) = self.activeTab, s.id == id {
+                                    self.activeTab = self.openTabs.first
+                                }
+                                NSLog("[EditorStore] Realtime: Removed browser session \(idString)")
                             }
                         }
                     }
@@ -1244,12 +1604,20 @@ class EditorStore: ObservableObject {
                     selectedProduct = nil
                     selectedConversation = nil
                     editedCode = nil
+                case .browserSession(let s):
+                    selectedBrowserSession = s
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    editedCode = nil
                 }
             } else {
                 selectedCreation = nil
                 selectedProduct = nil
                 selectedConversation = nil
                 selectedCategory = nil
+                selectedBrowserSession = nil
                 editedCode = nil
             }
         }
@@ -1264,23 +1632,34 @@ class EditorStore: ObservableObject {
             selectedProduct = nil
             selectedConversation = nil
             selectedCategory = nil
+            selectedBrowserSession = nil
         case .product(let p):
             selectedProduct = p
             selectedCreation = nil
             selectedConversation = nil
             selectedCategory = nil
+            selectedBrowserSession = nil
             editedCode = nil
         case .conversation(let c):
             selectedConversation = c
             selectedCreation = nil
             selectedProduct = nil
             selectedCategory = nil
+            selectedBrowserSession = nil
             editedCode = nil
         case .category(let c):
             selectedCategory = c
             selectedCreation = nil
             selectedProduct = nil
             selectedConversation = nil
+            selectedBrowserSession = nil
+            editedCode = nil
+        case .browserSession(let s):
+            selectedBrowserSession = s
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
             editedCode = nil
         }
     }
@@ -1295,23 +1674,34 @@ class EditorStore: ObservableObject {
             selectedProduct = nil
             selectedConversation = nil
             selectedCategory = nil
+            selectedBrowserSession = nil
         case .product(let p):
             selectedProduct = p
             selectedCreation = nil
             selectedConversation = nil
             selectedCategory = nil
+            selectedBrowserSession = nil
             editedCode = nil
         case .conversation(let c):
             selectedConversation = c
             selectedCreation = nil
             selectedProduct = nil
             selectedCategory = nil
+            selectedBrowserSession = nil
             editedCode = nil
         case .category(let c):
             selectedCategory = c
             selectedCreation = nil
             selectedProduct = nil
             selectedConversation = nil
+            selectedBrowserSession = nil
+            editedCode = nil
+        case .browserSession(let s):
+            selectedBrowserSession = s
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
             editedCode = nil
         }
     }
@@ -1323,6 +1713,7 @@ class EditorStore: ObservableObject {
         selectedProduct = nil
         selectedConversation = nil
         selectedCategory = nil
+        selectedBrowserSession = nil
         editedCode = nil
     }
 
@@ -1389,9 +1780,223 @@ class EditorStore: ObservableObject {
             openConversation(virtualConvo)
         }
     }
+
+    // MARK: - Browser Sessions
+
+    func loadBrowserSessions() async {
+        guard let store = selectedStore else {
+            NSLog("[EditorStore] No store selected, cannot load browser sessions")
+            return
+        }
+
+        do {
+            NSLog("[EditorStore] Loading browser sessions for store: \(store.id)")
+            browserSessions = try await supabase.fetchBrowserSessions(storeId: store.id)
+            NSLog("[EditorStore] Loaded \(browserSessions.count) browser sessions")
+        } catch {
+            NSLog("[EditorStore] Failed to load browser sessions: \(error)")
+            self.error = "Failed to load browser sessions: \(error.localizedDescription)"
+        }
+    }
+
+    func openBrowserSession(_ session: BrowserSession) {
+        selectedBrowserSession = session
+        selectedCreation = nil
+        selectedProduct = nil
+        selectedConversation = nil
+        editedCode = nil
+        openTab(.browserSession(session))
+    }
+
+    func refreshBrowserSession(_ session: BrowserSession) async {
+        do {
+            if let updated = try await supabase.fetchBrowserSession(id: session.id) {
+                // Update in array
+                if let index = browserSessions.firstIndex(where: { $0.id == session.id }) {
+                    browserSessions[index] = updated
+                }
+                // Update selected if this is the selected one
+                if selectedBrowserSession?.id == session.id {
+                    selectedBrowserSession = updated
+                }
+                // Update in open tabs
+                if let tabIndex = openTabs.firstIndex(where: {
+                    if case .browserSession(let s) = $0, s.id == session.id { return true }
+                    return false
+                }) {
+                    openTabs[tabIndex] = .browserSession(updated)
+                }
+                if case .browserSession(let s) = activeTab, s.id == session.id {
+                    activeTab = .browserSession(updated)
+                }
+            }
+        } catch {
+            NSLog("[EditorStore] Failed to refresh browser session: \(error)")
+        }
+    }
 }
 
-// MARK: - Open Tab Bar (Safari/Xcode style)
+// MARK: - Toolbar Tab Strip (Safari-style)
+
+struct ToolbarTabStrip: View {
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if store.openTabs.isEmpty {
+                Text("Swag Manager")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+            } else {
+                // Safari-style proportional tabs - each tab gets equal width
+                ForEach(store.openTabs) { tab in
+                    SafariStyleTab(
+                        tab: tab,
+                        isActive: store.activeTab?.id == tab.id,
+                        hasUnsavedChanges: tabHasUnsavedChanges(tab),
+                        onSelect: { store.switchToTab(tab) },
+                        onClose: { store.closeTab(tab) }
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .frame(height: 26)
+        .animation(Theme.animationFast, value: store.openTabs.count)
+    }
+
+    private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
+        if case .creation(let c) = tab, c.id == store.selectedCreation?.id {
+            return store.hasUnsavedChanges
+        }
+        return false
+    }
+}
+
+// MARK: - Safari-Style Tab
+
+struct SafariStyleTab: View {
+    let tab: OpenTabItem
+    let isActive: Bool
+    let hasUnsavedChanges: Bool
+    let onSelect: () -> Void
+    let onClose: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button {
+            onSelect()
+        } label: {
+            HStack(spacing: 6) {
+                // Icon
+                Image(systemName: tab.icon)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isActive ? Theme.text : Theme.textTertiary)
+
+                // Title
+                Text(tab.name)
+                    .font(.system(size: 11.5, weight: isActive ? .medium : .regular))
+                    .foregroundStyle(isActive ? Theme.text : Theme.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                Spacer(minLength: 4)
+
+                // Close button / unsaved indicator
+                ZStack {
+                    if hasUnsavedChanges && !isHovering {
+                        Circle()
+                            .fill(Theme.orange)
+                            .frame(width: 6, height: 6)
+                    } else if isHovering || isActive {
+                        Button {
+                            onClose()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 7.5, weight: .semibold))
+                                .foregroundStyle(isActive ? Theme.textSecondary : Theme.textTertiary)
+                                .frame(width: 16, height: 16)
+                                .background(
+                                    Circle()
+                                        .fill(isHovering ? Theme.bgHover : Color.clear)
+                                )
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(width: 16, height: 16)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                ZStack {
+                    if isActive {
+                        Theme.bgTertiary
+                    } else if isHovering {
+                        Theme.bgHover.opacity(0.5)
+                    }
+                }
+            )
+            .overlay(
+                Rectangle()
+                    .frame(width: 0.5)
+                    .foregroundStyle(Theme.borderSubtle)
+                , alignment: .trailing
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .contextMenu {
+            Button("Close Tab") { onClose() }
+            Button("Close Other Tabs") { }
+            Button("Close All Tabs") { }
+        }
+    }
+}
+
+// MARK: - Editor Mode Strip
+
+struct EditorModeStrip: View {
+    @Binding var selectedTab: EditorTab
+    @State private var hoveringTab: EditorTab?
+
+    var body: some View {
+        HStack(spacing: 1) {
+            ForEach(EditorTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(Theme.spring) { selectedTab = tab }
+                } label: {
+                    Image(systemName: tab.icon)
+                        .font(.system(size: 11))
+                        .foregroundStyle(selectedTab == tab ? Theme.accent : Theme.textTertiary)
+                        .frame(width: 28, height: 24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(selectedTab == tab ? Theme.selectionActive : (hoveringTab == tab ? Theme.bgHover : Color.clear))
+                        )
+                }
+                .buttonStyle(.borderless)
+                .help(tab.rawValue)
+                .onHover { hovering in
+                    withAnimation(Theme.animationFast) { hoveringTab = hovering ? tab : nil }
+                }
+            }
+        }
+        .padding(3)
+        .background(Theme.bgTertiary)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Theme.border, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Open Tab Bar (Legacy - kept for reference)
 
 struct OpenTabBar: View {
     @ObservedObject var store: EditorStore
@@ -1416,7 +2021,7 @@ struct OpenTabBar: View {
             .padding(.vertical, 4)
         }
         .frame(height: 32)
-        .background(Color(white: 0.065))
+        .background(Theme.bgTertiary)
         .contextMenu {
             Button("Close All Tabs") {
                 store.closeAllTabs()
@@ -1504,8 +2109,8 @@ struct ProductEditorPanel: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+        ScrollView(.vertical, showsIndicators: true) {
+            LazyVStack(alignment: .leading, spacing: 20) {
                 // Header
                 HStack {
                     if let imageUrl = product.featuredImage, let url = URL(string: imageUrl) {
@@ -1596,7 +2201,9 @@ struct ProductEditorPanel: View {
             }
             .padding()
         }
-        .background(Color(white: 0.08))
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.automatic)
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -1620,127 +2227,107 @@ struct ProductFieldRow: View {
 
 struct WelcomeView: View {
     @ObservedObject var store: EditorStore
-    @State private var isHoveringCreate = false
-    @State private var isHoveringCollection = false
+    @State private var appeared = false
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Main content
-            VStack(spacing: 32) {
-                // Stats row
-                if !store.creations.isEmpty || !store.products.isEmpty {
-                    HStack(spacing: 0) {
-                        statCard(value: store.products.count, label: "Products", icon: "cube.box")
-
-                        Rectangle()
-                            .fill(Color.white.opacity(0.06))
-                            .frame(width: 1, height: 40)
-
-                        statCard(value: store.categories.count, label: "Categories", icon: "folder")
-
-                        Rectangle()
-                            .fill(Color.white.opacity(0.06))
-                            .frame(width: 1, height: 40)
-
-                        statCard(value: store.creations.count, label: "Creations", icon: "doc.richtext")
-                    }
-                    .padding(.vertical, 20)
-                    .padding(.horizontal, 32)
-                    .background(Color.white.opacity(0.02))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
+            // Welcome card
+            VStack(alignment: .leading, spacing: 24) {
+                // Header
+                HStack(spacing: 14) {
+                    ZStack {
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                    )
+                            .fill(Theme.accent.opacity(0.15))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "storefront.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Theme.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(store.selectedStore?.storeName ?? "Swag Manager")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Theme.text)
+                        Text("Ready to build")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
 
-                // Action text
-                VStack(spacing: 8) {
-                    Text("Ready to build")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    Text("Select from sidebar or create new")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.white.opacity(0.35))
+                // Stats
+                if !store.products.isEmpty || !store.categories.isEmpty || !store.creations.isEmpty {
+                    HStack(spacing: 0) {
+                        statItem(value: store.products.count, label: "Products", color: Theme.green)
+                        Rectangle().fill(Theme.border).frame(width: 1, height: 40)
+                        statItem(value: store.categories.count, label: "Categories", color: Theme.yellow)
+                        Rectangle().fill(Theme.border).frame(width: 1, height: 40)
+                        statItem(value: store.creations.count, label: "Creations", color: Theme.cyan)
+                    }
+                    .padding(.vertical, 16)
+                    .background(Theme.bgElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
 
-                // Action buttons
-                HStack(spacing: 10) {
-                    Button {
-                        store.showNewCreationSheet = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .semibold))
-                            Text("New Creation")
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(isHoveringCreate ? Color.accentColor : Color.accentColor.opacity(0.9))
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHoveringCreate = $0 }
+                // Quick actions
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Quick Actions")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
 
-                    Button {
-                        store.showNewCollectionSheet = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "folder.badge.plus")
-                                .font(.system(size: 10, weight: .medium))
-                            Text("New Collection")
-                                .font(.system(size: 11, weight: .medium))
+                    HStack(spacing: 12) {
+                        QuickActionButton(icon: "plus", label: "New Creation", shortcut: "⌘N") {
+                            store.showNewCreationSheet = true
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(isHoveringCollection ? Color.white.opacity(0.1) : Color.white.opacity(0.05))
-                        .foregroundStyle(.secondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
+                        QuickActionButton(icon: "folder.badge.plus", label: "New Collection", shortcut: "⌘⇧N") {
+                            store.showNewCollectionSheet = true
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .onHover { isHoveringCollection = $0 }
                 }
             }
-            .padding(40)
+            .padding(32)
+            .background(Theme.bgTertiary)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Theme.border, lineWidth: 1)
+            )
+            .frame(maxWidth: 440)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
 
             Spacer()
 
-            // Keyboard hint at bottom
-            HStack(spacing: 16) {
+            // Keyboard hints
+            HStack(spacing: 32) {
                 keyboardHint(keys: ["⌘", "N"], action: "New")
                 keyboardHint(keys: ["⌘", "F"], action: "Search")
-                keyboardHint(keys: ["⌘", "1-9"], action: "Switch tabs")
+                keyboardHint(keys: ["⌘", "\\"], action: "Sidebar")
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, 40)
+            .opacity(appeared ? 1 : 0)
+
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(white: 0.08))
+        .onAppear {
+            withAnimation(Theme.animationSlow.delay(0.1)) {
+                appeared = true
+            }
+        }
     }
 
-    private func statCard(value: Int, label: String, icon: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundStyle(Color.white.opacity(0.3))
-                .frame(width: 20)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(formatNumber(value))
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                Text(label)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.4))
-            }
+    private func statItem(value: Int, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -1749,24 +2336,57 @@ struct WelcomeView: View {
         HStack(spacing: 4) {
             ForEach(keys, id: \.self) { key in
                 Text(key)
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Theme.bgTertiary)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Theme.border, lineWidth: 1)
+                    )
             }
             Text(action)
-                .font(.system(size: 9))
-                .foregroundStyle(Color.white.opacity(0.3))
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.textTertiary)
         }
-        .foregroundStyle(Color.white.opacity(0.5))
     }
+}
 
-    private func formatNumber(_ num: Int) -> String {
-        if num >= 1000 {
-            return String(format: "%.1fK", Double(num) / 1000.0)
+// MARK: - Quick Action Button
+
+struct QuickActionButton: View {
+    let icon: String
+    let label: String
+    let shortcut: String
+    let action: () -> Void
+
+    @State private var isHovering = false
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(Theme.accent)
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.text)
+                Text(shortcut)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+            .background(isHovering ? Theme.bgElevated : Theme.bgSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isHovering ? Theme.border : Color.clear, lineWidth: 1)
+            )
         }
-        return "\(num)"
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }
 
@@ -1797,59 +2417,84 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // MARK: Store Switcher (Top-level environment)
+            // Store Switcher
             StoreEnvironmentHeader(store: store)
-                .frame(height: 44)
-                .clipped()
+                .frame(height: 48)
 
-            Divider()
-                .background(Color.white.opacity(0.1))
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
 
-            // Search
-            HStack(spacing: 6) {
+            // Search bar
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textTertiary)
                 TextField("Search", text: $searchText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.text)
+                if !searchText.isEmpty {
+                    Button {
+                        withAnimation(Theme.animationFast) { searchText = "" }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color(white: 0.12))
-            .cornerRadius(4)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Theme.bgSecondary)
 
-            // Content tree (only show if store is selected)
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
+
+            // Content tree
             if store.selectedStore == nil && store.stores.isEmpty {
-                // No stores - prompt to create
-                VStack(spacing: 12) {
+                // No stores
+                VStack(spacing: 16) {
                     Spacer()
-                    Image(systemName: "storefront")
+                    Image(systemName: "building.2")
                         .font(.system(size: 32))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.textQuaternary)
+
                     Text("No Store Selected")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Text("Create a store to get started")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.textSecondary)
+
                     Button {
                         store.showNewStoreSheet = true
                     } label: {
-                        Label("Create Store", systemImage: "plus")
-                            .font(.system(size: 11, weight: .medium))
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus")
+                            Text("Create Store")
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.bg)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Theme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
             } else if store.isLoading {
                 Spacer()
-                ProgressView()
-                    .scaleEffect(0.7)
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .tint(Theme.accent)
+                    Text("Loading...")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textTertiary)
+                }
                 Spacer()
             } else {
                 ScrollView {
@@ -1908,11 +2553,9 @@ struct SidebarPanel: View {
                                                     product: product,
                                                     isSelected: store.selectedProductIds.contains(product.id),
                                                     isActive: store.selectedProduct?.id == product.id,
-                                                    indentLevel: 1
+                                                    indentLevel: 1,
+                                                    onSelect: { store.selectProduct(product) }
                                                 )
-                                                .onTapGesture {
-                                                    store.selectProduct(product)
-                                                }
                                             }
                                         }
                                     }
@@ -1964,11 +2607,9 @@ struct SidebarPanel: View {
                                             creation: creation,
                                             isSelected: store.selectedCreationIds.contains(creation.id),
                                             isActive: store.selectedCreation?.id == creation.id,
-                                            indentLevel: 1
+                                            indentLevel: 1,
+                                            onSelect: { store.selectCreation(creation, in: store.creations) }
                                         )
-                                        .onTapGesture {
-                                            store.selectCreation(creation, in: store.creations)
-                                        }
                                         .contextMenu {
                                             Button("Delete", role: .destructive) {
                                                 Task { await store.deleteCreation(creation) }
@@ -1984,11 +2625,9 @@ struct SidebarPanel: View {
                                     creation: creation,
                                     isSelected: store.selectedCreationIds.contains(creation.id),
                                     isActive: store.selectedCreation?.id == creation.id,
-                                    indentLevel: 0
+                                    indentLevel: 0,
+                                    onSelect: { store.selectCreation(creation, in: store.creations) }
                                 )
-                                .onTapGesture {
-                                    store.selectCreation(creation, in: store.creations)
-                                }
                                 .contextMenu {
                                     if store.selectedCreationIds.count > 1 {
                                         Button("Delete \(store.selectedCreationIds.count) items", role: .destructive) {
@@ -2092,16 +2731,89 @@ struct SidebarPanel: View {
                                 }
                             }
                         }
+
+                        Divider()
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+
+                        // MARK: BROWSER SESSIONS Section
+                        BrowserSessionsSectionHeader(
+                            isExpanded: $store.sidebarBrowserExpanded,
+                            count: store.browserSessions.filter { $0.isActive }.count,
+                            onNewSession: {
+                                // TODO: Create new browser session
+                            }
+                        )
+
+                        if store.sidebarBrowserExpanded {
+                            if store.selectedStore == nil {
+                                Text("Select a store")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                            } else if store.browserSessions.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("No browser sessions")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.tertiary)
+                                    Text("Sessions will appear here when AI browses the web")
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(.quaternary)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                            } else {
+                                // Active sessions first
+                                let activeSessions = store.browserSessions.filter { $0.isActive }
+                                if !activeSessions.isEmpty {
+                                    ChatSectionLabel(title: "Active")
+                                    ForEach(activeSessions) { session in
+                                        BrowserSessionItem(
+                                            session: session,
+                                            isSelected: store.selectedBrowserSession?.id == session.id,
+                                            onTap: { store.openBrowserSession(session) }
+                                        )
+                                    }
+                                }
+
+                                // Recent closed sessions
+                                let closedSessions = store.browserSessions.filter { !$0.isActive }.prefix(5)
+                                if !closedSessions.isEmpty {
+                                    ChatSectionLabel(title: "Recent")
+                                    ForEach(Array(closedSessions)) { session in
+                                        BrowserSessionItem(
+                                            session: session,
+                                            isSelected: store.selectedBrowserSession?.id == session.id,
+                                            onTap: { store.openBrowserSession(session) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                     .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .scrollBounceBehavior(.always)
             }
         }
-        .background(Color(white: 0.08))
+        .background(VisualEffectBackground(material: .sidebar))
+        .task {
+            // Load browser sessions when store changes
+            if store.selectedStore != nil && store.browserSessions.isEmpty {
+                await store.loadBrowserSessions()
+            }
+        }
+        .onChange(of: store.selectedStore?.id) { _, _ in
+            Task {
+                await store.loadBrowserSessions()
+            }
+        }
     }
 }
 
-// MARK: - Store Environment Header (Slack/Discord style workspace switcher)
+// MARK: - Store Environment Header
 
 struct StoreEnvironmentHeader: View {
     @ObservedObject var store: EditorStore
@@ -2109,104 +2821,89 @@ struct StoreEnvironmentHeader: View {
 
     var body: some View {
         Menu {
-            // Current stores
             if !store.stores.isEmpty {
-                Section("Your Stores") {
-                    ForEach(store.stores) { s in
-                        Button {
-                            Task { await store.selectStore(s) }
-                        } label: {
-                            HStack(spacing: 8) {
-                                storeLogoView(logoUrl: s.logoUrl)
-                                Text(s.storeName)
-                                Spacer()
-                                if store.selectedStore?.id == s.id {
-                                    Image(systemName: "checkmark")
-                                }
+                ForEach(store.stores) { s in
+                    Button {
+                        Task { await store.selectStore(s) }
+                    } label: {
+                        HStack {
+                            Image(systemName: "building.2")
+                            Text(s.storeName)
+                            Spacer()
+                            if store.selectedStore?.id == s.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Theme.accent)
                             }
                         }
                     }
                 }
-
                 Divider()
             }
 
-            // Create new store
             Button {
                 store.showNewStoreSheet = true
             } label: {
-                Label("Create New Store", systemImage: "plus.circle")
+                Label("New Store", systemImage: "plus")
             }
 
-            // Store settings (if store selected)
             if store.selectedStore != nil {
                 Divider()
                 Button {
                     // TODO: Open store settings
                 } label: {
-                    Label("Store Settings", systemImage: "gear")
+                    Label("Settings", systemImage: "gear")
                 }
             }
         } label: {
-            HStack(spacing: 8) {
-                // Store icon/logo
-                if let selectedStore = store.selectedStore {
-                    storeLogoView(logoUrl: selectedStore.logoUrl)
+            HStack(spacing: 12) {
+                // Store icon
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(store.selectedStore != nil ? Theme.accent : Theme.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(store.selectedStore != nil ? Theme.accent.opacity(0.15) : Theme.bgElevated)
+                    )
 
-                    VStack(alignment: .leading, spacing: 1) {
+                if let selectedStore = store.selectedStore {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(selectedStore.storeName)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.primary)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Theme.text)
                             .lineLimit(1)
-                        Text(selectedStore.storeType?.capitalized ?? "Store")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
+                        if let storeType = selectedStore.storeType {
+                            Text(storeType.capitalized)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.textTertiary)
+                        }
                     }
                 } else {
-                    storeLogoView(logoUrl: nil)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Select Store")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                        Text("No store selected")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
-                    }
+                    Text("Select Store")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.textSecondary)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Theme.textTertiary)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .frame(maxWidth: 200)
-            .background(isHovering ? Color.white.opacity(0.05) : Color.clear)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isHovering ? Theme.bgHover : Color.clear)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .menuStyle(.borderlessButton)
-        .frame(height: 44)
+        .frame(height: 48)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(Theme.animationFast, value: isHovering)
         .onHover { isHovering = $0 }
-    }
-
-    private func storeLogoView(logoUrl: String?) -> some View {
-        StoreLogoImage(logoUrl: logoUrl, size: 16)
-    }
-
-    private var storeIconFallback: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(Color.green.opacity(0.2))
-            .frame(width: 20, height: 20)
-            .overlay(
-                Image(systemName: "storefront")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.green)
-            )
     }
 }
 
@@ -2275,8 +2972,6 @@ struct CategoryHierarchyView: View {
     @Binding var expandedCategoryIds: Set<UUID>
     var indentLevel: Int = 0
 
-    @State private var isHovering = false
-
     private var isExpanded: Bool {
         expandedCategoryIds.contains(category.id)
     }
@@ -2312,41 +3007,7 @@ struct CategoryHierarchyView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Category header row - minimal, no icons
-            HStack(spacing: 4) {
-                // Chevron - only show if has children
-                if hasChildren {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 10)
-                } else {
-                    Spacer().frame(width: 10)
-                }
-
-                Text(category.name)
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-
-                Spacer()
-
-                // Show total count
-                if totalCount > 0 {
-                    Text("\(totalCount)")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.tertiary)
-                        .padding(.trailing, 4)
-                }
-            }
-            .padding(.leading, CGFloat(8 + indentLevel * 12))
-            .padding(.trailing, 4)
-            .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? Color.accentColor.opacity(0.15) : (isHovering ? Color.white.opacity(0.04) : Color.clear))
-            )
-            .contentShape(Rectangle())
-            .onHover { isHovering = $0 }
-            .onTapGesture {
+            Button {
                 // Toggle expand/collapse
                 withAnimation(.easeInOut(duration: 0.15)) {
                     if expandedCategoryIds.contains(category.id) {
@@ -2357,7 +3018,42 @@ struct CategoryHierarchyView: View {
                 }
                 // Also select category to show config
                 store.selectCategory(category)
+            } label: {
+                HStack(spacing: 4) {
+                    // Chevron - only show if has children
+                    if hasChildren {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 10)
+                    } else {
+                        Spacer().frame(width: 10)
+                    }
+
+                    Text(category.name)
+                        .font(.system(size: 11))
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    // Show total count
+                    if totalCount > 0 {
+                        Text("\(totalCount)")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                            .padding(.trailing, 4)
+                    }
+                }
+                .padding(.leading, CGFloat(8 + indentLevel * 12))
+                .padding(.trailing, 4)
+                .padding(.vertical, 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                )
+                .contentShape(Rectangle())
             }
+            .buttonStyle(TreeItemButtonStyle())
 
             // Expanded content: subcategories first, then products
             if isExpanded {
@@ -2377,11 +3073,9 @@ struct CategoryHierarchyView: View {
                         product: product,
                         isSelected: store.selectedProductIds.contains(product.id),
                         isActive: store.selectedProduct?.id == product.id,
-                        indentLevel: indentLevel + 2
+                        indentLevel: indentLevel + 2,
+                        onSelect: { store.selectProduct(product) }
                     )
-                    .onTapGesture {
-                        store.selectProduct(product)
-                    }
                     .contextMenu {
                         Button("Delete", role: .destructive) {
                             Task { await store.deleteProduct(product) }
@@ -2442,40 +3136,44 @@ struct ProductTreeItem: View {
     let isSelected: Bool
     let isActive: Bool
     var indentLevel: Int = 0
-
-    @State private var isHovering = false
+    let onSelect: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            Text(product.name)
-                .font(.system(size: 11))
-                .lineLimit(1)
+        Button {
+            onSelect()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.green)
+                    .frame(width: 14)
 
-            Spacer()
+                Text(product.name)
+                    .font(.system(size: 11))
+                    .foregroundStyle(isActive ? Theme.text : Theme.textSecondary)
+                    .lineLimit(1)
 
-            // Price on hover
-            if isHovering || isActive {
+                Spacer()
+
                 Text(product.displayPrice)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
-            }
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.textTertiary)
 
-            // Stock indicator
-            Circle()
-                .fill(product.stockStatusColor)
-                .frame(width: 5, height: 5)
+                Circle()
+                    .fill(product.stockStatusColor)
+                    .frame(width: 6, height: 6)
+            }
+            .padding(.leading, CGFloat(8 + min(indentLevel, 2) * 12))
+            .padding(.trailing, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Theme.selectionActive :
+                          isSelected ? Theme.selection : Color.clear)
+            )
+            .contentShape(Rectangle())
         }
-        .padding(.leading, CGFloat(8 + indentLevel * 12))
-        .padding(.trailing, 8)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isActive ? Color.accentColor.opacity(0.3) :
-                      isSelected ? Color.white.opacity(0.08) :
-                      isHovering ? Color.white.opacity(0.04) : Color.clear)
-        )
-        .contentShape(Rectangle())
-        .onHover { isHovering = $0 }
+        .buttonStyle(TreeItemButtonStyle())
     }
 }
 
@@ -2487,30 +3185,37 @@ struct TreeSectionHeader: View {
     let count: Int
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(.tertiary)
-                .frame(width: 12)
+        Button {
+            withAnimation(Theme.spring) { isExpanded.toggle() }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .animation(Theme.animationFast, value: isExpanded)
+                    .frame(width: 12)
 
-            Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .tracking(0.5)
 
-            Text("(\(count))")
-                .font(.system(size: 9))
-                .foregroundStyle(.tertiary)
+                Text("\(count)")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Theme.textTertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Theme.bgElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
 
-            Spacer()
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isExpanded.toggle()
+                Spacer()
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(TreeItemButtonStyle())
     }
 }
 
@@ -2523,29 +3228,39 @@ struct CollectionTreeItem: View {
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            // Disclosure indicator
-            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: 8))
-                .foregroundStyle(.tertiary)
-                .frame(width: 10)
+        Button {
+            withAnimation(Theme.spring) { onToggle() }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .animation(Theme.animationFast, value: isExpanded)
+                    .frame(width: 10)
 
-            Text(collection.name)
-                .font(.system(size: 11))
-                .lineLimit(1)
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.yellow)
 
-            Spacer()
+                Text(collection.name)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1)
 
-            if itemCount > 0 {
-                Text("\(itemCount)")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
+                Spacer()
+
+                if itemCount > 0 {
+                    Text("\(itemCount)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.textTertiary)
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .contentShape(Rectangle())
-        .onTapGesture { onToggle() }
+        .buttonStyle(TreeItemButtonStyle())
     }
 }
 
@@ -2556,41 +3271,45 @@ struct CreationTreeItem: View {
     let isSelected: Bool
     let isActive: Bool
     var indentLevel: Int = 0
+    let onSelect: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            // Indent spacer based on level
-            Spacer()
-                .frame(width: CGFloat(12 + indentLevel * 16))
+        Button {
+            onSelect()
+        } label: {
+            HStack(spacing: 8) {
+                if indentLevel > 0 {
+                    Spacer().frame(width: CGFloat(indentLevel * 16))
+                }
 
-            // Type icon
-            Image(systemName: creation.creationType.icon)
-                .font(.system(size: 10))
-                .foregroundStyle(creation.creationType.color)
-                .frame(width: 16)
+                Image(systemName: creation.creationType.icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(creation.creationType.color)
+                    .frame(width: 16)
 
-            Text(creation.name)
-                .font(.system(size: 11))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
+                Text(creation.name)
+                    .font(.system(size: 12))
+                    .foregroundStyle(isActive ? Theme.text : Theme.textSecondary)
+                    .lineLimit(1)
 
-            Spacer()
+                Spacer()
 
-            // Status indicator
-            if let status = creation.status {
-                Circle()
-                    .fill(status.color)
-                    .frame(width: 6, height: 6)
+                if let status = creation.status {
+                    Circle()
+                        .fill(status.color)
+                        .frame(width: 6, height: 6)
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Theme.selectionActive :
+                          isSelected ? Theme.selection : Color.clear)
+            )
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isActive ? Color.accentColor.opacity(0.3) :
-                      isSelected ? Color.white.opacity(0.08) : Color.clear)
-        )
-        .contentShape(Rectangle())
+        .buttonStyle(TreeItemButtonStyle())
     }
 }
 
@@ -2680,7 +3399,7 @@ struct StorePickerRow: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(Color(white: 0.12))
+            .background(Theme.bgTertiary)
             .cornerRadius(4)
         }
         .buttonStyle(.plain)
@@ -2712,8 +3431,6 @@ struct LocationChatItem: View {
     let isSelected: Bool
     let onTap: () -> Void
 
-    @State private var isHovering = false
-
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 6) {
@@ -2738,12 +3455,11 @@ struct LocationChatItem: View {
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? Color.accentColor.opacity(0.3) :
-                          isHovering ? Color.white.opacity(0.04) : Color.clear)
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) : Color.clear)
             )
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        .buttonStyle(TreeItemButtonStyle())
         .padding(.horizontal, 8)
     }
 }
@@ -2755,8 +3471,6 @@ struct CatalogRow: View {
     let isExpanded: Bool
     let itemCount: Int?
     let onTap: () -> Void
-
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: onTap) {
@@ -2780,13 +3494,9 @@ struct CatalogRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isHovering ? Color.white.opacity(0.04) : Color.clear)
-            )
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        .buttonStyle(TreeItemButtonStyle())
         .padding(.horizontal, 8)
     }
 }
@@ -2797,8 +3507,6 @@ struct ConversationRow: View {
     let conversation: Conversation
     let isSelected: Bool
     let onTap: () -> Void
-
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: onTap) {
@@ -2824,12 +3532,11 @@ struct ConversationRow: View {
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? Color.accentColor.opacity(0.3) :
-                          isHovering ? Color.white.opacity(0.04) : Color.clear)
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) : Color.clear)
             )
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        .buttonStyle(TreeItemButtonStyle())
         .padding(.horizontal, 8)
     }
 }
@@ -2994,7 +3701,7 @@ struct EditorTabBar: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 38)
-        .background(Color(white: 0.095))
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -3946,8 +4653,8 @@ struct DetailsPanel: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+        ScrollView(.vertical, showsIndicators: true) {
+            LazyVStack(alignment: .leading, spacing: 24) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -3996,7 +4703,9 @@ struct DetailsPanel: View {
             }
             .padding(24)
         }
-        .background(Color(white: 0.11))
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.automatic)
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -4137,7 +4846,7 @@ struct EmptyEditorView: View {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(white: 0.11))
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -4169,7 +4878,7 @@ struct NewCreationSheet: View {
                 .buttonStyle(.plain)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
 
             // Form
             VStack(alignment: .leading, spacing: 16) {
@@ -4180,7 +4889,7 @@ struct NewCreationSheet: View {
                     TextField("My New Creation", text: $name)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
 
@@ -4222,7 +4931,7 @@ struct NewCreationSheet: View {
                     TextField("", text: $description)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
             }
@@ -4263,10 +4972,10 @@ struct NewCreationSheet: View {
                 .disabled(name.isEmpty || isCreating)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
         }
         .frame(width: 400, height: 450)
-        .background(Color(white: 0.12))
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -4297,7 +5006,7 @@ struct NewCollectionSheet: View {
                 .buttonStyle(.plain)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
 
             // Form
             VStack(alignment: .leading, spacing: 16) {
@@ -4308,7 +5017,7 @@ struct NewCollectionSheet: View {
                     TextField("My Collection", text: $name)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
 
@@ -4319,7 +5028,7 @@ struct NewCollectionSheet: View {
                     TextField("", text: $description)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
             }
@@ -4359,10 +5068,10 @@ struct NewCollectionSheet: View {
                 .disabled(name.isEmpty || isCreating)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
         }
         .frame(width: 350, height: 250)
-        .background(Color(white: 0.12))
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -4394,7 +5103,7 @@ struct NewStoreSheet: View {
                 .buttonStyle(.plain)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
 
             // Form
             VStack(alignment: .leading, spacing: 16) {
@@ -4405,7 +5114,7 @@ struct NewStoreSheet: View {
                     TextField("My Store", text: $name)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
 
@@ -4416,7 +5125,7 @@ struct NewStoreSheet: View {
                     TextField("store@example.com", text: $email)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
 
@@ -4461,10 +5170,10 @@ struct NewStoreSheet: View {
                 .disabled(name.isEmpty || isCreating)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
         }
         .frame(width: 350, height: 280)
-        .background(Color(white: 0.12))
+        .background(Theme.bgTertiary)
         .onAppear {
             // Pre-fill email from current user
             if let userEmail = authManager.currentUser?.email {
@@ -4510,7 +5219,7 @@ struct NewCatalogSheet: View {
                 .buttonStyle(.plain)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
 
             // Form
             VStack(alignment: .leading, spacing: 16) {
@@ -4521,7 +5230,7 @@ struct NewCatalogSheet: View {
                     TextField("Master Catalog", text: $name)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
 
@@ -4596,10 +5305,10 @@ struct NewCatalogSheet: View {
                 .disabled(name.isEmpty || isCreating)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
         }
         .frame(width: 420, height: 380)
-        .background(Color(white: 0.12))
+        .background(Theme.bgTertiary)
     }
 }
 
@@ -4630,7 +5339,7 @@ struct NewCategorySheet: View {
                 .buttonStyle(.plain)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
 
             // Form
             VStack(alignment: .leading, spacing: 16) {
@@ -4641,7 +5350,7 @@ struct NewCategorySheet: View {
                     TextField("New Category", text: $name)
                         .textFieldStyle(.plain)
                         .padding(8)
-                        .background(Color(white: 0.18))
+                        .background(Theme.bgElevated)
                         .cornerRadius(6)
                 }
 
@@ -4695,9 +5404,28 @@ struct NewCategorySheet: View {
                 .disabled(name.isEmpty || isCreating)
             }
             .padding()
-            .background(Color(white: 0.15))
+            .background(Theme.bgElevated)
         }
         .frame(width: 350, height: 280)
-        .background(Color(white: 0.12))
+        .background(Theme.bgTertiary)
+    }
+}
+
+// MARK: - Visual Effect Background
+
+struct VisualEffectBackground: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .sidebar
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = .behindWindow
+        view.state = .active
+        view.wantsLayer = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
     }
 }

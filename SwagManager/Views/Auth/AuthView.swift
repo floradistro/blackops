@@ -3,12 +3,16 @@ import SwiftUI
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var isSignUp = false
-    @State private var email = ""
-    @State private var password = ""
+
     @State private var confirmPassword = ""
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @FocusState private var focusedField: FocusedField?
+    
+    enum FocusedField {
+        case email, password, confirmPassword
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -25,24 +29,31 @@ struct AuthView: View {
 
             // Form
             VStack(spacing: 12) {
-                TextField("Email", text: $email)
-                    .textFieldStyle(.plain)
-                    .padding(8)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .cornerRadius(6)
+                TextField("Email", text: $authManager.email)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .email)
+                    .onSubmit {
+                        focusedField = .password
+                    }
 
-                SecureField("Password", text: $password)
-                    .textFieldStyle(.plain)
-                    .padding(8)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .cornerRadius(6)
+                SecureField("Password", text: $authManager.password)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .password)
+                    .onSubmit {
+                        if isSignUp {
+                            focusedField = .confirmPassword
+                        } else {
+                            submit()
+                        }
+                    }
 
                 if isSignUp {
                     SecureField("Confirm Password", text: $confirmPassword)
-                        .textFieldStyle(.plain)
-                        .padding(8)
-                        .background(Color(nsColor: .textBackgroundColor))
-                        .cornerRadius(6)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .confirmPassword)
+                        .onSubmit {
+                            submit()
+                        }
                 }
 
                 Button(isSignUp ? "Create Account" : "Sign In") {
@@ -64,6 +75,9 @@ struct AuthView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            focusedField = .email
+        }
         .alert("Error", isPresented: $showError) {
             Button("OK") { }
         } message: {
@@ -72,7 +86,7 @@ struct AuthView: View {
     }
 
     private var isFormValid: Bool {
-        email.contains("@") && password.count >= 6 && (!isSignUp || password == confirmPassword)
+        authManager.email.contains("@") && authManager.password.count >= 6 && (!isSignUp || authManager.password == confirmPassword)
     }
 
     private func submit() {
@@ -81,9 +95,9 @@ struct AuthView: View {
         Task {
             do {
                 if isSignUp {
-                    try await authManager.signUp(email: email, password: password)
+                    try await authManager.signUp(email: authManager.email, password: authManager.password)
                 } else {
-                    try await authManager.signIn(email: email, password: password)
+                    try await authManager.signIn(email: authManager.email, password: authManager.password)
                 }
             } catch {
                 errorMessage = error.localizedDescription

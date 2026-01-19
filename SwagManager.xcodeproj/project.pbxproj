@@ -8,6 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */; };
+		BF017 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF017 /* AIService.swift */; };
+		BF018 /* ChatDataCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF018 /* ChatDataCards.swift */; };
+		BF019 /* BrowserSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF019 /* BrowserSession.swift */; };
+		BF020 /* BrowserSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF020 /* BrowserSessionView.swift */; };
+		BF021 /* BrowserSessionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF021 /* BrowserSessionItem.swift */; };
+		BF022 /* SafariBrowserWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF022 /* SafariBrowserWindow.swift */; };
+		BF023 /* BrowserTabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF023 /* BrowserTabManager.swift */; };
+		BF024 /* BrowserTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF024 /* BrowserTabView.swift */; };
 		BF001 /* SwagManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF001 /* SwagManagerApp.swift */; };
 		BF002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF002 /* ContentView.swift */; };
 		BF003 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF003 /* AuthView.swift */; };
@@ -23,6 +31,7 @@
 		BF013 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = PD002 /* SwiftSoup */; };
 		BF014 /* Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF013 /* Chat.swift */; };
 		BF015 /* TeamChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF014 /* TeamChatView.swift */; };
+		BF016 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF015 /* MarkdownText.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +51,15 @@
 		SF012 /* SwagManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwagManager.entitlements; sourceTree = "<group>"; };
 		SF013 /* Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chat.swift; sourceTree = "<group>"; };
 		SF014 /* TeamChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamChatView.swift; sourceTree = "<group>"; };
+		SF015 /* MarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownText.swift; sourceTree = "<group>"; };
+		SF017 /* AIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIService.swift; sourceTree = "<group>"; };
+		SF018 /* ChatDataCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDataCards.swift; sourceTree = "<group>"; };
+		SF019 /* BrowserSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSession.swift; sourceTree = "<group>"; };
+		SF020 /* BrowserSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSessionView.swift; sourceTree = "<group>"; };
+		SF021 /* BrowserSessionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSessionItem.swift; sourceTree = "<group>"; };
+		SF022 /* SafariBrowserWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariBrowserWindow.swift; sourceTree = "<group>"; };
+		SF023 /* BrowserTabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabManager.swift; sourceTree = "<group>"; };
+		SF024 /* BrowserTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +118,7 @@
 				SF002 /* ContentView.swift */,
 				SF004 /* EditorView.swift */,
 				GR009 /* Auth */,
+				GR012 /* Browser */,
 				GR011 /* Chat */,
 				GR010 /* Settings */,
 				8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */,
@@ -107,9 +126,22 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		GR012 /* Browser */ = {
+			isa = PBXGroup;
+			children = (
+				SF020 /* BrowserSessionView.swift */,
+				SF021 /* BrowserSessionItem.swift */,
+				SF022 /* SafariBrowserWindow.swift */,
+				SF023 /* BrowserTabManager.swift */,
+				SF024 /* BrowserTabView.swift */,
+			);
+			path = Browser;
+			sourceTree = "<group>";
+		};
 		GR006 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				SF017 /* AIService.swift */,
 				SF005 /* AuthManager.swift */,
 				SF006 /* SupabaseService.swift */,
 			);
@@ -119,6 +151,7 @@
 		GR007 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				SF019 /* BrowserSession.swift */,
 				SF013 /* Chat.swift */,
 				SF007 /* Collection.swift */,
 				SF008 /* Creation.swift */,
@@ -154,6 +187,8 @@
 		GR011 /* Chat */ = {
 			isa = PBXGroup;
 			children = (
+				SF018 /* ChatDataCards.swift */,
+				SF015 /* MarkdownText.swift */,
 				SF014 /* TeamChatView.swift */,
 			);
 			path = Chat;
@@ -230,13 +265,22 @@
 				BF004 /* EditorView.swift in Sources */,
 				BF005 /* AuthManager.swift in Sources */,
 				BF006 /* SupabaseService.swift in Sources */,
+				BF017 /* AIService.swift in Sources */,
 				BF007 /* Collection.swift in Sources */,
 				BF008 /* Creation.swift in Sources */,
 				BF009 /* Product.swift in Sources */,
+				BF019 /* BrowserSession.swift in Sources */,
 				BF010 /* AnyCodable.swift in Sources */,
 				BF011 /* SettingsView.swift in Sources */,
 				BF014 /* Chat.swift in Sources */,
 				BF015 /* TeamChatView.swift in Sources */,
+				BF016 /* MarkdownText.swift in Sources */,
+				BF018 /* ChatDataCards.swift in Sources */,
+				BF020 /* BrowserSessionView.swift in Sources */,
+				BF021 /* BrowserSessionItem.swift in Sources */,
+				BF022 /* SafariBrowserWindow.swift in Sources */,
+				BF023 /* BrowserTabManager.swift in Sources */,
+				BF024 /* BrowserTabView.swift in Sources */,
 				7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

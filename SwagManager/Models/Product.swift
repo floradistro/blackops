@@ -338,6 +338,7 @@ struct ProductUpdate: Codable {
 struct FieldSchema: Codable, Identifiable, Hashable {
     let id: UUID
     var ownerUserId: UUID?
+    var catalogId: UUID?
     var name: String
     var slug: String?
     var description: String?
@@ -354,6 +355,7 @@ struct FieldSchema: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, name, slug, description, icon, fields
         case ownerUserId = "owner_user_id"
+        case catalogId = "catalog_id"
         case applicableCategories = "applicable_categories"
         case isPublic = "is_public"
         case forkedFromId = "forked_from_id"
@@ -428,6 +430,7 @@ struct FieldDefinition: Codable, Hashable {
 struct PricingSchema: Codable, Identifiable, Hashable {
     let id: UUID
     var ownerUserId: UUID?
+    var catalogId: UUID?
     var name: String
     var slug: String?
     var description: String?
@@ -444,6 +447,7 @@ struct PricingSchema: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, name, slug, description, tiers
         case ownerUserId = "owner_user_id"
+        case catalogId = "catalog_id"
         case qualityTier = "quality_tier"
         case applicableCategories = "applicable_categories"
         case isPublic = "is_public"
