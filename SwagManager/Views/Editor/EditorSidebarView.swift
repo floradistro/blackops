@@ -8,24 +8,26 @@ struct SidebarPanel: View {
     @ObservedObject var store: EditorStore
     @Binding var sidebarCollapsed: Bool
     @State private var searchText = ""
+    @State private var debouncedSearchText = ""
+    @State private var searchTask: Task<Void, Never>?
     @State private var expandedCollectionIds: Set<UUID> = []
     @State private var expandedCategoryIds: Set<UUID> = []
     @FocusState private var isSearchFocused: Bool
 
     var filteredCreations: [Creation] {
-        if searchText.isEmpty { return store.creations }
-        return store.creations.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        if debouncedSearchText.isEmpty { return store.creations }
+        return store.creations.filter { $0.name.localizedCaseInsensitiveContains(debouncedSearchText) }
     }
 
     var filteredOrphanCreations: [Creation] {
-        if searchText.isEmpty { return store.orphanCreations }
-        return store.orphanCreations.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        if debouncedSearchText.isEmpty { return store.orphanCreations }
+        return store.orphanCreations.filter { $0.name.localizedCaseInsensitiveContains(debouncedSearchText) }
     }
 
     func filteredCreationsForCollection(_ collectionId: UUID) -> [Creation] {
         let creations = store.creationsForCollection(collectionId)
-        if searchText.isEmpty { return creations }
-        return creations.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        if debouncedSearchText.isEmpty { return creations }
+        return creations.filter { $0.name.localizedCaseInsensitiveContains(debouncedSearchText) }
     }
 
     var body: some View {
@@ -83,6 +85,24 @@ struct SidebarPanel: View {
         .onChange(of: store.selectedStore?.id) { _, _ in
             Task {
                 await store.loadBrowserSessions()
+            }
+        }
+        .onChange(of: searchText) { _, newValue in
+            // Cancel previous search task
+            searchTask?.cancel()
+
+            // If empty, update immediately
+            if newValue.isEmpty {
+                debouncedSearchText = ""
+                return
+            }
+
+            // Otherwise, debounce for 300ms
+            searchTask = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+                if !Task.isCancelled {
+                    debouncedSearchText = newValue
+                }
             }
         }
     }
@@ -144,7 +164,7 @@ struct SidebarPanel: View {
     @ViewBuilder
     private var sidebarContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
                 catalogsSection
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.top, DesignSystem.Spacing.xxs)
 

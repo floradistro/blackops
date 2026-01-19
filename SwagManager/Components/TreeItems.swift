@@ -250,6 +250,8 @@ struct ProductTreeItem: View {
                     .fill(isActive ? DesignSystem.Colors.selectionActive :
                           isSelected ? DesignSystem.Colors.selection : Color.clear)
             )
+            .animation(DesignSystem.Animation.fast, value: isActive)
+            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
@@ -344,6 +346,8 @@ struct CreationTreeItem: View {
                     .fill(isActive ? DesignSystem.Colors.selectionActive :
                           isSelected ? DesignSystem.Colors.selection : Color.clear)
             )
+            .animation(DesignSystem.Animation.fast, value: isActive)
+            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
