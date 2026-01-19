@@ -11,6 +11,8 @@
 		083FFA444D8304CB32281877 /* MarkdownTableBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D646892B5257473211F8643E /* MarkdownTableBlocks.swift */; };
 		1C97C417E85FE510804A46A1 /* WilsonLocalExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9DD143157215FDBBC1928C6 /* WilsonLocalExecutor.swift */; };
 		26904178A4DDB5FEB9669EBD /* MarkdownCodeBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD529C31FCE3421DB0C9C96 /* MarkdownCodeBlock.swift */; };
+		35F0A5FBC59A48AD333315C3 /* EditorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0498EF3964A2DA9B3C640B /* EditorModels.swift */; };
+		424AD41344AD9F5DAB1A605D /* ScrollViewComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FB2C78A81CD609C899A96B /* ScrollViewComponents.swift */; };
 		4BCC505708CDEF815FC435F4 /* StoreLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3905F5C7211C00F2AB8B259D /* StoreLocationService.swift */; };
 		4E385E796EDF586CAF9D112F /* AIServiceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B37964F00F8C0D5CA22A80F /* AIServiceModels.swift */; };
 		4F831EE94759D1D67CCDD962 /* BrowserControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56871CCC32E7CE5CF59D5EB /* BrowserControls.swift */; };
@@ -21,6 +23,7 @@
 		9355917976DFD7DCE615719F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13E9796FDD6C45C1E624D9B /* ChatService.swift */; };
 		A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */; };
 		A311162A2D7B94BCA638B7A3 /* PricingSchemaSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43041469A40063BA9CA998E1 /* PricingSchemaSheets.swift */; };
+		A3C6743F87A05A55C6CC2BDE /* EditorUIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D5D947EFC2A41C1512D3C2 /* EditorUIComponents.swift */; };
 		ABAF4F978CDEEC6ECEB2C60D /* WilsonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FA781BDC9835C7F5C476E3 /* WilsonTheme.swift */; };
 		B1451D5242DF2E2768A9C6AE /* CatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8478299740E031A7732E0766 /* CatalogService.swift */; };
 		B576FCCDDBAA466612ED22F2 /* InteractiveBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18EADDAC27754F7A9065D14E /* InteractiveBrowserView.swift */; };
@@ -72,9 +75,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		02FB2C78A81CD609C899A96B /* ScrollViewComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScrollViewComponents.swift; sourceTree = "<group>"; };
 		06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductEditorComponents.swift; sourceTree = "<group>"; };
 		08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReactRenderTemplate.swift; sourceTree = "<group>"; };
-		0EFDEEE3BBAEEB2FEFB8D909 /* WilsonLocalExecutor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WilsonLocalExecutor.swift; sourceTree = "<group>"; };
 		18EADDAC27754F7A9065D14E /* InteractiveBrowserView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InteractiveBrowserView.swift; sourceTree = "<group>"; };
 		2838530950992B2372F9AD11 /* EditorPanelComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditorPanelComponents.swift; path = ../../../SwagManager/Views/Editor/EditorPanelComponents.swift; sourceTree = "<group>"; };
 		3900932E64BF678E6CB4C6DE /* MarkdownTextBlocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownTextBlocks.swift; sourceTree = "<group>"; };
@@ -85,10 +88,10 @@
 		43041469A40063BA9CA998E1 /* PricingSchemaSheets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PricingSchemaSheets.swift; path = Sheets/PricingSchemaSheets.swift; sourceTree = "<group>"; };
 		4B91722D30FF233088EA84D4 /* EditorWelcomeComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditorWelcomeComponents.swift; path = ../../../SwagManager/Views/Editor/EditorWelcomeComponents.swift; sourceTree = "<group>"; };
 		4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HotReloadComponents.swift; sourceTree = "<group>"; };
-		51DD4DE69A18D91F0C894572 /* WilsonCloudExecutor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WilsonCloudExecutor.swift; sourceTree = "<group>"; };
 		53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserComponents.swift; sourceTree = "<group>"; };
 		6B37964F00F8C0D5CA22A80F /* AIServiceModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIServiceModels.swift; sourceTree = "<group>"; };
 		6DBCB48891417FB8919E9CFD /* SchemaRowComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SchemaRowComponents.swift; sourceTree = "<group>"; };
+		81D5D947EFC2A41C1512D3C2 /* EditorUIComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorUIComponents.swift; sourceTree = "<group>"; };
 		8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryConfigView.swift; sourceTree = "<group>"; };
 		8478299740E031A7732E0766 /* CatalogService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogService.swift; sourceTree = "<group>"; };
 		872C1DD3002CC27B6C50156F /* CreationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CreationService.swift; sourceTree = "<group>"; };
@@ -96,10 +99,10 @@
 		ADD529C31FCE3421DB0C9C96 /* MarkdownCodeBlock.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownCodeBlock.swift; sourceTree = "<group>"; };
 		B7FA781BDC9835C7F5C476E3 /* WilsonTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WilsonTheme.swift; sourceTree = "<group>"; };
 		B9DD143157215FDBBC1928C6 /* WilsonLocalExecutor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WilsonLocalExecutor.swift; sourceTree = "<group>"; };
-		C302EA6B6896EDE66ABBD381 /* AIServiceModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIServiceModels.swift; sourceTree = "<group>"; };
 		D4209D1B0F4488BA1DDBF987 /* EditorToolbarComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditorToolbarComponents.swift; path = ../../../SwagManager/Views/Editor/EditorToolbarComponents.swift; sourceTree = "<group>"; };
 		D56871CCC32E7CE5CF59D5EB /* BrowserControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserControls.swift; sourceTree = "<group>"; };
 		D646892B5257473211F8643E /* MarkdownTableBlocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownTableBlocks.swift; sourceTree = "<group>"; };
+		DE0498EF3964A2DA9B3C640B /* EditorModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorModels.swift; sourceTree = "<group>"; };
 		E13E9796FDD6C45C1E624D9B /* ChatService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		F02AF96328BE578E43804220 /* MarkdownParser.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownParser.swift; sourceTree = "<group>"; };
 		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -353,6 +356,9 @@
 				2838530950992B2372F9AD11 /* EditorPanelComponents.swift */,
 				4B91722D30FF233088EA84D4 /* EditorWelcomeComponents.swift */,
 				08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */,
+				02FB2C78A81CD609C899A96B /* ScrollViewComponents.swift */,
+				DE0498EF3964A2DA9B3C640B /* EditorModels.swift */,
+				81D5D947EFC2A41C1512D3C2 /* EditorUIComponents.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -482,6 +488,9 @@
 				4E385E796EDF586CAF9D112F /* AIServiceModels.swift in Sources */,
 				1C97C417E85FE510804A46A1 /* WilsonLocalExecutor.swift in Sources */,
 				8B26357EB874CF092D69CA8A /* WilsonCloudExecutor.swift in Sources */,
+				424AD41344AD9F5DAB1A605D /* ScrollViewComponents.swift in Sources */,
+				35F0A5FBC59A48AD333315C3 /* EditorModels.swift in Sources */,
+				A3C6743F87A05A55C6CC2BDE /* EditorUIComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
