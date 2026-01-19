@@ -2211,6 +2211,10 @@ struct ProductEditorPanel: View {
     let product: Product
     @ObservedObject var store: EditorStore
 
+    @State private var customFields: [FieldSchema] = []
+    @State private var pricingSchemas: [PricingSchema] = []
+    @State private var isLoadingExtras = true
+
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(alignment: .leading, spacing: 20) {
@@ -2300,12 +2304,177 @@ struct ProductEditorPanel: View {
                     }
                 }
 
+                // Short Description
+                if let shortDesc = product.shortDescription, !shortDesc.isEmpty {
+                    GroupBox("Short Description") {
+                        Text(shortDesc)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                // Dimensions & Weight
+                if product.weight != nil || product.length != nil || product.width != nil || product.height != nil {
+                    GroupBox("Dimensions & Weight") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if let weight = product.weight {
+                                ProductFieldRow(label: "Weight", value: String(format: "%.2f lbs", weight))
+                            }
+                            if let length = product.length {
+                                ProductFieldRow(label: "Length", value: String(format: "%.2f in", length))
+                            }
+                            if let width = product.width {
+                                ProductFieldRow(label: "Width", value: String(format: "%.2f in", width))
+                            }
+                            if let height = product.height {
+                                ProductFieldRow(label: "Height", value: String(format: "%.2f in", height))
+                            }
+                        }
+                    }
+                }
+
+                // Wholesale
+                if product.isWholesale == true || product.wholesalePrice != nil {
+                    GroupBox("Wholesale") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ProductFieldRow(label: "Is Wholesale", value: (product.isWholesale ?? false) ? "Yes" : "No")
+                            ProductFieldRow(label: "Wholesale Only", value: (product.wholesaleOnly ?? false) ? "Yes" : "No")
+                            if let wholesalePrice = product.wholesalePrice {
+                                ProductFieldRow(label: "Wholesale Price", value: String(format: "$%.2f", wholesalePrice))
+                            }
+                        }
+                    }
+                }
+
+                // Custom Fields
+                if !customFields.isEmpty {
+                    GroupBox("Custom Fields") {
+                        VStack(alignment: .leading, spacing: 16) {
+                            ForEach(customFields) { schema in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(schema.name)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Theme.text)
+
+                                    ForEach(schema.fields, id: \.fieldId) { field in
+                                        ProductFieldRow(
+                                            label: field.displayLabel,
+                                            value: field.defaultValue?.description ?? "-"
+                                        )
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                }
+
+                // Pricing Schemas
+                if !pricingSchemas.isEmpty {
+                    GroupBox("Pricing Tiers") {
+                        VStack(alignment: .leading, spacing: 16) {
+                            ForEach(pricingSchemas) { schema in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(schema.name)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Theme.text)
+
+                                    ForEach(schema.tiers, id: \.tierId) { tier in
+                                        HStack {
+                                            Text(tier.displayLabel)
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+
+                                            if let qty = tier.quantity {
+                                                Text("(\(Int(qty)) \(tier.unit ?? "units"))")
+                                                    .font(.system(size: 10))
+                                                    .foregroundStyle(.tertiary)
+                                            }
+
+                                            Spacer()
+
+                                            Text(tier.formattedPrice)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(Theme.green)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                }
+
+                // Image Gallery
+                if let gallery = product.imageGallery, !gallery.isEmpty {
+                    GroupBox("Image Gallery") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(gallery, id: \.self) { imageUrlString in
+                                    if let url = URL(string: imageUrlString) {
+                                        AsyncImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Theme.bgElevated
+                                        }
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer()
             }
             .padding()
         }
         .scrollContentBackground(.hidden)
         .scrollIndicators(.automatic)
+        .task {
+            await loadProductExtras()
+        }
+    }
+
+    private func loadProductExtras() async {
+        guard let categoryId = product.primaryCategoryId,
+              let category = store.categories.first(where: { $0.id == categoryId }) else {
+            isLoadingExtras = false
+            return
+        }
+
+        do {
+            // Load field schemas for this category
+            let allFieldSchemas: [FieldSchema] = try await store.supabase.client
+                .from("field_schemas")
+                .select()
+                .eq("catalog_id", value: category.catalogId?.uuidString ?? "")
+                .eq("is_active", value: true)
+                .execute()
+                .value
+
+            customFields = allFieldSchemas.filter { $0.appliesTo(categoryName: category.name) }
+
+            // Load pricing schemas for this category
+            let allPricingSchemas: [PricingSchema] = try await store.supabase.client
+                .from("pricing_schemas")
+                .select()
+                .eq("catalog_id", value: category.catalogId?.uuidString ?? "")
+                .eq("is_active", value: true)
+                .execute()
+                .value
+
+            pricingSchemas = allPricingSchemas.filter { $0.appliesTo(categoryName: category.name) }
+
+            isLoadingExtras = false
+        } catch {
+            print("Failed to load product extras: \(error)")
+            isLoadingExtras = false
+        }
     }
 }
 
