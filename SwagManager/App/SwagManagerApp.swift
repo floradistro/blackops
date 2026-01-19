@@ -46,11 +46,6 @@ struct SwagManagerApp: App {
                 }
                 .keyboardShortcut("\\", modifiers: .command)
 
-                Button("Toggle Terminal") {
-                    NotificationCenter.default.post(name: NSNotification.Name("ToggleTerminal"), object: nil)
-                }
-                .keyboardShortcut("t", modifiers: [.command, .shift])
-
                 Divider()
 
                 Button("Zoom In") {

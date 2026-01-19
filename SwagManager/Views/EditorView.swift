@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import Supabase
 import Darwin
+// import SwiftTerm // TODO: Add SwiftTerm package in Xcode: File > Add Package Dependencies > https://github.com/migueldeicaza/SwiftTerm.git
 
 // MARK: - JSON Decoder Extension for Supabase
 extension JSONDecoder {
@@ -278,7 +279,6 @@ struct EditorView: View {
     @State private var selectedTab: EditorTab = .preview
     @State private var isHoveringToggle = false
     @State private var showStoreSelectorSheet = false
-    @State private var terminalCollapsed = true
 
     var body: some View {
         HStack(spacing: 0) {
@@ -383,16 +383,6 @@ struct EditorView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            // Collapsible Terminal Panel
-            if !terminalCollapsed {
-                Rectangle()
-                    .fill(Theme.border)
-                    .frame(width: 1)
-
-                TerminalPanel(terminalCollapsed: $terminalCollapsed)
-                    .frame(width: 500)
-                    .transition(.move(edge: .trailing))
-            }
         }
         .background(VisualEffectBackground(material: .underWindowBackground))
         .overlay(alignment: .topLeading) {
@@ -417,27 +407,7 @@ struct EditorView: View {
             .onHover { isHoveringToggle = $0 }
             .help("Toggle Sidebar (⌘\\)")
         }
-        .overlay(alignment: .topTrailing) {
-            // Floating terminal toggle button (Apple-style)
-            Button {
-                withAnimation(Theme.spring) { terminalCollapsed.toggle() }
-            } label: {
-                Image(systemName: terminalCollapsed ? "terminal" : "terminal.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(0.05))
-                    )
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .padding(12)
-            .help("Toggle Terminal (⌘T)")
-        }
         .animation(Theme.spring, value: sidebarCollapsed)
-        .animation(Theme.spring, value: terminalCollapsed)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleSidebar"))) { _ in
             withAnimation(Theme.spring) { sidebarCollapsed.toggle() }
         }
@@ -451,9 +421,6 @@ struct EditorView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewStore"))) { _ in
             store.showNewStoreSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleTerminal"))) { _ in
-            withAnimation(Theme.spring) { terminalCollapsed.toggle() }
         }
         .sheet(isPresented: $showStoreSelectorSheet) {
             StoreSelectorSheet(store: store)
@@ -5621,212 +5588,5 @@ struct VisualEffectBackground: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
-    }
-}
-
-// MARK: - Terminal Panel
-
-struct TerminalPanel: View {
-    @Binding var terminalCollapsed: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Terminal header
-            HStack {
-                Image(systemName: "terminal.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.green)
-
-                Text("TERMINAL")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.textTertiary)
-                    .tracking(1.2)
-
-                Spacer()
-
-                Button {
-                    withAnimation(Theme.spring) { terminalCollapsed.toggle() }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-
-            Rectangle()
-                .fill(Theme.border)
-                .frame(height: 1)
-
-            // Embedded terminal
-            TerminalView()
-        }
-        .background(VisualEffectBackground(material: .sidebar))
-    }
-}
-
-// MARK: - Terminal View (Working embedded terminal)
-
-struct TerminalView: NSViewRepresentable {
-    func makeNSView(context: Context) -> TerminalContainerView {
-        let container = TerminalContainerView()
-        container.coordinator = context.coordinator
-        context.coordinator.setup(container: container)
-        return container
-    }
-
-    func updateNSView(_ nsView: TerminalContainerView, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    class Coordinator: NSObject {
-        var shellTask: Process?
-        var masterFD: Int32 = -1
-        var readSource: DispatchSourceRead?
-        weak var textView: NSTextView?
-
-        func setup(container: TerminalContainerView) {
-            // Create text view
-            let textView = NSTextView()
-            textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-            textView.textColor = NSColor(red: 0.9, green: 0.9, blue: 0.9, alpha: 1.0)
-            textView.backgroundColor = NSColor.clear
-            textView.isEditable = false
-            textView.isSelectable = true
-            textView.textContainerInset = NSSize(width: 12, height: 12)
-
-            let scrollView = NSScrollView()
-            scrollView.documentView = textView
-            scrollView.hasVerticalScroller = true
-            scrollView.drawsBackground = false
-            scrollView.translatesAutoresizingMaskIntoConstraints = false
-
-            container.addSubview(scrollView)
-            NSLayoutConstraint.activate([
-                scrollView.topAnchor.constraint(equalTo: container.topAnchor),
-                scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-                scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor)
-            ])
-
-            self.textView = textView
-            startShell()
-        }
-
-        func startShell() {
-            var master: Int32 = 0
-            var slave: Int32 = 0
-            var name = [CChar](repeating: 0, count: 128)
-
-            guard openpty(&master, &slave, &name, nil, nil) == 0 else {
-                appendText("[Terminal] Failed to open PTY\n")
-                return
-            }
-
-            masterFD = master
-
-            var size = winsize()
-            size.ws_row = 40
-            size.ws_col = 100
-            ioctl(master, TIOCSWINSZ, &size)
-
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            task.arguments = ["-l", "-i"]
-            task.standardInput = FileHandle(fileDescriptor: slave)
-            task.standardOutput = FileHandle(fileDescriptor: slave)
-            task.standardError = FileHandle(fileDescriptor: slave)
-
-            var env = ProcessInfo.processInfo.environment
-            env["TERM"] = "xterm-256color"
-            task.environment = env
-
-            do {
-                try task.run()
-                shellTask = task
-                close(slave)
-                startReading()
-            } catch {
-                appendText("[Terminal] Failed to start: \(error)\n")
-                close(master)
-                close(slave)
-            }
-        }
-
-        func startReading() {
-            let source = DispatchSource.makeReadSource(fileDescriptor: masterFD, queue: .main)
-            source.setEventHandler { [weak self] in
-                guard let self = self else { return }
-                var buffer = [UInt8](repeating: 0, count: 4096)
-                let n = read(self.masterFD, &buffer, buffer.count)
-                if n > 0, let str = String(bytes: buffer[..<n], encoding: .utf8) {
-                    self.appendText(str)
-                }
-            }
-            source.resume()
-            readSource = source
-        }
-
-        func appendText(_ text: String) {
-            guard let textView = textView else { return }
-            let attrs: [NSAttributedString.Key: Any] = [
-                .foregroundColor: NSColor(red: 0.9, green: 0.9, blue: 0.9, alpha: 1.0),
-                .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-            ]
-            let attrStr = NSAttributedString(string: text, attributes: attrs)
-            textView.textStorage?.append(attrStr)
-            textView.scrollToEndOfDocument(nil)
-        }
-
-        func sendInput(_ text: String) {
-            guard masterFD >= 0, let data = text.data(using: .utf8) else { return }
-            data.withUnsafeBytes { write(masterFD, $0.baseAddress, data.count) }
-        }
-
-        deinit {
-            readSource?.cancel()
-            shellTask?.terminate()
-            if masterFD >= 0 { close(masterFD) }
-        }
-    }
-}
-
-class TerminalContainerView: NSView {
-    weak var coordinator: TerminalView.Coordinator?
-
-    override var acceptsFirstResponder: Bool { true }
-
-    override func becomeFirstResponder() -> Bool {
-        return true
-    }
-
-    override func keyDown(with event: NSEvent) {
-        guard let coordinator = coordinator else { return }
-
-        // Handle special keys
-        switch event.keyCode {
-        case 126: coordinator.sendInput("\u{1B}[A") // Up
-        case 125: coordinator.sendInput("\u{1B}[B") // Down
-        case 124: coordinator.sendInput("\u{1B}[C") // Right
-        case 123: coordinator.sendInput("\u{1B}[D") // Left
-        case 51: coordinator.sendInput("\u{7F}") // Backspace
-        case 36, 76: coordinator.sendInput("\r") // Return/Enter
-        case 48: coordinator.sendInput("\t") // Tab
-        default:
-            if let chars = event.characters {
-                coordinator.sendInput(chars)
-            }
-        }
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        // Theme background
-        NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0).setFill()
-        dirtyRect.fill()
     }
 }
