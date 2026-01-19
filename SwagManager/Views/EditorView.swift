@@ -381,6 +381,7 @@ struct EditorView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .scaleEffect(store.zoomLevel)
             }
             .toolbar {
                 UnifiedToolbarContent(store: store)
@@ -408,6 +409,43 @@ struct EditorView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewStore"))) { _ in
             store.showNewStoreSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ZoomIn"))) { _ in
+            store.zoomIn()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ZoomOut"))) { _ in
+            store.zoomOut()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ZoomReset"))) { _ in
+            store.resetZoom()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserNewTab"))) { _ in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+                if case .browserSession(let s) = tab { return s } else { return nil }
+            } : nil) {
+                BrowserTabManager.forSession(session.id).newTab()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserReload"))) { _ in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+                if case .browserSession(let s) = tab { return s } else { return nil }
+            } : nil) {
+                BrowserTabManager.forSession(session.id).activeTab?.reload()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserBack"))) { _ in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+                if case .browserSession(let s) = tab { return s } else { return nil }
+            } : nil) {
+                BrowserTabManager.forSession(session.id).activeTab?.goBack()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserForward"))) { _ in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+                if case .browserSession(let s) = tab { return s } else { return nil }
+            } : nil) {
+                BrowserTabManager.forSession(session.id).activeTab?.goForward()
+            }
         }
         .sheet(isPresented: $showStoreSelectorSheet) {
             StoreSelectorSheet(store: store)
@@ -601,7 +639,7 @@ class EditorStore: ObservableObject {
     // MARK: - Browser Sessions State
     @Published var browserSessions: [BrowserSession] = []
     @Published var selectedBrowserSession: BrowserSession?
-    @Published var sidebarBrowserExpanded = true
+    @Published var sidebarBrowserExpanded = false
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []
@@ -615,6 +653,7 @@ class EditorStore: ObservableObject {
     @Published var sidebarCreationsExpanded = false
     @Published var sidebarCatalogExpanded = false
     @Published var sidebarChatExpanded = false
+    @Published var zoomLevel: CGFloat = 1.0
 
     // Sheet states
     @Published var showNewCreationSheet = false
@@ -1083,6 +1122,20 @@ class EditorStore: ObservableObject {
 
     func triggerRefresh() {
         refreshTrigger = UUID()
+    }
+
+    // MARK: - Zoom Functions
+
+    func zoomIn() {
+        zoomLevel = min(zoomLevel + 0.1, 3.0)
+    }
+
+    func zoomOut() {
+        zoomLevel = max(zoomLevel - 0.1, 0.5)
+    }
+
+    func resetZoom() {
+        zoomLevel = 1.0
     }
 
     // MARK: - Create Functions
@@ -2437,6 +2490,7 @@ struct SidebarPanel: View {
     @State private var searchText = ""
     @State private var expandedCollectionIds: Set<UUID> = []
     @State private var expandedCategoryIds: Set<UUID> = []
+    @FocusState private var isSearchFocused: Bool
 
     var filteredCreations: [Creation] {
         if searchText.isEmpty { return store.creations }
@@ -2465,6 +2519,7 @@ struct SidebarPanel: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text)
+                    .focused($isSearchFocused)
                 if !searchText.isEmpty {
                     Button {
                         withAnimation(Theme.animationFast) { searchText = "" }
@@ -2842,6 +2897,9 @@ struct SidebarPanel: View {
             }
         }
         .background(VisualEffectBackground(material: .sidebar))
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowSearch"))) { _ in
+            isSearchFocused = true
+        }
         .task {
             // Load browser sessions when store changes
             if store.selectedStore != nil && store.browserSessions.isEmpty {

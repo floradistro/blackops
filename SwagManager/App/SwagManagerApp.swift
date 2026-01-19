@@ -62,6 +62,38 @@ struct SwagManagerApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("ZoomReset"), object: nil)
                 }
                 .keyboardShortcut("0", modifiers: .command)
+
+                Divider()
+
+                Button("Find...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowSearch"), object: nil)
+                }
+                .keyboardShortcut("f", modifiers: .command)
+            }
+
+            // Browser commands
+            CommandMenu("Browser") {
+                Button("New Tab") {
+                    NotificationCenter.default.post(name: NSNotification.Name("BrowserNewTab"), object: nil)
+                }
+                .keyboardShortcut("t", modifiers: .command)
+
+                Button("Reload Page") {
+                    NotificationCenter.default.post(name: NSNotification.Name("BrowserReload"), object: nil)
+                }
+                .keyboardShortcut("r", modifiers: .command)
+
+                Divider()
+
+                Button("Back") {
+                    NotificationCenter.default.post(name: NSNotification.Name("BrowserBack"), object: nil)
+                }
+                .keyboardShortcut("[", modifiers: .command)
+
+                Button("Forward") {
+                    NotificationCenter.default.post(name: NSNotification.Name("BrowserForward"), object: nil)
+                }
+                .keyboardShortcut("]", modifiers: .command)
             }
 
             // File commands
