@@ -26,7 +26,7 @@ struct ContentView: View {
                 .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.bgActive)
+        .background(Color.black.opacity(0.95))
     }
 }
 

@@ -7,6 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BF910 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF910 /* DesignSystem.swift */; };
+		BF911 /* CreationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF911 /* CreationStore.swift */; };
+		BF912 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF912 /* CatalogStore.swift */; };
+		BF913 /* BrowserStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF913 /* BrowserStore.swift */; };
+		BF914 /* TreeItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF914 /* TreeItems.swift */; };
+		BF915 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF915 /* StateViews.swift */; };
+		BF916 /* ChatComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF916 /* ChatComponents.swift */; };
+		BF917 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF917 /* ButtonStyles.swift */; };
+		BF918 /* EditorSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF918 /* EditorSheets.swift */; };
+		BF919 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF919 /* Formatters.swift */; };
+		BF920 /* EditorSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF920 /* EditorSidebarView.swift */; };
 		7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */; };
 		BF017 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF017 /* AIService.swift */; };
 		BF018 /* ChatDataCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF018 /* ChatDataCards.swift */; };
@@ -35,6 +46,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		SF910 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		SF911 /* CreationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreationStore.swift; sourceTree = "<group>"; };
+		SF912 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
+		SF913 /* BrowserStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserStore.swift; sourceTree = "<group>"; };
+		SF914 /* TreeItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreeItems.swift; sourceTree = "<group>"; };
+		SF915 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
+		SF916 /* ChatComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComponents.swift; sourceTree = "<group>"; };
+		SF917 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
+		SF918 /* EditorSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSheets.swift; sourceTree = "<group>"; };
+		SF919 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		SF920 /* EditorSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSidebarView.swift; sourceTree = "<group>"; };
 		8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryConfigView.swift; sourceTree = "<group>"; };
 		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		SF001 /* SwagManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManagerApp.swift; sourceTree = "<group>"; };
@@ -75,6 +97,44 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		GR020 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				SF910 /* DesignSystem.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		GR021 /* Stores */ = {
+			isa = PBXGroup;
+			children = (
+				SF911 /* CreationStore.swift */,
+				SF912 /* CatalogStore.swift */,
+				SF913 /* BrowserStore.swift */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		GR022 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				SF914 /* TreeItems.swift */,
+				SF915 /* StateViews.swift */,
+				SF916 /* ChatComponents.swift */,
+				SF917 /* ButtonStyles.swift */,
+				SF918 /* EditorSheets.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		GR023 /* Editor */ = {
+			isa = PBXGroup;
+			children = (
+				SF920 /* EditorSidebarView.swift */,
+			);
+			path = Editor;
+			sourceTree = "<group>";
+		};
 		GR001 = {
 			isa = PBXGroup;
 			children = (
@@ -86,6 +146,9 @@
 		GR002 /* SwagManager */ = {
 			isa = PBXGroup;
 			children = (
+				GR020 /* Theme */,
+				GR021 /* Stores */,
+				GR022 /* Components */,
 				GR004 /* App */,
 				GR005 /* Views */,
 				GR006 /* Services */,
@@ -115,6 +178,7 @@
 		GR005 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				GR023 /* Editor */,
 				SF002 /* ContentView.swift */,
 				SF004 /* EditorView.swift */,
 				GR009 /* Auth */,
@@ -163,6 +227,7 @@
 		GR008 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				SF919 /* Formatters.swift */,
 				SF010 /* AnyCodable.swift */,
 			);
 			path = Utilities;
@@ -259,6 +324,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF910 /* DesignSystem.swift in Sources */,
+				BF911 /* CreationStore.swift in Sources */,
+				BF912 /* CatalogStore.swift in Sources */,
+				BF913 /* BrowserStore.swift in Sources */,
+				BF914 /* TreeItems.swift in Sources */,
+				BF915 /* StateViews.swift in Sources */,
+				BF916 /* ChatComponents.swift in Sources */,
+				BF917 /* ButtonStyles.swift in Sources */,
+				BF918 /* EditorSheets.swift in Sources */,
+				BF919 /* Formatters.swift in Sources */,
+				BF920 /* EditorSidebarView.swift in Sources */,
 				BF001 /* SwagManagerApp.swift in Sources */,
 				BF002 /* ContentView.swift in Sources */,
 				BF003 /* AuthView.swift in Sources */,

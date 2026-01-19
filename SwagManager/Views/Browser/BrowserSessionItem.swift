@@ -29,7 +29,7 @@ struct BrowserSessionItem: View {
                     // Title/URL
                     Text(session.displayName)
                         .font(.system(size: 11, weight: isSelected ? .medium : .regular))
-                        .foregroundStyle(isSelected ? Theme.text : Theme.textSecondary)
+                        .foregroundStyle(isSelected ? Theme.text : DesignSystem.Colors.textSecondary)
                         .lineLimit(1)
 
                     // Shortened URL with better formatting
@@ -38,11 +38,11 @@ struct BrowserSessionItem: View {
                             if session.isSecure {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 7))
-                                    .foregroundStyle(Theme.green.opacity(0.6))
+                                    .foregroundStyle(DesignSystem.Colors.success.opacity(0.6))
                             }
                             Text(shortenUrl(url))
                                 .font(.system(size: 9))
-                                .foregroundStyle(Theme.textTertiary)
+                                .foregroundStyle(DesignSystem.Colors.textTertiary)
                                 .lineLimit(1)
                         }
                     }
@@ -57,11 +57,11 @@ struct BrowserSessionItem: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(Theme.textTertiary)
+                            .foregroundStyle(DesignSystem.Colors.textTertiary)
                             .frame(width: 16, height: 16)
                             .background(
                                 Circle()
-                                    .fill(Theme.bgHover)
+                                    .fill(DesignSystem.Colors.surfaceHover)
                             )
                             .contentShape(Circle())
                     }
@@ -70,7 +70,7 @@ struct BrowserSessionItem: View {
                 } else if let lastActivity = session.lastActivity {
                     Text(timeAgo(lastActivity))
                         .font(.system(size: 9))
-                        .foregroundStyle(Theme.textTertiary)
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                         .monospacedDigit()
                 }
             }
@@ -78,7 +78,7 @@ struct BrowserSessionItem: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Theme.selectionActive : (isHovering ? Theme.bgHover : Color.clear))
+                    .fill(isSelected ? DesignSystem.Colors.selectionActive : (isHovering ? DesignSystem.Colors.surfaceHover : Color.clear))
             )
             .contentShape(Rectangle())
         }
@@ -92,11 +92,11 @@ struct BrowserSessionItem: View {
 
     private var statusColor: Color {
         switch session.status {
-        case "active": return Theme.green
-        case "paused": return Theme.yellow
-        case "closed": return Theme.textTertiary
-        case "error": return Theme.red
-        default: return Theme.textTertiary
+        case "active": return DesignSystem.Colors.success
+        case "paused": return DesignSystem.Colors.warning
+        case "closed": return DesignSystem.Colors.textTertiary
+        case "error": return DesignSystem.Colors.error
+        default: return DesignSystem.Colors.textTertiary
         }
     }
 
@@ -132,27 +132,27 @@ struct BrowserSessionsSectionHeader: View {
 
     var body: some View {
         Button {
-            withAnimation(Theme.spring) { isExpanded.toggle() }
+            withAnimation(DesignSystem.Animation.spring) { isExpanded.toggle() }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Theme.textTertiary)
+                    .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .animation(Theme.animationFast, value: isExpanded)
+                    .animation(DesignSystem.Animation.fast, value: isExpanded)
                     .frame(width: 12)
 
                 Text("BROWSER SESSIONS")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(DesignSystem.Colors.textSecondary)
                     .tracking(0.5)
 
                 Text("\(count)")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(Theme.textTertiary)
+                    .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Theme.bgElevated)
+                    .background(DesignSystem.Colors.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
 
                 Spacer()
@@ -160,11 +160,11 @@ struct BrowserSessionsSectionHeader: View {
                 Button(action: onNewSession) {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(DesignSystem.Colors.textSecondary)
                         .frame(width: 20, height: 20)
                         .background(
                             Circle()
-                                .fill(isHovering ? Theme.bgHover : Color.clear)
+                                .fill(isHovering ? DesignSystem.Colors.surfaceHover : Color.clear)
                         )
                         .contentShape(Rectangle())
                 }
@@ -252,6 +252,6 @@ struct BrowserSessionsSectionHeader: View {
             onClose: {}
         )
     }
-    .background(Theme.bgSecondary)
+    .background(Color(white: 0.1).opacity(0.3))
     .frame(width: 260)
 }
