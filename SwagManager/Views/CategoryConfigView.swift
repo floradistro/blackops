@@ -82,14 +82,28 @@ struct CategoryConfigView: View {
 
     private var headerSection: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Theme.bgElevated)
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.tertiary)
-                )
+            // Category image or fallback icon
+            Group {
+                if let imageUrlString = category.imageUrl ?? category.featuredImage ?? category.bannerUrl,
+                   let imageUrl = URL(string: imageUrlString) {
+                    AsyncImage(url: imageUrl) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .failure, .empty:
+                            fallbackIcon
+                        @unknown default:
+                            fallbackIcon
+                        }
+                    }
+                } else {
+                    fallbackIcon
+                }
+            }
+            .frame(width: 48, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(category.name)
@@ -113,6 +127,16 @@ struct CategoryConfigView: View {
         .padding(16)
         .background(Theme.bgTertiary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var fallbackIcon: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Theme.bgElevated)
+            .overlay(
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.tertiary)
+            )
     }
 
     // MARK: - Error Banner
