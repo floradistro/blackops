@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		07D694322E9AC5B56006590D /* BrowserComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */; };
+		083FFA444D8304CB32281877 /* MarkdownTableBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D646892B5257473211F8643E /* MarkdownTableBlocks.swift */; };
+		26904178A4DDB5FEB9669EBD /* MarkdownCodeBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD529C31FCE3421DB0C9C96 /* MarkdownCodeBlock.swift */; };
 		4BCC505708CDEF815FC435F4 /* StoreLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3905F5C7211C00F2AB8B259D /* StoreLocationService.swift */; };
 		7E8990AF8768FC90316DA120 /* CategoryConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */; };
 		8AEE31860D8FEB93CF642889 /* FieldSchemaSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4190C95727DEA382B956325E /* FieldSchemaSheets.swift */; };
@@ -15,6 +17,7 @@
 		9355917976DFD7DCE615719F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13E9796FDD6C45C1E624D9B /* ChatService.swift */; };
 		A13B71679695E8BD199A97F2 /* EditorTabComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */; };
 		A311162A2D7B94BCA638B7A3 /* PricingSchemaSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43041469A40063BA9CA998E1 /* PricingSchemaSheets.swift */; };
+		ABAF4F978CDEEC6ECEB2C60D /* WilsonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7FA781BDC9835C7F5C476E3 /* WilsonTheme.swift */; };
 		B1451D5242DF2E2768A9C6AE /* CatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8478299740E031A7732E0766 /* CatalogService.swift */; };
 		B97C1754F3DA1DA5B21B78AE /* ProductEditorComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */; };
 		BF001 /* SwagManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF001 /* SwagManagerApp.swift */; };
@@ -52,7 +55,9 @@
 		BF918 /* EditorSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF918 /* EditorSheets.swift */; };
 		BF919 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF919 /* Formatters.swift */; };
 		BF920 /* EditorSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF920 /* EditorSidebarView.swift */; };
+		C305E57D422FF2118AF02153 /* MarkdownParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02AF96328BE578E43804220 /* MarkdownParser.swift */; };
 		C4ADA5A7F6F9409F1179F0AB /* SchemaRowComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DBCB48891417FB8919E9CFD /* SchemaRowComponents.swift */; };
+		C746FE7DDA1A3A62A9986699 /* MarkdownTextBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3900932E64BF678E6CB4C6DE /* MarkdownTextBlocks.swift */; };
 		CC2A7D4A0F857D50FDBDE744 /* EditorWelcomeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B91722D30FF233088EA84D4 /* EditorWelcomeComponents.swift */; };
 		CFF4EF004363F80B4D94978C /* CreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 872C1DD3002CC27B6C50156F /* CreationService.swift */; };
 		DF53F2F9F0425CECFC401881 /* EditorPanelComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2838530950992B2372F9AD11 /* EditorPanelComponents.swift */; };
@@ -63,6 +68,7 @@
 /* Begin PBXFileReference section */
 		06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductEditorComponents.swift; sourceTree = "<group>"; };
 		2838530950992B2372F9AD11 /* EditorPanelComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditorPanelComponents.swift; path = ../../../SwagManager/Views/Editor/EditorPanelComponents.swift; sourceTree = "<group>"; };
+		3900932E64BF678E6CB4C6DE /* MarkdownTextBlocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownTextBlocks.swift; sourceTree = "<group>"; };
 		3905F5C7211C00F2AB8B259D /* StoreLocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoreLocationService.swift; sourceTree = "<group>"; };
 		3AD16A9A88A6B17525056448 /* EditorTabComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorTabComponents.swift; sourceTree = "<group>"; };
 		3F94E64A9DC0C3DB0DDB99B9 /* ProductSchemaService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductSchemaService.swift; sourceTree = "<group>"; };
@@ -75,8 +81,12 @@
 		8453CC5BD941091064F9F0BA /* CategoryConfigView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryConfigView.swift; sourceTree = "<group>"; };
 		8478299740E031A7732E0766 /* CatalogService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogService.swift; sourceTree = "<group>"; };
 		872C1DD3002CC27B6C50156F /* CreationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CreationService.swift; sourceTree = "<group>"; };
+		ADD529C31FCE3421DB0C9C96 /* MarkdownCodeBlock.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownCodeBlock.swift; sourceTree = "<group>"; };
+		B7FA781BDC9835C7F5C476E3 /* WilsonTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WilsonTheme.swift; sourceTree = "<group>"; };
 		D4209D1B0F4488BA1DDBF987 /* EditorToolbarComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditorToolbarComponents.swift; path = ../../../SwagManager/Views/Editor/EditorToolbarComponents.swift; sourceTree = "<group>"; };
+		D646892B5257473211F8643E /* MarkdownTableBlocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownTableBlocks.swift; sourceTree = "<group>"; };
 		E13E9796FDD6C45C1E624D9B /* ChatService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
+		F02AF96328BE578E43804220 /* MarkdownParser.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownParser.swift; sourceTree = "<group>"; };
 		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		SF001 /* SwagManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManagerApp.swift; sourceTree = "<group>"; };
 		SF002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -250,6 +260,10 @@
 				SF018 /* ChatDataCards.swift */,
 				SF015 /* MarkdownText.swift */,
 				SF014 /* TeamChatView.swift */,
+				F02AF96328BE578E43804220 /* MarkdownParser.swift */,
+				3900932E64BF678E6CB4C6DE /* MarkdownTextBlocks.swift */,
+				ADD529C31FCE3421DB0C9C96 /* MarkdownCodeBlock.swift */,
+				D646892B5257473211F8643E /* MarkdownTableBlocks.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -270,6 +284,7 @@
 			isa = PBXGroup;
 			children = (
 				SF910 /* DesignSystem.swift */,
+				B7FA781BDC9835C7F5C476E3 /* WilsonTheme.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -426,6 +441,11 @@
 				C4ADA5A7F6F9409F1179F0AB /* SchemaRowComponents.swift in Sources */,
 				8AEE31860D8FEB93CF642889 /* FieldSchemaSheets.swift in Sources */,
 				A311162A2D7B94BCA638B7A3 /* PricingSchemaSheets.swift in Sources */,
+				ABAF4F978CDEEC6ECEB2C60D /* WilsonTheme.swift in Sources */,
+				C305E57D422FF2118AF02153 /* MarkdownParser.swift in Sources */,
+				C746FE7DDA1A3A62A9986699 /* MarkdownTextBlocks.swift in Sources */,
+				26904178A4DDB5FEB9669EBD /* MarkdownCodeBlock.swift in Sources */,
+				083FFA444D8304CB32281877 /* MarkdownTableBlocks.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
