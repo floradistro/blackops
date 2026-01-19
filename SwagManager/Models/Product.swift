@@ -241,6 +241,7 @@ struct Product: Codable, Identifiable, Hashable {
     var isWholesale: Bool?
     var wholesaleOnly: Bool?
     var productVisibility: String?
+    var fieldValues: [String: AnyCodable]?
     var createdAt: String?
     var updatedAt: String?
 
@@ -266,6 +267,7 @@ struct Product: Codable, Identifiable, Hashable {
         case isWholesale = "is_wholesale"
         case wholesaleOnly = "wholesale_only"
         case productVisibility = "product_visibility"
+        case fieldValues = "field_values"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

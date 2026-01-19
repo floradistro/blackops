@@ -2349,7 +2349,7 @@ struct ProductEditorPanel: View {
 
                 // Custom Fields
                 if !customFields.isEmpty {
-                    CustomFieldsSection(schemas: customFields)
+                    CustomFieldsSection(schemas: customFields, fieldValues: product.fieldValues)
                 }
 
                 // Pricing Schemas
@@ -2392,34 +2392,17 @@ struct ProductEditorPanel: View {
     }
 
     private func loadProductExtras() async {
-        guard let categoryId = product.primaryCategoryId,
-              let category = store.categories.first(where: { $0.id == categoryId }) else {
+        guard let categoryId = product.primaryCategoryId else {
             isLoadingExtras = false
             return
         }
 
         do {
-            // Load field schemas for this category
-            let allFieldSchemas: [FieldSchema] = try await store.supabase.client
-                .from("field_schemas")
-                .select()
-                .eq("catalog_id", value: category.catalogId?.uuidString ?? "")
-                .eq("is_active", value: true)
-                .execute()
-                .value
+            // Load field schemas assigned to this category via junction table
+            customFields = try await store.supabase.fetchFieldSchemasForCategory(categoryId: categoryId)
 
-            customFields = allFieldSchemas.filter { $0.appliesTo(categoryName: category.name) }
-
-            // Load pricing schemas for this category
-            let allPricingSchemas: [PricingSchema] = try await store.supabase.client
-                .from("pricing_schemas")
-                .select()
-                .eq("catalog_id", value: category.catalogId?.uuidString ?? "")
-                .eq("is_active", value: true)
-                .execute()
-                .value
-
-            pricingSchemas = allPricingSchemas.filter { $0.appliesTo(categoryName: category.name) }
+            // Load pricing schemas assigned to this category via junction table
+            pricingSchemas = try await store.supabase.fetchPricingSchemasForCategory(categoryId: categoryId)
 
             isLoadingExtras = false
         } catch {
@@ -2449,6 +2432,7 @@ struct ProductFieldRow: View {
 
 struct CustomFieldsSection: View {
     let schemas: [FieldSchema]
+    let fieldValues: [String: AnyCodable]?
 
     var body: some View {
         GroupBox("Custom Fields") {
@@ -2462,7 +2446,7 @@ struct CustomFieldsSection: View {
                         ForEach(schema.fields, id: \.fieldId) { field in
                             ProductFieldRow(
                                 label: field.displayLabel,
-                                value: field.defaultValue.map { "\($0.value)" } ?? "-"
+                                value: getFieldValue(field)
                             )
                         }
                     }
@@ -2470,6 +2454,22 @@ struct CustomFieldsSection: View {
                 }
             }
         }
+    }
+
+    private func getFieldValue(_ field: FieldDefinition) -> String {
+        // Try to get actual value from product's field_values
+        if let fieldKey = field.key,
+           let fieldValues = fieldValues,
+           let actualValue = fieldValues[fieldKey] {
+            return "\(actualValue.value)"
+        }
+
+        // Fall back to default value from schema if no actual value exists
+        if let defaultValue = field.defaultValue {
+            return "\(defaultValue.value)"
+        }
+
+        return "-"
     }
 }
 
