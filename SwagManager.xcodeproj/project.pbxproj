@@ -61,12 +61,14 @@
 		CC2A7D4A0F857D50FDBDE744 /* EditorWelcomeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B91722D30FF233088EA84D4 /* EditorWelcomeComponents.swift */; };
 		CFF4EF004363F80B4D94978C /* CreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 872C1DD3002CC27B6C50156F /* CreationService.swift */; };
 		DF53F2F9F0425CECFC401881 /* EditorPanelComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2838530950992B2372F9AD11 /* EditorPanelComponents.swift */; };
+		E26CCFE2D892FAAEAF15BEFB /* ReactRenderTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */; };
 		EDFE174897CC3ECFD5BA6E16 /* EditorToolbarComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4209D1B0F4488BA1DDBF987 /* EditorToolbarComponents.swift */; };
 		F3C6F109C9E4168D89840E85 /* HotReloadComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F426B70BBD7F02478C15837 /* HotReloadComponents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductEditorComponents.swift; sourceTree = "<group>"; };
+		08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReactRenderTemplate.swift; sourceTree = "<group>"; };
 		2838530950992B2372F9AD11 /* EditorPanelComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditorPanelComponents.swift; path = ../../../SwagManager/Views/Editor/EditorPanelComponents.swift; sourceTree = "<group>"; };
 		3900932E64BF678E6CB4C6DE /* MarkdownTextBlocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownTextBlocks.swift; sourceTree = "<group>"; };
 		3905F5C7211C00F2AB8B259D /* StoreLocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoreLocationService.swift; sourceTree = "<group>"; };
@@ -323,6 +325,7 @@
 				D4209D1B0F4488BA1DDBF987 /* EditorToolbarComponents.swift */,
 				2838530950992B2372F9AD11 /* EditorPanelComponents.swift */,
 				4B91722D30FF233088EA84D4 /* EditorWelcomeComponents.swift */,
+				08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -446,6 +449,7 @@
 				C746FE7DDA1A3A62A9986699 /* MarkdownTextBlocks.swift in Sources */,
 				26904178A4DDB5FEB9669EBD /* MarkdownCodeBlock.swift in Sources */,
 				083FFA444D8304CB32281877 /* MarkdownTableBlocks.swift in Sources */,
+				E26CCFE2D892FAAEAF15BEFB /* ReactRenderTemplate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
