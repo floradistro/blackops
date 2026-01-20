@@ -42,7 +42,7 @@ struct BrowserSessionView: View {
                 onForward: { webView?.goForward() },
                 onRefresh: { webView?.reload() },
                 onStop: { webView?.stopLoading() },
-                onNewTab: { /* TODO: Create new browser session */ },
+                onNewTab: { }, // New tab functionality not yet implemented
                 onToggleDarkMode: { toggleDarkMode() }
             )
 

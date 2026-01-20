@@ -25,7 +25,6 @@
 		34F5EB6B1A54D9B006F414FC /* SalesSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDC6C9B1593EA3CF8119CF5 /* SalesSummaryCard.swift */; };
 		35F0A5FBC59A48AD333315C3 /* EditorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0498EF3964A2DA9B3C640B /* EditorModels.swift */; };
 		3C2DF3FB9085A0E0CABC96E7 /* ProductDataCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819CB34149DB474C42BCBC06 /* ProductDataCard.swift */; };
-		3C31B810B480850F95847735 /* EditorStore+CatalogManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 869EE05102C2A79A5DD82497 /* EditorStore+CatalogManagement.swift */; };
 		3CD129A2EE1D1FC024C46E33 /* NewCatalogSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4640AD9A5BCE118AB6A926DD /* NewCatalogSheet.swift */; };
 		3E1DFC0A836C10AD8623098C /* QuickStatsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DFD64D9672CBE80979ABA27 /* QuickStatsRow.swift */; };
 		40EE43998CBE985157042855 /* EditorStore+CategoryManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB33492A193256610F7041D /* EditorStore+CategoryManagement.swift */; };
@@ -132,7 +131,6 @@
 		EC524F94D5CDE739B553A45E /* SidebarBrowserSessionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B30414FF2C02B543F3041F /* SidebarBrowserSessionsSection.swift */; };
 		ECE8DE9A33AE24FFF8767922 /* InteractiveBrowserView+Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E230FA2DA9F0854044F29EF /* InteractiveBrowserView+Configuration.swift */; };
 		EDFE174897CC3ECFD5BA6E16 /* EditorToolbarComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4209D1B0F4488BA1DDBF987 /* EditorToolbarComponents.swift */; };
-		EE6EED6357F6E437538C78EB /* EditorStore+RealtimeSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8ED0828F42D1D441708B49 /* EditorStore+RealtimeSync.swift */; };
 		F04C1184153C33B9B4171F6A /* NewCollectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8561BEB484A9ED45E40376 /* NewCollectionSheet.swift */; };
 		F13C5361B646B47E50532A24 /* ProductTreeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F9344BBC9352497C10070A /* ProductTreeItem.swift */; };
 		F361317CF120BE1C49D6E3DC /* SidebarCatalogsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33680BF35E4DC536EAAA8D5A /* SidebarCatalogsSection.swift */; };
@@ -185,7 +183,6 @@
 		594533FA67BAB551A3FDD448 /* SafariTabBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariTabBar.swift; sourceTree = "<group>"; };
 		5CE80B8C2BF851411703F0B9 /* FormFieldComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FormFieldComponents.swift; sourceTree = "<group>"; };
 		665D9F4AF3E2F177931D0AD8 /* ConversationTreeComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConversationTreeComponents.swift; sourceTree = "<group>"; };
-		6A8ED0828F42D1D441708B49 /* EditorStore+RealtimeSync.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+RealtimeSync.swift"; sourceTree = "<group>"; };
 		6ADAD03E2B8A5722AD4C328C /* InteractiveBrowserView+Coordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "InteractiveBrowserView+Coordinator.swift"; sourceTree = "<group>"; };
 		6B37964F00F8C0D5CA22A80F /* AIServiceModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIServiceModels.swift; sourceTree = "<group>"; };
 		6DBCB48891417FB8919E9CFD /* SchemaRowComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SchemaRowComponents.swift; sourceTree = "<group>"; };
@@ -203,7 +200,6 @@
 		847EF2E6EF2603E411B2BF5B /* SupabaseDecoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SupabaseDecoder.swift; sourceTree = "<group>"; };
 		8555502D47FE1315BE665533 /* SidebarEmptyState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarEmptyState.swift; sourceTree = "<group>"; };
 		86161349644DD807408EE48C /* SidebarCreationsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarCreationsSection.swift; sourceTree = "<group>"; };
-		869EE05102C2A79A5DD82497 /* EditorStore+CatalogManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+CatalogManagement.swift"; sourceTree = "<group>"; };
 		872C1DD3002CC27B6C50156F /* CreationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CreationService.swift; sourceTree = "<group>"; };
 		879B983ABD8D1D7A78B44149 /* WilsonCloudExecutor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WilsonCloudExecutor.swift; sourceTree = "<group>"; };
 		8AD35AC478D91C5887B31F1E /* EnhancedChatStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EnhancedChatStore.swift; sourceTree = "<group>"; };
@@ -579,9 +575,7 @@
 				SF911 /* CreationStore.swift */,
 				SF912 /* CatalogStore.swift */,
 				SF913 /* BrowserStore.swift */,
-				6A8ED0828F42D1D441708B49 /* EditorStore+RealtimeSync.swift */,
 				9C3B2C7358DD27BA111462E7 /* EditorStore+TabManagement.swift */,
-				869EE05102C2A79A5DD82497 /* EditorStore+CatalogManagement.swift */,
 				13AC7CCBC4DCC5B56C08CD8E /* EditorStore+Zoom.swift */,
 				7C5C67CD673A9F65742FBF35 /* EditorStore+Creation.swift */,
 				D4A7EDDA052CB3F913F685A5 /* EditorStore+Conversations.swift */,
@@ -755,9 +749,7 @@
 				424AD41344AD9F5DAB1A605D /* ScrollViewComponents.swift in Sources */,
 				35F0A5FBC59A48AD333315C3 /* EditorModels.swift in Sources */,
 				A3C6743F87A05A55C6CC2BDE /* EditorUIComponents.swift in Sources */,
-				EE6EED6357F6E437538C78EB /* EditorStore+RealtimeSync.swift in Sources */,
 				49D480EE888D3D55D190C74C /* EditorStore+TabManagement.swift in Sources */,
-				3C31B810B480850F95847735 /* EditorStore+CatalogManagement.swift in Sources */,
 				5B49F0E4FF0794D0BFC96429 /* StoreModels.swift in Sources */,
 				7C3F33620251F8B97AB53E77 /* ProductRelated.swift in Sources */,
 				4751F45559C07A0DB4B49DB4 /* FormFieldComponents.swift in Sources */,

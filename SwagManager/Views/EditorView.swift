@@ -1,8 +1,6 @@
 import SwiftUI
 import WebKit
 import Supabase
-import Darwin
-// import SwiftTerm // TODO: Add SwiftTerm package in Xcode: File > Add Package Dependencies > https://github.com/migueldeicaza/SwiftTerm.git
 
 // MARK: - Main Editor View
 // Refactored following Apple engineering standards - extracted utilities and store extensions
@@ -188,10 +186,6 @@ struct EditorView: View {
                 BrowserTabManager.forSession(session.id).activeTab?.goForward()
             }
         }
-        // Store selector sheet removed during refactoring
-        // .sheet(isPresented: $showStoreSelectorSheet) {
-        //     StoreSelectorSheet(store: store)
-        // }
         .task {
             await store.loadCreations()
             // RLS handles filtering - just load stores
