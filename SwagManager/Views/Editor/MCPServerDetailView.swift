@@ -6,8 +6,72 @@ import SwiftUI
 struct MCPServerDetailView: View {
     let server: MCPServer
     @ObservedObject var store: EditorStore
+    @State private var selectedTab: MCPTab = .details
+    @State private var showEditor = false
+
+    enum MCPTab: String, CaseIterable {
+        case details = "Details"
+        case test = "Test"
+        case monitor = "Monitor"
+    }
 
     var body: some View {
+        VStack(spacing: 0) {
+            // Tab Bar
+            tabBar
+
+            // Content based on selected tab
+            TabView(selection: $selectedTab) {
+                detailsTab.tag(MCPTab.details)
+                MCPTestView(server: server).tag(MCPTab.test)
+                MCPMonitoringView().tag(MCPTab.monitor)
+            }
+            .tabViewStyle(.automatic)
+        }
+        .sheet(isPresented: $showEditor) {
+            MCPEditorView(server: server) {
+                Task { await store.loadMCPServers() }
+            }
+            .frame(minWidth: 700, minHeight: 600)
+        }
+    }
+
+    @ViewBuilder
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(MCPTab.allCases, id: \.self) { tab in
+                Button(action: { selectedTab = tab }) {
+                    Text(tab.rawValue)
+                        .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
+                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+
+            Button(action: { showEditor = true }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "pencil")
+                    Text("Edit")
+                }
+                .font(.system(size: 12))
+                .foregroundStyle(.blue)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.xs)
+        .background(Color.primary.opacity(0.03))
+    }
+
+    @ViewBuilder
+    private var detailsTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
                 // Header

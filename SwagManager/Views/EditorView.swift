@@ -14,6 +14,8 @@ struct EditorView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var selectedTab: EditorTab = .preview
     @State private var showStoreSelectorSheet = false
+    @State private var showNewMCPServerSheet = false
+    @State private var showMCPMonitoringSheet = false
 
     // MARK: - Main Content View
 
@@ -203,6 +205,12 @@ struct EditorView: View {
                 NSWorkspace.shared.open(url)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewMCPServer"))) { _ in
+            showNewMCPServerSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MonitorMCPServers"))) { _ in
+            showMCPMonitoringSheet = true
+        }
         .task {
             await store.loadCreations()
             // RLS handles filtering - just load stores
@@ -223,6 +231,16 @@ struct EditorView: View {
         }
         .sheet(isPresented: $store.showNewCategorySheet) {
             NewCategorySheet(store: store)
+        }
+        .sheet(isPresented: $showNewMCPServerSheet) {
+            MCPEditorView {
+                Task { await store.loadMCPServers() }
+            }
+            .frame(minWidth: 700, minHeight: 600)
+        }
+        .sheet(isPresented: $showMCPMonitoringSheet) {
+            MCPMonitoringView()
+                .frame(minWidth: 900, minHeight: 700)
         }
         .alert("Error", isPresented: Binding(
             get: { store.error != nil },

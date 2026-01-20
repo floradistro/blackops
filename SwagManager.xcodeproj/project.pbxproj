@@ -7,6 +7,32 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		239E78D5EAC2489FAD23AEC5 /* Customer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418EBB0F9EE14C4FA69E265E /* Customer.swift */; };
+		55894FFE6F0E4897AA5F7655 /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05071C0A8A594B5BB79BC573 /* Order.swift */; };
+		9B4F14366DBD4E4FB6E1925A /* MCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E4DC32CEE147A1ADD9565C /* MCPServer.swift */; };
+		F1419A45AFDA4B589D0E5EE7 /* CustomerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B87C1DC21A4C6FAEC75C04 /* CustomerService.swift */; };
+		A1B92D294AB541B8914BB60D /* OrderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B1B56D54434DF0AE9EE1F5 /* OrderService.swift */; };
+		23CED4FC004046078DCA6010 /* LocationQueueService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC4F2E233944BD69FD5C8C6 /* LocationQueueService.swift */; };
+		DA4324D1DD444595BC33074E /* EditorStore+Customers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A20BFF0CCD4C1D9161C4B3 /* EditorStore+Customers.swift */; };
+		88EDB537CED24F8EB227FAAF /* EditorStore+Orders.swift in Sources */ = {isa = PBXBuildFile; fileRef = C85867E51F644E77AD1234C4 /* EditorStore+Orders.swift */; };
+		67FD20536C394BBF913EE5A3 /* EditorStore+MCPManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E2064C4AE04C7988EAF1B6 /* EditorStore+MCPManagement.swift */; };
+		D12BEF68B8D84FA7A3FCA23A /* EditorStore+QueueManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E1D752DAA8840A7B33AB11A /* EditorStore+QueueManagement.swift */; };
+		C528882A235E48A3B2E102EB /* LocationQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E2272B44D84D309AC702AA /* LocationQueueStore.swift */; };
+		4C289325F94546C58A47CBBF /* CustomerTreeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0BBEBD5F6C8406891877404 /* CustomerTreeItem.swift */; };
+		B0888A8601824951B6678C03 /* OrderTreeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCDF7A6959E4CE1AB5E4A6B /* OrderTreeItem.swift */; };
+		243DE6E5B11E40D0957D5A26 /* FloatingContextBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4CB5DA1D7B41CBB277F6FE /* FloatingContextBar.swift */; };
+		55946195553C477E801FF09E /* SidebarCustomersSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD501B5DC234C1882E47D9C /* SidebarCustomersSection.swift */; };
+		867BA547BA624DDB9E0E8CE9 /* SidebarOrdersSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3805503C2CA496A9A7814D1 /* SidebarOrdersSection.swift */; };
+		3CC2EC7096024B2CB166BF8F /* SidebarLocationsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133AC306FCE149C499E49B99 /* SidebarLocationsSection.swift */; };
+		5D6FDCF0C7394FA9A157391E /* SidebarQueuesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18086098BA44F4B83691A3C /* SidebarQueuesSection.swift */; };
+		D72BEBFEA9B745729E22AED6 /* SidebarMCPServersSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58CD1449541498E94B11706 /* SidebarMCPServersSection.swift */; };
+		CB992FA975E847DCA8D1830F /* CustomerDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90645955AC9446348594F583 /* CustomerDetailPanel.swift */; };
+		7EDFB8F117914FFF91E6CDD9 /* OrderDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5530AE8EC8044CFAAD44E424 /* OrderDetailPanel.swift */; };
+		7B441827AE064BF9909C1B49 /* LocationDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FF771C884D49ADB857075D /* LocationDetailPanel.swift */; };
+		6F8FAB32E00C4C9589F94922 /* MCPServerDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22B5D1D0C304FF19989BD9F /* MCPServerDetailPanel.swift */; };
+		684A1820FE8249ACB6C6F484 /* LocationQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00998916769846A59EECA0AD /* LocationQueueView.swift */; };
+		851C69C633B94385961732E3 /* LocationQueueDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2EF406025D3439D87E8D180 /* LocationQueueDebugView.swift */; };
+		8A88B9F99F194352AC000B59 /* WindowZoomManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 380197E486B1445A9E95CB32 /* WindowZoomManager.swift */; };
 		0B1D49EE3C7A41988184211F /* Customer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F3346F15FE5436FA8D49410 /* Customer.swift */; };
 		6698914B1E6E4BBFB0643E1A /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC1283840DB402D9B700815 /* Order.swift */; };
 		4A975C4B6B5B47D2AE9A6006 /* MCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2EB90DE5604322AC83E176 /* MCPServer.swift */; };
@@ -155,6 +181,32 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		418EBB0F9EE14C4FA69E265E /* Customer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Customer.swift"; sourceTree = "<group>"; };
+		05071C0A8A594B5BB79BC573 /* Order.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Order.swift"; sourceTree = "<group>"; };
+		41E4DC32CEE147A1ADD9565C /* MCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "MCPServer.swift"; sourceTree = "<group>"; };
+		A7B87C1DC21A4C6FAEC75C04 /* CustomerService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CustomerService.swift"; sourceTree = "<group>"; };
+		56B1B56D54434DF0AE9EE1F5 /* OrderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "OrderService.swift"; sourceTree = "<group>"; };
+		EEC4F2E233944BD69FD5C8C6 /* LocationQueueService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LocationQueueService.swift"; sourceTree = "<group>"; };
+		65A20BFF0CCD4C1D9161C4B3 /* EditorStore+Customers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+Customers.swift"; sourceTree = "<group>"; };
+		C85867E51F644E77AD1234C4 /* EditorStore+Orders.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+Orders.swift"; sourceTree = "<group>"; };
+		C1E2064C4AE04C7988EAF1B6 /* EditorStore+MCPManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+MCPManagement.swift"; sourceTree = "<group>"; };
+		1E1D752DAA8840A7B33AB11A /* EditorStore+QueueManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+QueueManagement.swift"; sourceTree = "<group>"; };
+		47E2272B44D84D309AC702AA /* LocationQueueStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LocationQueueStore.swift"; sourceTree = "<group>"; };
+		E0BBEBD5F6C8406891877404 /* CustomerTreeItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CustomerTreeItem.swift"; sourceTree = "<group>"; };
+		1BCDF7A6959E4CE1AB5E4A6B /* OrderTreeItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "OrderTreeItem.swift"; sourceTree = "<group>"; };
+		4A4CB5DA1D7B41CBB277F6FE /* FloatingContextBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "FloatingContextBar.swift"; sourceTree = "<group>"; };
+		ABD501B5DC234C1882E47D9C /* SidebarCustomersSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SidebarCustomersSection.swift"; sourceTree = "<group>"; };
+		E3805503C2CA496A9A7814D1 /* SidebarOrdersSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SidebarOrdersSection.swift"; sourceTree = "<group>"; };
+		133AC306FCE149C499E49B99 /* SidebarLocationsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SidebarLocationsSection.swift"; sourceTree = "<group>"; };
+		F18086098BA44F4B83691A3C /* SidebarQueuesSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SidebarQueuesSection.swift"; sourceTree = "<group>"; };
+		F58CD1449541498E94B11706 /* SidebarMCPServersSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "SidebarMCPServersSection.swift"; sourceTree = "<group>"; };
+		90645955AC9446348594F583 /* CustomerDetailPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CustomerDetailPanel.swift"; sourceTree = "<group>"; };
+		5530AE8EC8044CFAAD44E424 /* OrderDetailPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "OrderDetailPanel.swift"; sourceTree = "<group>"; };
+		04FF771C884D49ADB857075D /* LocationDetailPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LocationDetailPanel.swift"; sourceTree = "<group>"; };
+		D22B5D1D0C304FF19989BD9F /* MCPServerDetailPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "MCPServerDetailPanel.swift"; sourceTree = "<group>"; };
+		00998916769846A59EECA0AD /* LocationQueueView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LocationQueueView.swift"; sourceTree = "<group>"; };
+		B2EF406025D3439D87E8D180 /* LocationQueueDebugView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LocationQueueDebugView.swift"; sourceTree = "<group>"; };
+		380197E486B1445A9E95CB32 /* WindowZoomManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WindowZoomManager.swift"; sourceTree = "<group>"; };
 		1F3346F15FE5436FA8D49410 /* Customer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Customer.swift"; sourceTree = "<group>"; };
 		7CC1283840DB402D9B700815 /* Order.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "Order.swift"; sourceTree = "<group>"; };
 		EF2EB90DE5604322AC83E176 /* MCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "MCPServer.swift"; sourceTree = "<group>"; };

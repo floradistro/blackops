@@ -88,6 +88,13 @@ struct SwagManagerApp: App {
 
             // MCP Server commands
             CommandMenu("MCP") {
+                Button("New MCP Server...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("NewMCPServer"), object: nil)
+                }
+                .keyboardShortcut("m", modifiers: [.command, .control])
+
+                Divider()
+
                 Button("Show MCP Servers") {
                     NotificationCenter.default.post(name: NSNotification.Name("ShowMCPServers"), object: nil)
                 }
@@ -97,6 +104,10 @@ struct SwagManagerApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("RefreshMCPServers"), object: nil)
                 }
                 .keyboardShortcut("m", modifiers: [.command, .option])
+
+                Button("Monitor MCP Servers") {
+                    NotificationCenter.default.post(name: NSNotification.Name("MonitorMCPServers"), object: nil)
+                }
 
                 Divider()
 
