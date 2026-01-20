@@ -185,8 +185,8 @@ class CustomerService {
 
         let stats = try JSONDecoder.supabaseDecoder.decode([CustomerStat].self, from: response.data)
 
-        var totalCustomers = stats.count
-        var activeCustomers = stats.filter { $0.isActive == true }.count
+        let totalCustomers = stats.count
+        let activeCustomers = stats.filter { $0.isActive == true }.count
         var totalRevenue: Decimal = 0
         var totalOrders = 0
         var tierCounts: [String: Int] = [:]

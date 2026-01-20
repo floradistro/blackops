@@ -139,7 +139,7 @@ struct CustomerTreeItemDetailed: View {
                                     .foregroundColor(.green)
                             }
 
-                            if let ddddddddddddddddssssssstier = customer.loyaltyTier {
+                            if customer.loyaltyTier != nil {
                                 Image(systemName: customer.loyaltyTierIcon)
                                     .font(.system(size: 10))
                                     .foregroundColor(Color(customer.loyaltyTierColor))

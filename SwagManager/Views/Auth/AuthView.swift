@@ -26,15 +26,14 @@ struct AuthView: View {
                     .padding(.bottom, 40)
 
                 VStack(spacing: 15) {
-                    NativeTextField(text: $email, placeholder: "Email") {
-                        // Focus password field
-                    }
-                    .frame(height: 30)
+                    TextField("Email", text: $email)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(height: 30)
 
-                    NativeSecureField(text: $password, placeholder: "Password") {
-                        login()
-                    }
-                    .frame(height: 30)
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(height: 30)
+                        .onSubmit { login() }
 
                     if !errorMessage.isEmpty {
                         Text(errorMessage)

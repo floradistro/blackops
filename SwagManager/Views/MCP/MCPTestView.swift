@@ -139,7 +139,7 @@ struct MCPTestView: View {
             }
         }
         .padding(DesignSystem.Spacing.sm)
-        .background(Color.primary.opacity(0.05))
+        .background(VisualEffectBackground(material: .sidebar))
         .cornerRadius(6)
     }
 
@@ -152,45 +152,17 @@ struct MCPTestView: View {
                 .font(.system(size: 16, weight: .semibold))
 
             HStack(spacing: DesignSystem.Spacing.sm) {
-                Button(action: executeTest) {
-                    HStack {
-                        Image(systemName: testRunner.isRunning ? "hourglass" : "play.fill")
-                        Text(testRunner.isRunning ? "Running..." : "Execute Test")
-                    }
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(testRunner.isRunning ? Color.orange : Color.blue)
-                    .cornerRadius(6)
-                }
-                .disabled(testRunner.isRunning)
+                Button(testRunner.isRunning ? "Running..." : "Execute Test", action: executeTest)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(testRunner.isRunning)
 
-                Button(action: { parameters.removeAll() }) {
-                    HStack {
-                        Image(systemName: "trash")
-                        Text("Clear")
-                    }
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.red)
-                    .cornerRadius(6)
+                Button("Clear") {
+                    parameters.removeAll()
                 }
+                .buttonStyle(.bordered)
 
-                Button(action: loadExample) {
-                    HStack {
-                        Image(systemName: "doc.text")
-                        Text("Load Example")
-                    }
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.purple)
-                    .cornerRadius(6)
-                }
+                Button("Load Example", action: loadExample)
+                    .buttonStyle(.bordered)
             }
         }
     }
@@ -230,7 +202,7 @@ struct MCPTestView: View {
                 }
                 .frame(maxHeight: 300)
                 .padding(DesignSystem.Spacing.sm)
-                .background(Color.primary.opacity(0.05))
+                .background(VisualEffectBackground(material: .sidebar))
                 .cornerRadius(6)
             }
         }
@@ -275,7 +247,7 @@ struct InfoChip: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.primary.opacity(0.05))
+        .background(VisualEffectBackground(material: .sidebar))
         .cornerRadius(4)
     }
 }

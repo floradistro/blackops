@@ -170,21 +170,13 @@ struct MCPEditorView: View {
                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray.opacity(0.2)))
 
             HStack {
-                Button(action: validateJSON) {
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Validate JSON")
-                    }
-                    .font(.system(size: 12))
-                }
+                Button("Validate JSON", action: validateJSON)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
 
-                Button(action: formatJSON) {
-                    HStack {
-                        Image(systemName: "text.alignleft")
-                        Text("Format")
-                    }
-                    .font(.system(size: 12))
-                }
+                Button("Format", action: formatJSON)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
 
                 Spacer()
 
@@ -204,7 +196,11 @@ struct MCPEditorView: View {
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.red)
                     .padding(DesignSystem.Spacing.sm)
-                    .background(Color.red.opacity(0.1))
+                    .background(VisualEffectBackground(material: .sidebar))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+                    )
                     .cornerRadius(4)
             }
         }
@@ -216,30 +212,21 @@ struct MCPEditorView: View {
     private var actionsSection: some View {
         HStack(spacing: DesignSystem.Spacing.md) {
             Button(action: save) {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text(server == nil ? "Create Server" : "Save Changes")
-                }
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(Color.blue)
-                .cornerRadius(8)
+                Text(server == nil ? "Create Server" : "Save Changes")
             }
+            .buttonStyle(.borderedProminent)
             .disabled(!editor.isValid || editor.isSaving)
 
-            Button(action: { dismiss() }) {
-                Text("Cancel")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
+            Button("Cancel") {
+                dismiss()
             }
+            .buttonStyle(.bordered)
 
             Spacer()
 
             if editor.isSaving {
                 ProgressView()
-                    .scaleEffect(0.8)
+                    .controlSize(.small)
             }
         }
     }

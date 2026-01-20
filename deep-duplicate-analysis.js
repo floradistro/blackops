@@ -10,10 +10,15 @@ async function deepAnalysis() {
   console.log('='.repeat(80));
 
   // Find duplicate groups
-  const { data: allCustomers } = await supabase
+  const { data: allCustomers, error } = await supabase
     .from('customers')
     .select('id, phone, email, first_name, last_name, store_id, created_at')
     .order('phone');
+
+  if (error || !allCustomers) {
+    console.error('Error fetching customers:', error);
+    return;
+  }
 
   const phoneGroups = {};
   allCustomers.forEach(c => {

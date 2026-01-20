@@ -20,13 +20,20 @@ struct MCPServerDetailView: View {
             // Tab Bar
             tabBar
 
+            Divider()
+
             // Content based on selected tab
-            TabView(selection: $selectedTab) {
-                detailsTab.tag(MCPTab.details)
-                MCPTestView(server: server).tag(MCPTab.test)
-                MCPMonitoringView().tag(MCPTab.monitor)
+            switch selectedTab {
+            case .details:
+                detailsTab
+            case .test:
+                MCPTestView(server: server)
+            case .monitor:
+                MCPMonitoringView()
             }
-            .tabViewStyle(.automatic)
+        }
+        .onAppear {
+            NSLog("[MCPServerDetailView] Loaded server: \(server.name)")
         }
         .sheet(isPresented: $showEditor) {
             MCPEditorView(server: server) {
@@ -44,66 +51,54 @@ struct MCPServerDetailView: View {
                     Text(tab.rawValue)
                         .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
                         .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
+                        .padding(.horizontal, DesignSystem.Spacing.md)
+                        .padding(.vertical, DesignSystem.Spacing.sm)
+                        .background(
+                            selectedTab == tab ? VisualEffectBackground(material: .sidebar) : nil
+                        )
+                        .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
             }
 
             Spacer()
 
-            Button(action: { showEditor = true }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "pencil")
-                    Text("Edit")
-                }
-                .font(.system(size: 12))
-                .foregroundStyle(.blue)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+            Button("Edit") {
+                showEditor = true
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
         }
         .padding(.horizontal, DesignSystem.Spacing.md)
-        .padding(.vertical, DesignSystem.Spacing.xs)
-        .background(Color.primary.opacity(0.03))
+        .padding(.vertical, DesignSystem.Spacing.sm)
     }
 
     @ViewBuilder
     private var detailsTab: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
                 // Header
                 headerSection
-
-                Divider()
 
                 // Server Info
                 serverInfoSection
 
-                Divider()
-
                 // Definition
                 definitionSection
-
-                Divider()
 
                 // Input Schema
                 if let schema = server.definition.inputSchema {
                     inputSchemaSection(schema)
-                    Divider()
                 }
 
                 // Properties
                 if let properties = server.definition.inputSchema?.properties, !properties.isEmpty {
                     propertiesSection(properties, required: server.definition.inputSchema?.required ?? [])
                 }
-
-                Spacer()
             }
             .padding(DesignSystem.Spacing.lg)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(VisualEffectBackground(material: .underWindowBackground))
     }
 
@@ -111,18 +106,21 @@ struct MCPServerDetailView: View {
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                Image(systemName: "server.rack")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.indigo)
-                    .frame(width: 44, height: 44)
-                    .background(Color.indigo.opacity(0.15))
-                    .cornerRadius(8)
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+            HStack(spacing: DesignSystem.Spacing.md) {
+                ZStack {
+                    VisualEffectBackground(material: .sidebar)
+                    Color.indigo.opacity(0.1)
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.indigo)
+                }
+                .frame(width: 56, height: 56)
+                .cornerRadius(12)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(server.name)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 24, weight: .semibold, design: .monospaced))
 
                     HStack(spacing: DesignSystem.Spacing.xs) {
                         StatusBadge(text: server.category, color: .orange)
@@ -137,82 +135,104 @@ struct MCPServerDetailView: View {
                         }
                     }
                 }
+
+                Spacer()
             }
 
             if let description = server.description {
                 Text(description)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(4)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DesignSystem.Spacing.lg)
+        .background(VisualEffectBackground(material: .sidebar))
+        .cornerRadius(8)
     }
 
     // MARK: - Server Info Section
 
     @ViewBuilder
     private var serverInfoSection: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             sectionTitle("Server Information")
 
-            if let version = server.version {
-                MCPInfoRow(label: "Version", value: "v\(version)")
-            }
-            if let type = server.definition.type {
-                MCPInfoRow(label: "Type", value: type)
-            }
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                if let version = server.version {
+                    MCPInfoRow(label: "Version", value: "v\(version)")
+                }
+                if let type = server.definition.type {
+                    MCPInfoRow(label: "Type", value: type)
+                }
 
-            if let rpc = server.rpcFunction {
-                MCPInfoRow(label: "RPC Function", value: rpc)
-            }
+                if let rpc = server.rpcFunction {
+                    MCPInfoRow(label: "RPC Function", value: rpc)
+                }
 
-            if let edge = server.edgeFunction {
-                MCPInfoRow(label: "Edge Function", value: edge)
-            }
+                if let edge = server.edgeFunction {
+                    MCPInfoRow(label: "Edge Function", value: edge)
+                }
 
-            MCPInfoRow(label: "Requires User ID", value: (server.requiresUserId ?? false) ? "Yes" : "No")
-            MCPInfoRow(label: "Requires Store ID", value: (server.requiresStoreId ?? false) ? "Yes" : "No")
+                MCPInfoRow(label: "Requires User ID", value: (server.requiresUserId ?? false) ? "Yes" : "No")
+                MCPInfoRow(label: "Requires Store ID", value: (server.requiresStoreId ?? false) ? "Yes" : "No")
+            }
         }
+        .padding(DesignSystem.Spacing.lg)
+        .background(VisualEffectBackground(material: .sidebar))
+        .cornerRadius(8)
     }
 
     // MARK: - Definition Section
 
     @ViewBuilder
     private var definitionSection: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             sectionTitle("Definition")
 
-            if let name = server.definition.name {
-                MCPInfoRow(label: "Name", value: name)
-            }
-            if let description = server.definition.description {
-                MCPInfoRow(label: "Description", value: description)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                if let name = server.definition.name {
+                    MCPInfoRow(label: "Name", value: name)
+                }
+                if let description = server.definition.description {
+                    MCPInfoRow(label: "Description", value: description)
+                }
             }
         }
+        .padding(DesignSystem.Spacing.lg)
+        .background(VisualEffectBackground(material: .sidebar))
+        .cornerRadius(8)
     }
 
     // MARK: - Input Schema Section
 
     @ViewBuilder
     private func inputSchemaSection(_ schema: InputSchema) -> some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             sectionTitle("Input Schema")
 
-            MCPInfoRow(label: "Type", value: schema.type)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                MCPInfoRow(label: "Type", value: schema.type)
 
-            if let required = schema.required, !required.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Required Fields:")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                if let required = schema.required, !required.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Required Fields:")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
 
-                    ForEach(required, id: \.self) { field in
-                        Text("• \(field)")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(.primary)
+                        ForEach(required, id: \.self) { field in
+                            Text("• \(field)")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.primary)
+                        }
                     }
                 }
             }
         }
+        .padding(DesignSystem.Spacing.lg)
+        .background(VisualEffectBackground(material: .sidebar))
+        .cornerRadius(8)
     }
 
     // MARK: - Properties Section
@@ -232,18 +252,18 @@ struct MCPServerDetailView: View {
 
     @ViewBuilder
     private func propertyCard(key: String, property: PropertyDefinition, isRequired: Bool) -> some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
             HStack {
                 Text(key)
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.primary)
 
                 if isRequired {
                     Text("required")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
                         .background(Color.red)
                         .cornerRadius(4)
                 }
@@ -251,38 +271,44 @@ struct MCPServerDetailView: View {
                 Spacer()
 
                 Text(property.type)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
             if let description = property.description {
                 Text(description)
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(2)
             }
 
             if let defaultValue = property.default {
-                Text("Default: \(defaultValue.stringValue)")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                HStack(spacing: 4) {
+                    Text("Default:")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                    Text(defaultValue.stringValue)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             if let enumValues = property.enum {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Options:")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.tertiary)
 
                     ForEach(enumValues, id: \.self) { value in
                         Text("• \(value)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                 }
             }
         }
-        .padding(DesignSystem.Spacing.sm)
-        .background(Color.primary.opacity(0.05))
+        .padding(DesignSystem.Spacing.md)
+        .background(VisualEffectBackground(material: .sidebar))
         .cornerRadius(6)
     }
 
@@ -321,17 +347,3 @@ struct MCPInfoRow: View {
 
 // MARK: - Status Badge
 
-struct StatusBadge: View {
-    let text: String
-    let color: Color
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.15))
-            .cornerRadius(4)
-    }
-}

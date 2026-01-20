@@ -29,6 +29,11 @@ extension EditorStore {
             mcpServers = try decoder.decode([MCPServer].self, from: response.data)
 
             NSLog("[EditorStore] Loaded \(mcpServers.count) MCP servers")
+
+            // Log details of first few servers to debug rpcFunction/edgeFunction
+            for (index, server) in mcpServers.prefix(5).enumerated() {
+                NSLog("[EditorStore] Server[\(index)] name=\(server.name), rpcFunction=\(server.rpcFunction ?? "nil"), edgeFunction=\(server.edgeFunction ?? "nil"), category=\(server.category)")
+            }
         } catch let DecodingError.keyNotFound(key, context) {
             self.error = "Missing key '\(key.stringValue)' at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
             NSLog("[EditorStore] Decoding error - missing key: \(key.stringValue)")

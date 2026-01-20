@@ -61,8 +61,8 @@ struct SidebarPanel: View {
                 if store.locations.isEmpty {
                     await store.loadLocations()
                 }
-                if store.customers.isEmpty {
-                    await store.loadCustomers()
+                if store.emails.isEmpty {
+                    await store.loadEmails()
                 }
             }
             if store.mcpServers.isEmpty {
@@ -74,7 +74,7 @@ struct SidebarPanel: View {
                 await store.loadBrowserSessions()
                 await store.loadOrders()
                 await store.loadLocations()
-                await store.loadCustomers()
+                await store.loadEmails()
             }
         }
         .onChange(of: searchText) { _, newValue in
@@ -117,8 +117,8 @@ struct SidebarPanel: View {
                 SidebarTeamChatSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarCustomersSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                // SidebarCustomersSection(store: store)
+                // Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
                 SidebarOrdersSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
@@ -126,13 +126,16 @@ struct SidebarPanel: View {
                 SidebarLocationsSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarQueuesSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                // SidebarQueuesSection(store: store)
+                // Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
                 SidebarBrowserSessionsSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
                 SidebarMCPServersSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
+                SidebarResendSection(store: store)
 
                 // Bottom padding to ensure content isn't cut off
                 Spacer().frame(height: 20)

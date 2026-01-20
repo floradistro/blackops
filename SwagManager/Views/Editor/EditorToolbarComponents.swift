@@ -142,6 +142,12 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
                     Label(server.name, systemImage: "server.rack")
                         .font(.system(size: 13, weight: .medium))
                 }
+
+            case .email(let email):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(email.displaySubject, systemImage: "envelope.fill")
+                        .font(.system(size: 13, weight: .medium))
+                }
             }
         } else if let browserSession = store.selectedBrowserSession {
             let tabManager = BrowserTabManager.forSession(browserSession.id)
@@ -211,6 +217,7 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
             case .queue: return "Queue"
             case .customer: return "Customer"
             case .mcpServer: return "MCP Server"
+            case .email: return "Email"
             }
         } else if store.selectedBrowserSession != nil {
             return "Browser"

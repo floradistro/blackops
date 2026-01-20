@@ -31,7 +31,7 @@ class MCPMonitor: ObservableObject {
             // Query lisa_tool_execution_log for statistics
             let response = try await supabase.client
                 .from("lisa_tool_execution_log")
-                .select("tool_name, success, duration_ms, created_at")
+                .select("tool_name, result_status, execution_time_ms, created_at")
                 .gte("created_at", value: ISO8601DateFormatter().string(from: startDate))
                 .order("created_at", ascending: false)
                 .limit(1000)
@@ -44,13 +44,23 @@ class MCPMonitor: ObservableObject {
             let totalExecutions = executions.count
             let successCount = executions.filter { $0.success }.count
             let successRate = totalExecutions > 0 ? Double(successCount) / Double(totalExecutions) * 100 : 0
-            let avgResponseTime = executions.compactMap { $0.durationMs }.reduce(0.0, +) / Double(max(executions.count, 1))
+            let avgResponseTime = executions.compactMap { $0.executionTimeMs }.reduce(0.0, +) / Double(max(executions.count, 1))
 
-            // Category breakdown
+            // Category breakdown - map tool_name to category via ai_tool_registry
             var categoryMap: [String: Int] = [:]
+
+            // Load tool registry to map names to categories
+            let registryResponse = try await supabase.client
+                .from("ai_tool_registry")
+                .select("name, category")
+                .execute()
+
+            let registryDecoder = JSONDecoder.supabaseDecoder
+            let toolRegistry = try registryDecoder.decode([ToolRegistryEntry].self, from: registryResponse.data)
+            let categoryLookup = Dictionary(uniqueKeysWithValues: toolRegistry.map { ($0.name, $0.category) })
+
             for execution in executions {
-                // TODO: Map tool_name to category via ai_tool_registry
-                let category = "unknown" // Placeholder
+                let category = categoryLookup[execution.toolName] ?? "unknown"
                 categoryMap[category, default: 0] += 1
             }
 
@@ -83,7 +93,7 @@ class MCPMonitor: ObservableObject {
         do {
             let response = try await supabase.client
                 .from("lisa_tool_execution_log")
-                .select("tool_name, success, duration_ms, created_at")
+                .select("tool_name, result_status, execution_time_ms, created_at")
                 .order("created_at", ascending: false)
                 .limit(50)
                 .execute()
@@ -96,7 +106,7 @@ class MCPMonitor: ObservableObject {
                     id: UUID(),
                     serverName: raw.toolName,
                     success: raw.success,
-                    duration: raw.durationMs != nil ? raw.durationMs! / 1000 : nil,
+                    duration: raw.executionTimeMs != nil ? raw.executionTimeMs! / 1000 : nil,
                     timestamp: raw.createdAt
                 )
             }
@@ -112,7 +122,7 @@ class MCPMonitor: ObservableObject {
             let response = try await supabase.client
                 .from("lisa_tool_execution_log")
                 .select("tool_name, error_message, created_at")
-                .eq("success", value: false)
+                .eq("result_status", value: "error")
                 .not("error_message", operator: .is, value: "null")
                 .order("created_at", ascending: false)
                 .limit(20)
@@ -191,14 +201,16 @@ struct ErrorLog: Identifiable {
 
 private struct RawExecution: Codable {
     let toolName: String
-    let success: Bool
-    let durationMs: Double?
+    let resultStatus: String
+    let executionTimeMs: Double?
     let createdAt: Date
+
+    var success: Bool { resultStatus == "success" }
 
     enum CodingKeys: String, CodingKey {
         case toolName = "tool_name"
-        case success
-        case durationMs = "duration_ms"
+        case resultStatus = "result_status"
+        case executionTimeMs = "execution_time_ms"
         case createdAt = "created_at"
     }
 }
@@ -213,4 +225,9 @@ private struct RawError: Codable {
         case errorMessage = "error_message"
         case createdAt = "created_at"
     }
+}
+
+private struct ToolRegistryEntry: Codable {
+    let name: String
+    let category: String
 }

@@ -7,6 +7,12 @@ struct MCPMonitoringView: View {
     @StateObject private var monitor = MCPMonitor()
     @State private var selectedCategory: String?
     @State private var timeRange: TimeRange = .last24Hours
+    @State private var selectedTab: MonitorTab = .overview
+
+    enum MonitorTab: String, CaseIterable {
+        case overview = "Overview"
+        case history = "History"
+    }
 
     enum TimeRange: String, CaseIterable {
         case lastHour = "Last Hour"
@@ -16,6 +22,54 @@ struct MCPMonitoringView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            // Tab Bar
+            tabBar
+
+            Divider()
+
+            // Content based on selected tab
+            if selectedTab == .overview {
+                overviewContent
+            } else {
+                ExecutionHistoryView()
+            }
+        }
+        .background(VisualEffectBackground(material: .underWindowBackground))
+        .task {
+            await monitor.loadStats(timeRange: timeRange)
+        }
+    }
+
+    // MARK: - Tab Bar
+
+    @ViewBuilder
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(MonitorTab.allCases, id: \.self) { tab in
+                Button(action: { selectedTab = tab }) {
+                    Text(tab.rawValue)
+                        .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
+                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                        .padding(.horizontal, DesignSystem.Spacing.md)
+                        .padding(.vertical, DesignSystem.Spacing.sm)
+                        .background(
+                            selectedTab == tab ? VisualEffectBackground(material: .sidebar) : nil
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, DesignSystem.Spacing.sm)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Overview Content
+
+    @ViewBuilder
+    private var overviewContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
                 // Header with controls
@@ -42,10 +96,6 @@ struct MCPMonitoringView: View {
                 errorLog
             }
             .padding(DesignSystem.Spacing.lg)
-        }
-        .background(VisualEffectBackground(material: .underWindowBackground))
-        .task {
-            await monitor.loadStats(timeRange: timeRange)
         }
     }
 
@@ -145,7 +195,7 @@ struct MCPMonitoringView: View {
                 .font(.system(size: 16, weight: .semibold))
 
             ForEach(monitor.recentExecutions.prefix(10)) { execution in
-                ExecutionRow(execution: execution)
+                RecentExecutionRow(execution: execution)
             }
         }
     }
@@ -197,8 +247,8 @@ struct MCPStatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DesignSystem.Spacing.md)
-        .background(Color.primary.opacity(0.05))
-        .cornerRadius(8)
+        .background(VisualEffectBackground(material: .sidebar))
+        .cornerRadius(6)
     }
 }
 
@@ -214,15 +264,15 @@ struct CategoryStatsRow: View {
                 .frame(width: 100, alignment: .leading)
 
             ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.05))
+                VisualEffectBackground(material: .sidebar)
                     .frame(height: 20)
+                    .cornerRadius(4)
 
                 Rectangle()
                     .fill(Color.blue)
                     .frame(width: stat.percentage * 300, height: 20)
+                    .cornerRadius(4)
             }
-            .cornerRadius(4)
 
             Text("\(stat.count)")
                 .font(.system(size: 12, design: .monospaced))
@@ -237,9 +287,9 @@ struct CategoryStatsRow: View {
     }
 }
 
-// MARK: - Execution Row
+// MARK: - Recent Execution Row
 
-struct ExecutionRow: View {
+struct RecentExecutionRow: View {
     let execution: ExecutionLog
 
     var body: some View {
@@ -268,7 +318,7 @@ struct ExecutionRow: View {
         }
         .padding(.vertical, 4)
         .padding(.horizontal, DesignSystem.Spacing.sm)
-        .background(Color.primary.opacity(0.02))
+        .background(VisualEffectBackground(material: .sidebar))
         .cornerRadius(4)
     }
 }
@@ -301,7 +351,11 @@ struct ErrorRow: View {
                 .lineLimit(2)
         }
         .padding(DesignSystem.Spacing.sm)
-        .background(Color.red.opacity(0.05))
+        .background(VisualEffectBackground(material: .sidebar))
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
+        )
         .cornerRadius(4)
     }
 }

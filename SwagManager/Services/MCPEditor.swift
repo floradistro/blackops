@@ -121,12 +121,40 @@ class MCPEditor: ObservableObject {
             // Convert to JSON data
             let jsonData = try JSONSerialization.data(withJSONObject: jsonDict)
 
-            // TODO: Implement save functionality using raw HTTP request
-            // The Supabase Swift client doesn't handle dynamic JSON well for inserts
-            // For now, throw a "not implemented" error
-            NSLog("[MCPEditor] Save function needs implementation via raw HTTP or custom RPC")
-            throw NSError(domain: "MCPEditor", code: 4, userInfo: [NSLocalizedDescriptionKey: "Save functionality pending - use database directly for now"])
+            // Use raw HTTP POST to Supabase REST API
+            let supabaseURL = SupabaseConfig.url.absoluteString
+            let apiKey = SupabaseConfig.anonKey
 
+            let urlString = "\(supabaseURL)/rest/v1/ai_tool_registry"
+            guard let url = URL(string: urlString) else {
+                throw NSError(domain: "MCPEditor", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = serverId == nil ? "POST" : "PATCH"
+            request.httpBody = jsonData
+            request.setValue(apiKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+            if serverId != nil {
+                request.url = URL(string: "\(urlString)?id=eq.\(serverId!.uuidString)")
+            }
+
+            let (responseData, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NSError(domain: "MCPEditor", code: 6, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+            }
+
+            if httpResponse.statusCode < 200 || httpResponse.statusCode >= 300 {
+                let errorMessage = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                NSLog("[MCPEditor] HTTP error \(httpResponse.statusCode): \(errorMessage)")
+                throw NSError(domain: "MCPEditor", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Save failed: \(errorMessage)"])
+            }
+
+            NSLog("[MCPEditor] Successfully saved MCP server: \(name)")
             return true
         } catch {
             NSLog("[MCPEditor] Error saving: \(error)")

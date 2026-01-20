@@ -45,6 +45,7 @@ enum OpenTabItem: Identifiable, Hashable {
     case queue(Location)
     case customer(Customer)
     case mcpServer(MCPServer)
+    case email(ResendEmail)
 
     var id: String {
         switch self {
@@ -58,6 +59,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue(let l): return "queue-\(l.id)"
         case .customer(let c): return "customer-\(c.id)"
         case .mcpServer(let m): return "mcp-\(m.id)"
+        case .email(let e): return "email-\(e.id)"
         }
     }
 
@@ -73,6 +75,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue(let l): return "\(l.name) Queue"
         case .customer(let c): return c.displayName
         case .mcpServer(let m): return m.name
+        case .email(let e): return e.displaySubject
         }
     }
 
@@ -97,6 +100,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue: return "person.3.fill"
         case .customer(let c): return c.statusIcon
         case .mcpServer: return "server.rack"
+        case .email: return "envelope.fill"
         }
     }
 
@@ -112,6 +116,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue: return .blue
         case .customer(let c): return Color(c.statusColor)
         case .mcpServer: return .indigo
+        case .email(let e): return e.statusColor
         }
     }
 
@@ -138,6 +143,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue: return "⚡"
         case .customer(let c): return c.terminalIcon
         case .mcpServer: return "⚙"
+        case .email: return "✉"
         }
     }
 
@@ -154,6 +160,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue: return .blue
         case .customer(let c): return Color(c.terminalColor)
         case .mcpServer: return .indigo
+        case .email(let e): return e.statusColor
         }
     }
 

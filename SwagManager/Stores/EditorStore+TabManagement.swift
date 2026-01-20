@@ -101,6 +101,19 @@ extension EditorStore {
                     selectedLocation = nil
                     selectedQueue = nil
                     selectedCustomer = nil
+                    selectedEmail = nil
+                    editedCode = nil
+                case .email(let e):
+                    selectedEmail = e
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    selectedLocation = nil
+                    selectedQueue = nil
+                    selectedCustomer = nil
                     editedCode = nil
                 }
             } else {
@@ -206,6 +219,20 @@ extension EditorStore {
             selectedLocation = nil
             selectedQueue = nil
             selectedCustomer = nil
+            selectedEmail = nil
+            editedCode = nil
+        case .email(let e):
+            selectedEmail = e
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            selectedCustomer = nil
+            selectedMCPServer = nil
             editedCode = nil
         }
     }
@@ -301,6 +328,20 @@ extension EditorStore {
             selectedLocation = nil
             selectedQueue = nil
             selectedCustomer = nil
+            selectedEmail = nil
+            editedCode = nil
+        case .email(let e):
+            selectedEmail = e
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            selectedCustomer = nil
+            selectedMCPServer = nil
             editedCode = nil
         }
     }
