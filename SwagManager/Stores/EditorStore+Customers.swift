@@ -12,32 +12,40 @@ extension EditorStore {
         do {
             isLoading = true
 
-            // Apple-style: Load ALL customers in batches
-            var allCustomers: [Customer] = []
-            var offset = 0
-            let batchSize = 500
+            // Load first batch immediately for instant UI
+            let firstBatch = try await supabase.fetchCustomers(storeId: storeId, limit: 100, offset: 0)
+            customers = firstBatch
+            isLoading = false
+            print("✅ Loaded initial \(customers.count) customers")
 
-            while true {
-                let batch = try await supabase.fetchCustomers(storeId: storeId, limit: batchSize, offset: offset)
-                if batch.isEmpty { break }
-                allCustomers.append(contentsOf: batch)
-                offset += batchSize
-
-                // Stop if we got less than batch size (last batch)
-                if batch.count < batchSize { break }
+            // Load stats in background
+            Task {
+                let stats = try await supabase.fetchCustomerStats(storeId: storeId)
+                customerStats = stats
             }
 
-            customers = allCustomers
-            print("✅ Loaded \(customers.count) customers in batches")
+            // Load remaining customers in background
+            Task {
+                var allCustomers = firstBatch
+                var offset = 100
+                let batchSize = 1000
 
-            // Load stats
-            let stats = try await supabase.fetchCustomerStats(storeId: storeId)
-            customerStats = stats
+                while true {
+                    let batch = try await supabase.fetchCustomers(storeId: storeId, limit: batchSize, offset: offset)
+                    if batch.isEmpty { break }
+                    allCustomers.append(contentsOf: batch)
+                    customers = allCustomers
+                    offset += batchSize
+
+                    if batch.count < batchSize { break }
+                }
+                print("✅ Loaded all \(customers.count) customers")
+            }
         } catch {
             print("❌ Error loading customers: \(error)")
             self.error = "Failed to load customers: \(error.localizedDescription)"
+            isLoading = false
         }
-        isLoading = false
     }
 
     func searchCustomers(query: String) async {

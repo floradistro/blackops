@@ -19,43 +19,36 @@ struct SidebarCustomersSection: View {
         case verified = "Verified"
         case active = "Active"
 
-        var icon: String {
-            switch self {
-            case .all: return "person.2"
-            case .vip: return "star.fill"
-            case .platinum: return "star.circle.fill"
-            case .gold: return "star.fill"
-            case .silver: return "star"
-            case .bronze: return "star.leadinghalf.filled"
-            case .verified: return "checkmark.shield"
-            case .active: return "checkmark.circle"
-            }
-        }
-
-        var color: Color {
-            switch self {
-            case .all: return .blue
-            case .vip: return .purple
-            case .platinum: return .purple
-            case .gold: return .yellow
-            case .silver: return .gray
-            case .bronze: return .orange
-            case .verified: return .green
-            case .active: return .green
-            }
-        }
     }
 
     var filteredCustomers: [Customer] {
+        let segmentFiltered: [Customer]
         switch selectedSegment {
-        case .all: return store.customers
-        case .vip: return store.customers.filter { ($0.lifetimeValue ?? 0) >= 1000 || $0.idVerified == true }
-        case .platinum: return store.platinumCustomers
-        case .gold: return store.goldCustomers
-        case .silver: return store.silverCustomers
-        case .bronze: return store.bronzeCustomers
-        case .verified: return store.verifiedCustomers
-        case .active: return store.activeCustomers
+        case .all: segmentFiltered = store.customers
+        case .vip: segmentFiltered = store.customers.filter { ($0.lifetimeValue ?? 0) >= 1000 || $0.idVerified == true }
+        case .platinum: segmentFiltered = store.platinumCustomers
+        case .gold: segmentFiltered = store.goldCustomers
+        case .silver: segmentFiltered = store.silverCustomers
+        case .bronze: segmentFiltered = store.bronzeCustomers
+        case .verified: segmentFiltered = store.verifiedCustomers
+        case .active: segmentFiltered = store.activeCustomers
+        }
+
+        // Apply search filter
+        if searchQuery.isEmpty {
+            return segmentFiltered
+        }
+
+        let query = searchQuery.lowercased()
+        return segmentFiltered.filter { customer in
+            // Search by name (first, middle, last)
+            customer.displayName.lowercased().contains(query) ||
+            customer.firstName?.lowercased().contains(query) == true ||
+            customer.middleName?.lowercased().contains(query) == true ||
+            customer.lastName?.lowercased().contains(query) == true ||
+            // Also search email and phone
+            customer.email?.lowercased().contains(query) == true ||
+            customer.phone?.contains(query) == true
         }
     }
 
@@ -79,45 +72,14 @@ struct SidebarCustomersSection: View {
         .padding(.top, DesignSystem.Spacing.xxs)
 
         if store.sidebarCustomersExpanded {
-            // Segment selector dropdown
-            Menu {
+            // Simple segment picker
+            Picker("", selection: $selectedSegment) {
                 ForEach(CustomerSegment.allCases, id: \.self) { segment in
-                    Button {
-                        withAnimation(DesignSystem.Animation.fast) {
-                            selectedSegment = segment
-                        }
-                    } label: {
-                        Label(segment.rawValue, systemImage: segment.icon)
-                    }
+                    Text(segment.rawValue).tag(segment)
                 }
-            } label: {
-                HStack(spacing: DesignSystem.Spacing.xs) {
-                    Image(systemName: selectedSegment.icon)
-                        .font(.system(size: 11))
-                        .foregroundColor(selectedSegment.color)
-
-                    Text(selectedSegment.rawValue)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 9))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
-                }
-                .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xs)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(selectedSegment.color.opacity(0.1))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(selectedSegment.color.opacity(0.3), lineWidth: 1)
-                        )
-                )
             }
-            .buttonStyle(.plain)
+            .pickerStyle(.menu)
+            .labelsHidden()
             .padding(.horizontal, DesignSystem.Spacing.sm)
             .padding(.bottom, DesignSystem.Spacing.xs)
 
@@ -130,13 +92,6 @@ struct SidebarCustomersSection: View {
                 TextField("Search customers...", text: $searchQuery)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
-                    .onChange(of: searchQuery) { _, newValue in
-                        if newValue.isEmpty {
-                            Task { await store.loadCustomers() }
-                        } else {
-                            Task { await store.searchCustomers(query: newValue) }
-                        }
-                    }
 
                 if !searchQuery.isEmpty {
                     Button(action: { searchQuery = "" }) {
@@ -156,45 +111,6 @@ struct SidebarCustomersSection: View {
             .padding(.horizontal, DesignSystem.Spacing.sm)
             .padding(.bottom, DesignSystem.Spacing.xs)
 
-            // Quick filters
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DesignSystem.Spacing.xs) {
-                    QuickFilterButton(title: "All", icon: "person.2", isActive: searchQuery.isEmpty && store.customers.count > 0) {
-                        searchQuery = ""
-                        Task { await store.loadCustomers() }
-                    }
-
-                    QuickFilterButton(title: "VIP", icon: "star.fill", isActive: false) {
-                        searchQuery = ""
-                        Task { await store.loadVIPCustomers() }
-                    }
-
-                    QuickFilterButton(title: "Verified", icon: "checkmark.shield", isActive: false) {
-                        searchQuery = ""
-                        let verified = store.verifiedCustomers
-                        store.customers = verified
-                    }
-                }
-                .padding(.horizontal, DesignSystem.Spacing.sm)
-            }
-            .padding(.bottom, DesignSystem.Spacing.xs)
-
-            // Stats overview (if available)
-            if let stats = store.customerStats, searchQuery.isEmpty {
-                VStack(spacing: DesignSystem.Spacing.xxs) {
-                    HStack {
-                        StatsChip(label: "Total", value: "\(stats.totalCustomers)", icon: "person.2.fill", color: .blue)
-                        StatsChip(label: "Active", value: "\(stats.activeCustomers)", icon: "checkmark.circle", color: .green)
-                    }
-                    HStack {
-                        StatsChip(label: "Revenue", value: stats.formattedTotalRevenue, icon: "dollarsign.circle", color: .purple)
-                        StatsChip(label: "Orders", value: "\(stats.totalOrders)", icon: "cart.fill", color: .orange)
-                    }
-                }
-                .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.bottom, DesignSystem.Spacing.sm)
-            }
-
             // Customer groups alphabetically (Apple Contacts style)
             if searchQuery.isEmpty {
                 // Group by first letter - using filtered customers
@@ -209,18 +125,18 @@ struct SidebarCustomersSection: View {
                 }
             } else {
                 // Search results - flat list
-                ForEach(store.customers) { customer in
+                ForEach(filteredCustomers) { customer in
                     CustomerTreeItem(
                         customer: customer,
                         isSelected: store.selectedCustomer?.id == customer.id,
-                        indentLevel: 1,
+                        indentLevel: 0,
                         onSelect: { store.selectCustomer(customer) }
                     )
                 }
             }
 
             // Empty state
-            if store.customers.isEmpty {
+            if filteredCustomers.isEmpty {
                 HStack {
                     Spacer()
                     VStack(spacing: DesignSystem.Spacing.xxs) {
@@ -262,44 +178,35 @@ struct CustomerAlphabetGroup: View {
         VStack(spacing: 0) {
             Button(action: onToggle) {
                 HStack(spacing: DesignSystem.Spacing.xs) {
-                    // Letter badge
-                    Text(letter)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(width: 20, height: 20)
-                        .background(
-                            Circle()
-                                .fill(Color.blue.gradient)
-                        )
-
-                    Text("\(customers.count) contacts")
-                        .font(.system(size: 11))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-
-                    Spacer()
-
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(DesignSystem.Colors.textTertiary)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .frame(width: 16)
+
+                    Text(letter)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                    Text("(\(customers.count))")
+                        .font(.system(size: 10))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+
+                    Spacer()
                 }
                 .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xs)
+                .padding(.vertical, DesignSystem.Spacing.xxs)
             }
             .buttonStyle(.plain)
 
             if isExpanded {
-                // Apple-style: LazyVStack for virtualization
-                LazyVStack(spacing: 0) {
-                    ForEach(customers) { customer in
-                        CustomerTreeItem(
-                            customer: customer,
-                            isSelected: store.selectedCustomer?.id == customer.id,
-                            indentLevel: 1,
-                            onSelect: { store.selectCustomer(customer) }
-                        )
-                        .id(customer.id)
-                    }
+                ForEach(customers) { customer in
+                    CustomerTreeItem(
+                        customer: customer,
+                        isSelected: store.selectedCustomer?.id == customer.id,
+                        indentLevel: 1,
+                        onSelect: { store.selectCustomer(customer) }
+                    )
                 }
             }
         }

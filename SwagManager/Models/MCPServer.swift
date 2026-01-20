@@ -10,15 +10,15 @@ struct MCPServer: Codable, Identifiable, Hashable {
     let definition: MCPDefinition
     let description: String?
     let rpcFunction: String?
-    let requiresUserId: Bool
-    let requiresStoreId: Bool
-    let isReadOnly: Bool
-    let isActive: Bool
-    let version: Int
-    let createdAt: Date
-    let updatedAt: Date
+    let requiresUserId: Bool?
+    let requiresStoreId: Bool?
+    let isReadOnly: Bool?
+    let isActive: Bool?
+    let version: Int?
+    let createdAt: Date?
+    let updatedAt: Date?
     let edgeFunction: String?
-    let toolMode: String
+    let toolMode: String?
 
     enum CodingKeys: String, CodingKey {
         case id

@@ -62,11 +62,13 @@ struct MCPServerDetailView: View {
 
                     HStack(spacing: DesignSystem.Spacing.xs) {
                         StatusBadge(text: server.category, color: .orange)
-                        StatusBadge(text: server.toolMode, color: .blue)
-                        if server.isActive {
+                        if let toolMode = server.toolMode {
+                            StatusBadge(text: toolMode, color: .blue)
+                        }
+                        if server.isActive ?? true {
                             StatusBadge(text: "Active", color: .green)
                         }
-                        if server.isReadOnly {
+                        if server.isReadOnly ?? false {
                             StatusBadge(text: "Read-Only", color: .secondary)
                         }
                     }
@@ -88,7 +90,9 @@ struct MCPServerDetailView: View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
             sectionTitle("Server Information")
 
-            MCPInfoRow(label: "Version", value: "v\(server.version)")
+            if let version = server.version {
+                MCPInfoRow(label: "Version", value: "v\(version)")
+            }
             MCPInfoRow(label: "Type", value: server.definition.type)
 
             if let rpc = server.rpcFunction {
@@ -99,8 +103,8 @@ struct MCPServerDetailView: View {
                 MCPInfoRow(label: "Edge Function", value: edge)
             }
 
-            MCPInfoRow(label: "Requires User ID", value: server.requiresUserId ? "Yes" : "No")
-            MCPInfoRow(label: "Requires Store ID", value: server.requiresStoreId ? "Yes" : "No")
+            MCPInfoRow(label: "Requires User ID", value: (server.requiresUserId ?? false) ? "Yes" : "No")
+            MCPInfoRow(label: "Requires Store ID", value: (server.requiresStoreId ?? false) ? "Yes" : "No")
         }
     }
 

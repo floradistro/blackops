@@ -117,14 +117,14 @@ struct SidebarMCPServersSection: View {
             store.openMCPServer(server)
         }) {
             HStack(spacing: DesignSystem.Spacing.xs) {
-                Image(systemName: server.isActive ? "circle.fill" : "circle")
+                Image(systemName: (server.isActive ?? true) ? "circle.fill" : "circle")
                     .font(.system(size: 8))
-                    .foregroundStyle(server.isActive ? .green : .secondary)
+                    .foregroundStyle((server.isActive ?? true) ? .green : .secondary)
                     .frame(width: 12)
 
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 11))
-                    .foregroundStyle(server.isReadOnly ? .secondary : Color.indigo)
+                    .foregroundStyle((server.isReadOnly ?? false) ? .secondary : Color.indigo)
 
                 Text(server.name)
                     .font(.system(size: 11))
@@ -133,7 +133,7 @@ struct SidebarMCPServersSection: View {
 
                 Spacer()
 
-                if server.isReadOnly {
+                if server.isReadOnly ?? false {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary)
