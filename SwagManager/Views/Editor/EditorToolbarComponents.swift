@@ -105,6 +105,40 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
                     Label(creation.name, systemImage: creation.creationType.icon)
                         .font(.system(size: 13, weight: .medium))
                 }
+
+            case .order(let order):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(order.displayTitle, systemImage: order.orderTypeIcon)
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .location(let location):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(location.name, systemImage: "mappin.and.ellipse")
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .queue(let location):
+                ToolbarItem(id: "context", placement: .principal) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.3.fill")
+                            .foregroundColor(.blue)
+                        Text("\(location.name) Queue")
+                            .font(.system(size: 13, weight: .medium))
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 10))
+                            .foregroundColor(.green)
+                    }
+                }
+
+            case .customer(let customer):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(customer.displayName, systemImage: customer.statusIcon)
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .mcpServer:
+                EmptyToolbarContent()
             }
         } else if let browserSession = store.selectedBrowserSession {
             let tabManager = BrowserTabManager.forSession(browserSession.id)
@@ -169,6 +203,11 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
             case .conversation: return "Team Chat"
             case .category: return "Category"
             case .browserSession: return "Browser"
+            case .order: return "Order"
+            case .location: return "Location"
+            case .queue: return "Queue"
+            case .customer: return "Customer"
+            case .mcpServer: return "MCP Server"
             }
         } else if store.selectedBrowserSession != nil {
             return "Browser"

@@ -51,6 +51,57 @@ extension EditorStore {
                     selectedConversation = nil
                     selectedCategory = nil
                     editedCode = nil
+                case .order(let o):
+                    selectedOrder = o
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedLocation = nil
+                    editedCode = nil
+                case .location(let l):
+                    selectedLocation = l
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    editedCode = nil
+                case .queue(let l):
+                    selectedQueue = l
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    selectedLocation = nil
+                    editedCode = nil
+                case .customer(let c):
+                    selectedCustomer = c
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    selectedLocation = nil
+                    selectedQueue = nil
+                    editedCode = nil
+                case .mcpServer(let m):
+                    selectedMCPServer = m
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    selectedLocation = nil
+                    selectedQueue = nil
+                    selectedCustomer = nil
+                    editedCode = nil
                 }
             } else {
                 selectedCreation = nil
@@ -58,6 +109,8 @@ extension EditorStore {
                 selectedConversation = nil
                 selectedCategory = nil
                 selectedBrowserSession = nil
+                selectedOrder = nil
+                selectedLocation = nil
                 editedCode = nil
             }
         }
@@ -100,6 +153,59 @@ extension EditorStore {
             selectedProduct = nil
             selectedConversation = nil
             selectedCategory = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            editedCode = nil
+        case .order(let o):
+            selectedOrder = o
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedLocation = nil
+            editedCode = nil
+        case .location(let l):
+            selectedLocation = l
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            editedCode = nil
+        case .queue(let l):
+            selectedQueue = l
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            editedCode = nil
+        case .customer(let c):
+            selectedCustomer = c
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            editedCode = nil
+        case .mcpServer(let m):
+            selectedMCPServer = m
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            selectedCustomer = nil
             editedCode = nil
         }
     }
@@ -142,6 +248,59 @@ extension EditorStore {
             selectedProduct = nil
             selectedConversation = nil
             selectedCategory = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            editedCode = nil
+        case .order(let o):
+            selectedOrder = o
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedLocation = nil
+            editedCode = nil
+        case .location(let l):
+            selectedLocation = l
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            editedCode = nil
+        case .queue(let l):
+            selectedQueue = l
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            editedCode = nil
+        case .customer(let c):
+            selectedCustomer = c
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            editedCode = nil
+        case .mcpServer(let m):
+            selectedMCPServer = m
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            selectedCustomer = nil
             editedCode = nil
         }
     }
@@ -154,6 +313,9 @@ extension EditorStore {
         selectedConversation = nil
         selectedCategory = nil
         selectedBrowserSession = nil
+        selectedOrder = nil
+        selectedLocation = nil
+        selectedQueue = nil
         editedCode = nil
     }
 

@@ -62,7 +62,7 @@ struct CategoryHierarchyView: View {
                     }
 
                     Text(category.name)
-                        .font(DesignSystem.Typography.caption2)
+                        .font(.system(size: 11))
                         .lineLimit(1)
 
                     Spacer()
@@ -137,7 +137,7 @@ struct CategoryTreeItem: View {
                 .frame(width: 14)
 
             Text(category.name)
-                .font(DesignSystem.Typography.caption2)
+                .font(.system(size: 11))
                 .lineLimit(1)
 
             Spacer()

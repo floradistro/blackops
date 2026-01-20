@@ -51,6 +51,8 @@ class SupabaseService {
     private(set) lazy var products = ProductSchemaService(client: client)
     private(set) lazy var chat = ChatService(client: client)
     private(set) lazy var storeLocation = StoreLocationService(client: client)
+    private(set) lazy var orders = OrderService(client: client)
+    private(set) lazy var customers = CustomerService(client: client)
 
     private init() {
         // Using anon key - RLS policies enforce security
@@ -353,5 +355,113 @@ class SupabaseService {
 
     func closeBrowserSession(id: UUID) async throws {
         try await storeLocation.closeBrowserSession(id: id)
+    }
+
+    // MARK: - Orders
+
+    func fetchOrders(storeId: UUID, status: String? = nil, limit: Int = 100) async throws -> [Order] {
+        try await orders.fetchOrders(storeId: storeId, status: status, limit: limit)
+    }
+
+    func fetchOrder(id: UUID) async throws -> Order {
+        try await orders.fetchOrder(id: id)
+    }
+
+    func fetchOrdersByLocation(locationId: UUID, limit: Int = 50) async throws -> [Order] {
+        try await orders.fetchOrdersByLocation(locationId: locationId, limit: limit)
+    }
+
+    func fetchOrdersByStatus(storeId: UUID, status: String, limit: Int = 50) async throws -> [Order] {
+        try await orders.fetchOrdersByStatus(storeId: storeId, status: status, limit: limit)
+    }
+
+    func fetchRecentOrders(storeId: UUID, limit: Int = 20) async throws -> [Order] {
+        try await orders.fetchRecentOrders(storeId: storeId, limit: limit)
+    }
+
+    func updateOrderStatus(id: UUID, status: String) async throws {
+        try await orders.updateOrderStatus(id: id, status: status)
+    }
+
+    func updateOrderFulfillmentStatus(id: UUID, fulfillmentStatus: String) async throws {
+        try await orders.updateOrderFulfillmentStatus(id: id, fulfillmentStatus: fulfillmentStatus)
+    }
+
+    func fetchOrderCounts(storeId: UUID) async throws -> [String: Int] {
+        try await orders.fetchOrderCounts(storeId: storeId)
+    }
+
+    func fetchOrderItems(orderId: UUID) async throws -> [OrderItem] {
+        try await orders.fetchOrderItems(orderId: orderId)
+    }
+
+    func fetchOrderStatusHistory(orderId: UUID) async throws -> [OrderStatusHistory] {
+        try await orders.fetchOrderStatusHistory(orderId: orderId)
+    }
+
+    func fetchOrderWithDetails(orderId: UUID, locationId: UUID? = nil) async throws -> OrderWithDetails {
+        try await orders.fetchOrderWithDetails(orderId: orderId, locationId: locationId)
+    }
+
+    func updateOrderStatusWithHistory(id: UUID, fromStatus: String?, toStatus: String, note: String?) async throws {
+        try await orders.updateOrderStatusWithHistory(id: id, fromStatus: fromStatus, toStatus: toStatus, note: note)
+    }
+
+    func updateItemFulfillment(itemId: UUID, status: String, fulfilledQty: Decimal?) async throws {
+        try await orders.updateItemFulfillment(itemId: itemId, status: status, fulfilledQty: fulfilledQty)
+    }
+
+    func fetchHeadlessCustomer(customerId: UUID) async throws -> HeadlessCustomer? {
+        try await orders.fetchHeadlessCustomer(customerId: customerId)
+    }
+
+    func fetchStaffMember(userId: UUID) async throws -> StaffMember? {
+        try await orders.fetchStaffMember(userId: userId)
+    }
+
+    func fetchStaffMembers(userIds: [UUID]) async throws -> [UUID: StaffMember] {
+        try await orders.fetchStaffMembers(userIds: userIds)
+    }
+
+    // MARK: - Customers
+
+    func fetchCustomers(storeId: UUID, limit: Int = 100, offset: Int = 0) async throws -> [Customer] {
+        try await customers.fetchCustomers(storeId: storeId, limit: limit, offset: offset)
+    }
+
+    func fetchCustomer(id: UUID) async throws -> Customer {
+        try await customers.fetchCustomer(id: id)
+    }
+
+    func searchCustomers(storeId: UUID, query: String, limit: Int = 50) async throws -> [Customer] {
+        try await customers.searchCustomers(storeId: storeId, query: query, limit: limit)
+    }
+
+    func fetchCustomersByTier(storeId: UUID, tier: String, limit: Int = 100) async throws -> [Customer] {
+        try await customers.fetchCustomersByTier(storeId: storeId, tier: tier, limit: limit)
+    }
+
+    func fetchVIPCustomers(storeId: UUID, minLTV: Decimal = 1000, limit: Int = 50) async throws -> [Customer] {
+        try await customers.fetchVIPCustomers(storeId: storeId, minLTV: minLTV, limit: limit)
+    }
+
+    func fetchRecentCustomers(storeId: UUID, days: Int = 30, limit: Int = 50) async throws -> [Customer] {
+        try await customers.fetchRecentCustomers(storeId: storeId, days: days, limit: limit)
+    }
+
+    func fetchCustomerNotes(customerId: UUID, limit: Int = 50) async throws -> [CustomerNote] {
+        try await customers.fetchCustomerNotes(customerId: customerId, limit: limit)
+    }
+
+    func createCustomerNote(customerId: UUID, note: String, noteType: String = "general", isCustomerVisible: Bool = false) async throws -> CustomerNote {
+        try await customers.createCustomerNote(customerId: customerId, note: note, noteType: noteType, isCustomerVisible: isCustomerVisible)
+    }
+
+    func fetchCustomerLoyalty(customerId: UUID, storeId: UUID) async throws -> CustomerLoyalty? {
+        try await customers.fetchCustomerLoyalty(customerId: customerId, storeId: storeId)
+    }
+
+    func fetchCustomerStats(storeId: UUID) async throws -> CustomerStats {
+        try await customers.fetchCustomerStats(storeId: storeId)
     }
 }

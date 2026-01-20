@@ -51,13 +51,31 @@ struct SidebarPanel: View {
             isSearchFocused = true
         }
         .task {
-            if store.selectedStore != nil && store.browserSessions.isEmpty {
-                await store.loadBrowserSessions()
+            if store.selectedStore != nil {
+                if store.browserSessions.isEmpty {
+                    await store.loadBrowserSessions()
+                }
+                if store.orders.isEmpty {
+                    await store.loadOrders()
+                }
+                if store.locations.isEmpty {
+                    await store.loadLocations()
+                }
+                if store.customers.isEmpty {
+                    await store.loadCustomers()
+                }
+                if store.mcpServers.isEmpty {
+                    await store.loadMCPServers()
+                }
             }
         }
         .onChange(of: store.selectedStore?.id) { _, _ in
             Task {
                 await store.loadBrowserSessions()
+                await store.loadOrders()
+                await store.loadLocations()
+                await store.loadCustomers()
+                await store.loadMCPServers()
             }
         }
         .onChange(of: searchText) { _, newValue in
@@ -84,8 +102,8 @@ struct SidebarPanel: View {
 
     @ViewBuilder
     private var sidebarContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+        ScrollView(.vertical, showsIndicators: true) {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
                 SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.top, DesignSystem.Spacing.xxs)
 
@@ -100,11 +118,30 @@ struct SidebarPanel: View {
                 SidebarTeamChatSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
+                SidebarCustomersSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
+                SidebarOrdersSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
+                SidebarLocationsSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
+                SidebarQueuesSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
+                SidebarMCPServersSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
                 SidebarBrowserSessionsSection(store: store)
+
+                // Bottom padding to ensure content isn't cut off
+                Spacer().frame(height: 20)
             }
             .padding(.vertical, DesignSystem.Spacing.xxs)
         }
-        .frame(maxHeight: .infinity)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.automatic)
         .scrollBounceBehavior(.always)
     }
 }

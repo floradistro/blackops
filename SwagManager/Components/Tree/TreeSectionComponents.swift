@@ -24,36 +24,36 @@ struct TreeSectionHeader: View {
     let count: Int
 
     var body: some View {
-        Button {
-            withAnimation(DesignSystem.Animation.spring) { isExpanded.toggle() }
-        } label: {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .animation(DesignSystem.Animation.fast, value: isExpanded)
-                    .frame(width: 12)
+        HStack(spacing: DesignSystem.Spacing.sm) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                .animation(DesignSystem.Animation.fast, value: isExpanded)
+                .frame(width: 12)
 
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    .tracking(0.5)
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                .tracking(0.5)
 
-                Text("\(count)")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    .padding(.horizontal, DesignSystem.Spacing.xs)
-                    .padding(.vertical, 2)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
+            Text("\(count)")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                .padding(.horizontal, DesignSystem.Spacing.xs)
+                .padding(.vertical, 2)
+                .background(DesignSystem.Colors.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
 
-                Spacer()
-            }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xs)
-            .contentShape(Rectangle())
+            Spacer()
         }
-        .buttonStyle(TreeItemButtonStyle())
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.xs)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(DesignSystem.Animation.spring) {
+                isExpanded.toggle()
+            }
+        }
     }
 }

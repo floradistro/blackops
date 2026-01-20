@@ -53,34 +53,36 @@ final class ChatService {
             .value
     }
 
+    /// Fetches all conversations for a store and its locations using backend RPC
+    /// This replaces the previous N+1 query pattern with a single database call
     func fetchAllConversationsForStoreLocations(storeId: UUID, fetchLocations: @escaping (UUID) async throws -> [Location]) async throws -> [Conversation] {
-        NSLog("[SupabaseService] Fetching all conversations for store locations: \(storeId)")
-        // First get all locations for this store
-        let locations = try await fetchLocations(storeId)
-        NSLog("[SupabaseService] Found \(locations.count) locations")
+        NSLog("[ChatService] Fetching all conversations via RPC for store: \(storeId)")
 
-        // Then get conversations for each location
-        var allConversations: [Conversation] = []
-        for location in locations {
-            let convos = try await fetchConversationsByLocation(locationId: location.id)
-            NSLog("[SupabaseService] Location '\(location.name)' has \(convos.count) conversations")
-            allConversations.append(contentsOf: convos)
-        }
+        // Use the backend RPC - single query handles all logic
+        let response = try await client.rpc("get_all_store_conversations", params: ["p_store_id": storeId.uuidString])
+            .execute()
 
-        // Also try to get conversations directly by store_id
-        let storeConvos = try await fetchConversations(storeId: storeId, chatType: nil)
-        NSLog("[SupabaseService] Store has \(storeConvos.count) direct conversations")
-
-        // Merge and deduplicate
-        let existingIds = Set(allConversations.map { $0.id })
-        for conv in storeConvos {
-            if !existingIds.contains(conv.id) {
-                allConversations.append(conv)
+        // Decode the JSON response
+        let decoder = JSONDecoder()
+        // Note: Don't use .convertFromSnakeCase - Conversation model has explicit CodingKeys
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            if let date = ISO8601DateFormatter().date(from: dateString) {
+                return date
             }
+            // Try alternative format
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ"
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date")
         }
 
-        NSLog("[SupabaseService] Total conversations: \(allConversations.count)")
-        return allConversations.sorted { ($0.updatedAt ?? Date.distantPast) > ($1.updatedAt ?? Date.distantPast) }
+        let conversations = try decoder.decode([Conversation].self, from: response.data)
+        NSLog("[ChatService] RPC returned \(conversations.count) conversations")
+        return conversations
     }
 
     func createConversation(_ conversation: ConversationInsert) async throws -> Conversation {

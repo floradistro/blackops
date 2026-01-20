@@ -14,13 +14,15 @@ struct ConversationRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 Text("#")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
+                    .frame(width: 10)
 
                 Text(conversation.displayTitle)
                     .font(DesignSystem.Typography.caption2)
+                    .foregroundStyle(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 
                 Spacer()
@@ -32,15 +34,15 @@ struct ConversationRow: View {
                 }
             }
             .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .padding(.vertical, DesignSystem.Spacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.sm)
-                    .fill(isSelected ? Color.accentColor.opacity(0.3) : Color.clear)
+                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
+                    .fill(isSelected ? DesignSystem.Colors.selectionActive : Color.clear)
             )
+            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
-        .padding(.horizontal, DesignSystem.Spacing.sm)
     }
 }
 

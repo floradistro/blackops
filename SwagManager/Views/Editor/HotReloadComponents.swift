@@ -16,6 +16,7 @@ struct HotReloadRenderer: View {
     let code: String
     let creationId: String
     let refreshTrigger: UUID
+    @Environment(\.contentZoom) private var zoom
 
     @State private var isLoading = true
     @State private var loadError: String?
@@ -30,7 +31,8 @@ struct HotReloadRenderer: View {
             HotReloadWebView(
                 html: ReactRenderTemplate.buildHTML(code: currentCode),
                 isLoading: $isLoading,
-                loadError: $loadError
+                loadError: $loadError,
+                magnification: zoom
             )
             .id(currentCode.hashValue)
             .opacity(opacity)
@@ -71,6 +73,7 @@ struct HotReloadRenderer: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             currentCode = code
         }
@@ -107,17 +110,30 @@ struct HotReloadWebView: NSViewRepresentable {
     let html: String
     @Binding var isLoading: Bool
     @Binding var loadError: String?
+    var magnification: CGFloat = 1.0
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.allowsMagnification = true
+        webView.magnification = magnification
+        context.coordinator.magnification = magnification
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        webView.loadHTMLString(html, baseURL: nil)
+        // Update magnification when zoom changes
+        if context.coordinator.magnification != magnification {
+            context.coordinator.magnification = magnification
+            webView.magnification = magnification
+        }
+        // Only reload if HTML changed
+        if context.coordinator.lastHTML != html {
+            context.coordinator.lastHTML = html
+            webView.loadHTMLString(html, baseURL: nil)
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -127,6 +143,8 @@ struct HotReloadWebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate {
         @Binding var isLoading: Bool
         @Binding var loadError: String?
+        var lastHTML: String = ""
+        var magnification: CGFloat = 1.0
 
         init(isLoading: Binding<Bool>, loadError: Binding<String?>) {
             _isLoading = isLoading

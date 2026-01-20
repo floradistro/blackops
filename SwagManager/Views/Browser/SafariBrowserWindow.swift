@@ -33,10 +33,13 @@ struct SafariBrowserWindow: View {
             if let activeTab = tabManager.activeTab {
                 BrowserTabView(tab: activeTab)
                     .id(activeTab.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 EmptyBrowserView(onNewTab: { tabManager.newTab() })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(VisualEffectBackground(material: .underWindowBackground))
         .onAppear {
             // Create initial tab

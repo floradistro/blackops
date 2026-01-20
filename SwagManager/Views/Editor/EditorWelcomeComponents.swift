@@ -9,30 +9,31 @@ import SwiftUI
 struct WelcomeView: View {
     @ObservedObject var store: EditorStore
     @State private var appeared = false
+    @Environment(\.contentZoom) private var zoom
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
             // Welcome card
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 24 * zoom) {
                 // Header
-                HStack(spacing: 14) {
+                HStack(spacing: 14 * zoom) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 12 * zoom)
                             .fill(DesignSystem.Colors.accent.opacity(0.15))
-                            .frame(width: 52, height: 52)
+                            .frame(width: 52 * zoom, height: 52 * zoom)
                         Image(systemName: "storefront.fill")
-                            .font(.system(size: 22))
+                            .font(.system(size: 22 * zoom))
                             .foregroundStyle(DesignSystem.Colors.accent)
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 4 * zoom) {
                         Text(store.selectedStore?.storeName ?? "Swag Manager")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 18 * zoom, weight: .semibold))
                             .foregroundStyle(DesignSystem.Colors.textPrimary)
                         Text("Ready to build")
-                            .font(.system(size: 12))
+                            .font(.system(size: 12 * zoom))
                             .foregroundStyle(DesignSystem.Colors.textSecondary)
                     }
                 }
@@ -41,25 +42,25 @@ struct WelcomeView: View {
                 if !store.products.isEmpty || !store.categories.isEmpty || !store.creations.isEmpty {
                     HStack(spacing: 0) {
                         statItem(value: store.products.count, label: "Products", color: DesignSystem.Colors.green)
-                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40)
+                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40 * zoom)
                         statItem(value: store.categories.count, label: "Categories", color: DesignSystem.Colors.yellow)
-                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40)
+                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40 * zoom)
                         statItem(value: store.creations.count, label: "Creations", color: DesignSystem.Colors.cyan)
                     }
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 16 * zoom)
                     .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 10 * zoom))
                 }
 
                 // Quick actions
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 12 * zoom) {
                     Text("Quick Actions")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11 * zoom, weight: .semibold))
                         .foregroundStyle(DesignSystem.Colors.textTertiary)
                         .textCase(.uppercase)
                         .tracking(0.5)
 
-                    HStack(spacing: 12) {
+                    HStack(spacing: 12 * zoom) {
                         QuickActionButton(icon: "plus", label: "New Creation", shortcut: "⌘N") {
                             store.showNewCreationSheet = true
                         }
@@ -69,26 +70,26 @@ struct WelcomeView: View {
                     }
                 }
             }
-            .padding(32)
+            .padding(32 * zoom)
             .background(DesignSystem.Colors.surfaceTertiary)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 16 * zoom))
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 16 * zoom)
                     .stroke(DesignSystem.Colors.border, lineWidth: 1)
             )
-            .frame(maxWidth: 440)
+            .frame(maxWidth: 440 * zoom)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
 
             Spacer()
 
             // Keyboard hints
-            HStack(spacing: 32) {
+            HStack(spacing: 32 * zoom) {
                 keyboardHint(keys: ["⌘", "N"], action: "New")
                 keyboardHint(keys: ["⌘", "F"], action: "Search")
                 keyboardHint(keys: ["⌘", "\\"], action: "Sidebar")
             }
-            .padding(.bottom, 40)
+            .padding(.bottom, 40 * zoom)
             .opacity(appeared ? 1 : 0)
 
             Spacer()
@@ -102,34 +103,34 @@ struct WelcomeView: View {
     }
 
     private func statItem(value: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 4 * zoom) {
             Text("\(value)")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 22 * zoom, weight: .semibold))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 10))
+                .font(.system(size: 10 * zoom))
                 .foregroundStyle(DesignSystem.Colors.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
 
     private func keyboardHint(keys: [String], action: String) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 4 * zoom) {
             ForEach(keys, id: \.self) { key in
                 Text(key)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10 * zoom, weight: .medium))
                     .foregroundStyle(DesignSystem.Colors.textSecondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 7 * zoom)
+                    .padding(.vertical, 4 * zoom)
                     .background(DesignSystem.Colors.surfaceTertiary)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .clipShape(RoundedRectangle(cornerRadius: 5 * zoom))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 5)
+                        RoundedRectangle(cornerRadius: 5 * zoom)
                             .stroke(DesignSystem.Colors.border, lineWidth: 1)
                     )
             }
             Text(action)
-                .font(.system(size: 10))
+                .font(.system(size: 10 * zoom))
                 .foregroundStyle(DesignSystem.Colors.textTertiary)
         }
     }
@@ -142,27 +143,28 @@ struct QuickActionButton: View {
     let label: String
     let shortcut: String
     let action: () -> Void
+    @Environment(\.contentZoom) private var zoom
 
     @State private var isHovering = false
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 10) {
+            VStack(spacing: 10 * zoom) {
                 Image(systemName: icon)
-                    .font(.system(size: 22, weight: .medium))
+                    .font(.system(size: 22 * zoom, weight: .medium))
                     .foregroundStyle(DesignSystem.Colors.accent)
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12 * zoom, weight: .medium))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                 Text(shortcut)
-                    .font(.system(size: 10))
+                    .font(.system(size: 10 * zoom))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
+            .padding(.vertical, 24 * zoom)
             .background(isHovering ? DesignSystem.Colors.surfaceElevated : DesignSystem.Colors.surfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: 10 * zoom))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 10 * zoom)
                     .stroke(isHovering ? DesignSystem.Colors.border : Color.clear, lineWidth: 1)
             )
         }
@@ -176,29 +178,30 @@ struct QuickActionButton: View {
 struct CodeEditorPanel: View {
     @Binding var code: String
     let onSave: () -> Void
+    @Environment(\.contentZoom) private var zoom
 
     var body: some View {
         VStack(spacing: 0) {
             // Toolbar
             HStack {
                 Text("React Code")
-                    .font(.headline)
+                    .font(.system(size: 14 * zoom, weight: .semibold))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                 Spacer()
                 Text("\(code.count) characters")
-                    .font(.caption)
+                    .font(.system(size: 11 * zoom))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
             }
-            .padding()
+            .padding(16 * zoom)
             .background(DesignSystem.Colors.surfaceTertiary)
 
             Rectangle()
                 .fill(DesignSystem.Colors.border)
                 .frame(height: 1)
 
-            // Editor
+            // Editor with zoom-scaled font
             TextEditor(text: $code)
-                .font(.system(size: 13, design: .monospaced))
+                .font(.system(size: 13 * zoom, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .background(DesignSystem.Colors.surfaceElevated)
         }

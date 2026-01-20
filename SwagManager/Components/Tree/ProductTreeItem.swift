@@ -22,7 +22,7 @@ struct ProductTreeItem: View {
                     .frame(width: 14)
 
                 Text(product.name)
-                    .font(DesignSystem.Typography.caption2)
+                    .font(.system(size: 11))
                     .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 

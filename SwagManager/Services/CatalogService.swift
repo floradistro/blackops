@@ -109,34 +109,23 @@ final class CatalogService {
             .execute()
     }
 
+    /// Assigns categories to a catalog using backend RPC (atomic batch operation)
+    /// Uses backend RPC: assign_categories_to_catalog (replaces N+1 update loop)
     func assignCategoriesToCatalog(storeId: UUID, catalogId: UUID, onlyOrphans: Bool = true) async throws -> Int {
-        // Simple struct just for getting IDs
-        struct CategoryId: Codable {
-            let id: UUID
+        let response = try await client
+            .rpc("assign_categories_to_catalog", params: [
+                "p_catalog_id": catalogId.uuidString,
+                "p_store_id": storeId.uuidString,
+                "p_orphans_only": onlyOrphans ? "true" : "false"
+            ])
+            .execute()
+
+        // RPC returns the count of updated categories
+        if let count = try? JSONDecoder().decode(Int.self, from: response.data) {
+            NSLog("[CatalogService] Assigned %d categories to catalog via RPC", count)
+            return count
         }
 
-        // Get categories to update
-        var query = client.from("categories")
-            .select("id")
-            .eq("store_id", value: storeId)
-
-        if onlyOrphans {
-            query = query.is("catalog_id", value: nil)
-        } else {
-            // Assign ALL categories for this store to the catalog
-            query = query.neq("catalog_id", value: catalogId.uuidString)
-        }
-
-        let categoriesToUpdate: [CategoryId] = try await query.execute().value
-
-        // Update each one
-        for category in categoriesToUpdate {
-            try await client.from("categories")
-                .update(["catalog_id": catalogId.uuidString])
-                .eq("id", value: category.id)
-                .execute()
-        }
-
-        return categoriesToUpdate.count
+        return 0
     }
 }

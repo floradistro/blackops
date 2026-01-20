@@ -50,29 +50,26 @@ extension ProductSchemaService {
         return joins.map { $0.fieldSchema }
     }
 
+    /// Fetches available field schemas using backend RPC (single filtered query)
     func fetchAvailableFieldSchemas(catalogId: UUID?, categoryName: String?) async throws -> [FieldSchema] {
-        // Fetch all active schemas
-        let allSchemas: [FieldSchema] = try await client.from("field_schemas")
-            .select("*")
-            .eq("is_active", value: true)
-            .execute()
-            .value
-
-        // Filter by catalog
-        var filtered = allSchemas.filter { schema in
-            if let schemaCatalogId = schema.catalogId {
-                return catalogId == schemaCatalogId
-            }
-            return true
+        var params: [String: String] = [:]
+        if let catalogId = catalogId {
+            params["p_catalog_id"] = catalogId.uuidString
         }
-
-        // Filter by applicable_categories if category name provided
         if let categoryName = categoryName {
-            filtered = filtered.filter { $0.appliesTo(categoryName: categoryName) }
+            params["p_category_name"] = categoryName
         }
 
-        NSLog("[SupabaseService] Fetched \(filtered.count) available field schemas for catalog \(catalogId?.uuidString ?? "nil"), category \(categoryName ?? "nil")")
-        return filtered
+        let response = try await client
+            .rpc("get_field_schemas", params: params)
+            .execute()
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let schemas = try decoder.decode([FieldSchema].self, from: response.data)
+
+        NSLog("[ProductSchemaService] Fetched \(schemas.count) field schemas via RPC for catalog \(catalogId?.uuidString ?? "nil"), category \(categoryName ?? "nil")")
+        return schemas
     }
 
     // MARK: - Field Schema CRUD

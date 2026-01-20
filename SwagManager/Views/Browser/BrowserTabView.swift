@@ -11,9 +11,10 @@ import AVKit
 
 struct BrowserTabView: View {
     @ObservedObject var tab: BrowserTab
+    @Environment(\.contentZoom) private var zoom
 
     var body: some View {
-        SimpleWebView(tab: tab)
+        SimpleWebView(tab: tab, zoomLevel: zoom)
     }
 }
 
@@ -21,14 +22,18 @@ struct BrowserTabView: View {
 
 struct SimpleWebView: NSViewRepresentable {
     @ObservedObject var tab: BrowserTab
+    var zoomLevel: CGFloat = 1.0
 
     func makeNSView(context: Context) -> WKWebView {
         // Check if we already have a WebView for this tab
         if let existingWebView = tab.webView {
             // Reattach the coordinator
             context.coordinator.webView = existingWebView
+            context.coordinator.zoomLevel = zoomLevel
             existingWebView.navigationDelegate = context.coordinator
             existingWebView.uiDelegate = context.coordinator
+            existingWebView.allowsMagnification = true
+            existingWebView.magnification = zoomLevel
             NSLog("[SimpleWebView] Reusing existing WebView for tab \(tab.id.uuidString.prefix(8)), URL: \(tab.currentURL ?? "none")")
             return existingWebView
         }
@@ -58,10 +63,13 @@ struct SimpleWebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
+        webView.allowsMagnification = true
+        webView.magnification = zoomLevel
 
         // Store reference
         tab.webView = webView
         context.coordinator.webView = webView
+        context.coordinator.zoomLevel = zoomLevel
 
         NSLog("[SimpleWebView] Created NEW WebView for tab \(tab.id.uuidString.prefix(8))")
 
@@ -80,7 +88,11 @@ struct SimpleWebView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        // No updates needed
+        // Update magnification when zoom level changes
+        if context.coordinator.zoomLevel != zoomLevel {
+            context.coordinator.zoomLevel = zoomLevel
+            webView.magnification = zoomLevel
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -90,6 +102,7 @@ struct SimpleWebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let tab: BrowserTab
         weak var webView: WKWebView?
+        var zoomLevel: CGFloat = 1.0
 
         init(tab: BrowserTab) {
             self.tab = tab

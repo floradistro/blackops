@@ -19,80 +19,9 @@ struct EditorView: View {
 
     @ViewBuilder
     private var mainContentView: some View {
-        ZStack {
-            if let activeTab = store.activeTab {
-                switch activeTab {
-                case .creation(let creation):
-                    // Creation editor
-                    switch selectedTab {
-                    case .preview:
-                        HotReloadRenderer(
-                            code: store.editedCode ?? creation.reactCode ?? "",
-                            creationId: creation.id.uuidString,
-                            refreshTrigger: store.refreshTrigger
-                        )
-                    case .code:
-                        CodeEditorPanel(
-                            code: Binding(
-                                get: { store.editedCode ?? store.selectedCreation?.reactCode ?? "" },
-                                set: { store.editedCode = $0 }
-                            ),
-                            onSave: { Task { await store.saveCurrentCreation() } }
-                        )
-                    case .details:
-                        DetailsPanel(creation: creation, store: store)
-                    case .settings:
-                        SettingsPanel(creation: creation, store: store)
-                    }
-
-                case .product(let product):
-                    // Product editor
-                    ProductEditorPanel(product: product, store: store)
-
-                case .conversation(let conversation):
-                    // Chat conversation
-                    TeamChatView(store: store)
-
-                case .category(let category):
-                    // Category config editor
-                    CategoryConfigView(category: category, store: store)
-
-                case .browserSession(let session):
-                    // Safari-style browser
-                    SafariBrowserWindow(sessionId: session.id)
-                        .id("browser-\(session.id)")
-
-                case .order(let order):
-                    OrderDetailPanel(order: order, store: store)
-
-                case .location(let location):
-                    LocationDetailPanel(location: location, store: store)
-
-                case .queue(let location):
-                    LocationQueueView(locationId: location.id)
-                        .id("queue-\(location.id)")
-
-                case .customer(let customer):
-                    CustomerDetailPanel(customer: customer, store: store)
-
-                case .mcpServer(let server):
-                    MCPServerDetailPanel(server: server, store: store)
-                }
-            } else if let browserSession = store.selectedBrowserSession {
-                // Safari-style browser
-                SafariBrowserWindow(sessionId: browserSession.id)
-                    .id("browser-\(browserSession.id)")
-            } else if let category = store.selectedCategory {
-                // Show category config even without tab
-                CategoryConfigView(category: category, store: store)
-            } else if let conversation = store.selectedConversation {
-                // Show conversation even without tab
-                TeamChatView(store: store)
-            } else if let product = store.selectedProduct {
-                // Show product even without tab
-                ProductEditorPanel(product: product, store: store)
-            } else if let creation = store.selectedCreation {
-                // Show creation even without tab
+        if let activeTab = store.activeTab {
+            switch activeTab {
+            case .creation(let creation):
                 switch selectedTab {
                 case .preview:
                     HotReloadRenderer(
@@ -103,7 +32,7 @@ struct EditorView: View {
                 case .code:
                     CodeEditorPanel(
                         code: Binding(
-                            get: { store.editedCode ?? creation.reactCode ?? "" },
+                            get: { store.editedCode ?? store.selectedCreation?.reactCode ?? "" },
                             set: { store.editedCode = $0 }
                         ),
                         onSave: { Task { await store.saveCurrentCreation() } }
@@ -113,39 +42,108 @@ struct EditorView: View {
                 case .settings:
                     SettingsPanel(creation: creation, store: store)
                 }
-            } else {
-                // Welcome state
-                WelcomeView(store: store)
+
+            case .product(let product):
+                ProductEditorPanel(product: product, store: store)
+
+            case .conversation(let conversation):
+                TeamChatView(store: store)
+
+            case .category(let category):
+                CategoryConfigView(category: category, store: store)
+
+            case .browserSession(let session):
+                SafariBrowserWindow(sessionId: session.id)
+                    .id("browser-\(session.id)")
+
+            case .order(let order):
+                OrderDetailPanel(order: order, store: store)
+
+            case .location(let location):
+                LocationDetailPanel(location: location, store: store)
+
+            case .queue(let location):
+                LocationQueueView(locationId: location.id)
+                    .id("queue-\(location.id)")
+
+            case .customer(let customer):
+                CustomerDetailPanel(customer: customer, store: store)
+
+            case .mcpServer(let server):
+                MCPServerDetailPanel(server: server, store: store)
             }
+        } else if let browserSession = store.selectedBrowserSession {
+            SafariBrowserWindow(sessionId: browserSession.id)
+                .id("browser-\(browserSession.id)")
+        } else if let category = store.selectedCategory {
+            CategoryConfigView(category: category, store: store)
+        } else if let conversation = store.selectedConversation {
+            TeamChatView(store: store)
+        } else if let product = store.selectedProduct {
+            ProductEditorPanel(product: product, store: store)
+        } else if let mcpServer = store.selectedMCPServer {
+            MCPServerDetailPanel(server: mcpServer, store: store)
+        } else if let creation = store.selectedCreation {
+            switch selectedTab {
+            case .preview:
+                HotReloadRenderer(
+                    code: store.editedCode ?? creation.reactCode ?? "",
+                    creationId: creation.id.uuidString,
+                    refreshTrigger: store.refreshTrigger
+                )
+            case .code:
+                CodeEditorPanel(
+                    code: Binding(
+                        get: { store.editedCode ?? creation.reactCode ?? "" },
+                        set: { store.editedCode = $0 }
+                    ),
+                    onSave: { Task { await store.saveCurrentCreation() } }
+                )
+            case .details:
+                DetailsPanel(creation: creation, store: store)
+            case .settings:
+                SettingsPanel(creation: creation, store: store)
+            }
+        } else {
+            WelcomeView(store: store)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .scaleEffect(store.zoomLevel)
     }
 
-    var body: some View {
+    // MARK: - Main Navigation View (unzoomed)
+
+    @ViewBuilder
+    private var navigationContent: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Sidebar
             SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 300)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
                 .toolbarBackground(.hidden, for: .windowToolbar)
         } detail: {
-            // Main Content Area
             ZStack {
-                // Unified glass background for all content
                 VisualEffectBackground(material: .underWindowBackground)
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    mainContentView
-                }
+                mainContentView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .toolbar {
-                UnifiedToolbarContent(store: store)
+                ToolbarItem(placement: .principal) {
+                    FloatingContextBar(store: store)
+                }
+
+                if case .browserSession = store.activeTab {
+                    UnifiedToolbarContent(store: store)
+                } else if store.selectedBrowserSession != nil {
+                    UnifiedToolbarContent(store: store)
+                }
             }
             .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
-        .animation(DesignSystem.Animation.spring, value: sidebarCollapsed)
+    }
+
+    var body: some View {
+        navigationContent
+            .animation(DesignSystem.Animation.spring, value: sidebarCollapsed)
         .onChange(of: sidebarCollapsed) { _, collapsed in
             columnVisibility = collapsed ? .detailOnly : .all
         }
@@ -164,15 +162,6 @@ struct EditorView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewStore"))) { _ in
             store.showNewStoreSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ZoomIn"))) { _ in
-            store.zoomIn()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ZoomOut"))) { _ in
-            store.zoomOut()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ZoomReset"))) { _ in
-            store.resetZoom()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserNewTab"))) { _ in
             if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
@@ -270,6 +259,24 @@ class EditorStore: ObservableObject {
     @Published var selectedBrowserSession: BrowserSession?
     @Published var sidebarBrowserExpanded = false
 
+    // MARK: - Orders State
+    @Published var orders: [Order] = []
+    @Published var selectedOrder: Order?
+    @Published var selectedLocation: Location?
+    @Published var sidebarOrdersExpanded = false
+    @Published var sidebarLocationsExpanded = false
+
+    // MARK: - Queue State
+    @Published var selectedQueue: Location?
+    @Published var sidebarQueuesExpanded = false
+
+    // MARK: - Customers State
+    @Published var customers: [Customer] = []
+    @Published var selectedCustomer: Customer?
+    @Published var sidebarCustomersExpanded = false
+    @Published var customerSearchQuery: String = ""
+    @Published var customerStats: CustomerStats?
+
     // MARK: - MCP Servers State
     @Published var mcpServers: [MCPServer] = []
     @Published var selectedMCPServer: MCPServer?
@@ -287,7 +294,6 @@ class EditorStore: ObservableObject {
     @Published var sidebarCreationsExpanded = false
     @Published var sidebarCatalogExpanded = false
     @Published var sidebarChatExpanded = false
-    @Published var zoomLevel: CGFloat = 1.0
 
     // Sheet states
     @Published var showNewCreationSheet = false

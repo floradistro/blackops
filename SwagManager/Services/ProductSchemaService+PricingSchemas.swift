@@ -50,29 +50,26 @@ extension ProductSchemaService {
         return joins.map { $0.pricingSchema }
     }
 
+    /// Fetches available pricing schemas using backend RPC (single filtered query)
     func fetchAvailablePricingSchemas(catalogId: UUID?, categoryName: String?) async throws -> [PricingSchema] {
-        // Fetch all active schemas
-        let allSchemas: [PricingSchema] = try await client.from("pricing_schemas")
-            .select("*")
-            .eq("is_active", value: true)
-            .execute()
-            .value
-
-        // Filter by catalog
-        var filtered = allSchemas.filter { schema in
-            if let schemaCatalogId = schema.catalogId {
-                return catalogId == schemaCatalogId
-            }
-            return true
+        var params: [String: String] = [:]
+        if let catalogId = catalogId {
+            params["p_catalog_id"] = catalogId.uuidString
         }
-
-        // Filter by applicable_categories if category name provided
         if let categoryName = categoryName {
-            filtered = filtered.filter { $0.appliesTo(categoryName: categoryName) }
+            params["p_category_name"] = categoryName
         }
 
-        NSLog("[SupabaseService] Fetched \(filtered.count) available pricing schemas for catalog \(catalogId?.uuidString ?? "nil"), category \(categoryName ?? "nil")")
-        return filtered
+        let response = try await client
+            .rpc("get_pricing_schemas", params: params)
+            .execute()
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let schemas = try decoder.decode([PricingSchema].self, from: response.data)
+
+        NSLog("[ProductSchemaService] Fetched \(schemas.count) pricing schemas via RPC for catalog \(catalogId?.uuidString ?? "nil"), category \(categoryName ?? "nil")")
+        return schemas
     }
 
     // MARK: - Pricing Schema CRUD
@@ -144,33 +141,11 @@ extension ProductSchemaService {
             .execute()
     }
 
+    /// Deletes pricing schema using backend RPC (atomic soft delete with cascade)
     func deletePricingSchema(schemaId: UUID) async throws {
-        // Soft delete - mark as inactive and record deletion time
-        // Data is never truly deleted (Oracle/Apple/Mossad approach)
-        struct SoftDelete: Codable {
-            let isActive: Bool
-            let deletedAt: String
-
-            enum CodingKeys: String, CodingKey {
-                case isActive = "is_active"
-                case deletedAt = "deleted_at"
-            }
-        }
-
-        let update = SoftDelete(
-            isActive: false,
-            deletedAt: ISO8601DateFormatter().string(from: Date())
-        )
-
-        try await client.from("pricing_schemas")
-            .update(update)
-            .eq("id", value: schemaId)
+        _ = try await client
+            .rpc("delete_pricing_schema", params: ["p_schema_id": schemaId.uuidString])
             .execute()
-
-        // Remove category assignments (these can be hard deleted - just junction records)
-        try await client.from("category_pricing_schemas")
-            .delete()
-            .eq("pricing_schema_id", value: schemaId)
-            .execute()
+        NSLog("[ProductSchemaService] Deleted pricing schema via RPC: \(schemaId)")
     }
 }

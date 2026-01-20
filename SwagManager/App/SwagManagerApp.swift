@@ -14,7 +14,9 @@ struct SwagManagerApp: App {
                 .environmentObject(appState)
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(.dark)
+                .handlesExternalEvents(preferring: Set(["*"]), allowing: Set(["*"]))
         }
+        .handlesExternalEvents(matching: Set(["*"]))
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {
@@ -45,23 +47,6 @@ struct SwagManagerApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("ToggleSidebar"), object: nil)
                 }
                 .keyboardShortcut("\\", modifiers: .command)
-
-                Divider()
-
-                Button("Zoom In") {
-                    NotificationCenter.default.post(name: NSNotification.Name("ZoomIn"), object: nil)
-                }
-                .keyboardShortcut("+", modifiers: .command)
-
-                Button("Zoom Out") {
-                    NotificationCenter.default.post(name: NSNotification.Name("ZoomOut"), object: nil)
-                }
-                .keyboardShortcut("-", modifiers: .command)
-
-                Button("Actual Size") {
-                    NotificationCenter.default.post(name: NSNotification.Name("ZoomReset"), object: nil)
-                }
-                .keyboardShortcut("0", modifiers: .command)
 
                 Divider()
 
@@ -120,6 +105,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Configure all windows with glass effect
         configureAllWindows()
 
+        // Close duplicate windows - keep only one main window
+        closeDuplicateWindows()
+
         // Watch for new windows
         NotificationCenter.default.addObserver(
             forName: NSWindow.didBecomeKeyNotification,
@@ -128,6 +116,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] notification in
             if let window = notification.object as? NSWindow {
                 self?.configureWindow(window)
+            }
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // Prevent opening new windows on dock click - just show existing
+        if !flag {
+            for window in NSApp.windows where window.canBecomeMain {
+                window.makeKeyAndOrderFront(nil)
+                return false
+            }
+        }
+        return true
+    }
+
+    private func closeDuplicateWindows() {
+        // Filter to main content windows (exclude Settings, About, etc.)
+        let mainWindows = NSApp.windows.filter { window in
+            window.canBecomeMain && window.styleMask.contains(.titled) && window.contentView != nil
+        }
+
+        // Keep only the first main window, close others
+        if mainWindows.count > 1 {
+            for window in mainWindows.dropFirst() {
+                window.close()
             }
         }
     }
