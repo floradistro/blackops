@@ -93,7 +93,9 @@ struct MCPServerDetailView: View {
             if let version = server.version {
                 MCPInfoRow(label: "Version", value: "v\(version)")
             }
-            MCPInfoRow(label: "Type", value: server.definition.type)
+            if let type = server.definition.type {
+                MCPInfoRow(label: "Type", value: type)
+            }
 
             if let rpc = server.rpcFunction {
                 MCPInfoRow(label: "RPC Function", value: rpc)
@@ -115,8 +117,12 @@ struct MCPServerDetailView: View {
         VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
             sectionTitle("Definition")
 
-            MCPInfoRow(label: "Name", value: server.definition.name)
-            MCPInfoRow(label: "Description", value: server.definition.description)
+            if let name = server.definition.name {
+                MCPInfoRow(label: "Name", value: name)
+            }
+            if let description = server.definition.description {
+                MCPInfoRow(label: "Description", value: description)
+            }
         }
     }
 

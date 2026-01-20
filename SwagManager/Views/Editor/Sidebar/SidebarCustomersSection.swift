@@ -41,26 +41,25 @@ struct SidebarCustomersSection: View {
 
         let query = searchQuery.lowercased()
         return segmentFiltered.filter { customer in
-            // Search by name (first, middle, last)
             customer.displayName.lowercased().contains(query) ||
-            customer.firstName?.lowercased().contains(query) == true ||
-            customer.middleName?.lowercased().contains(query) == true ||
-            customer.lastName?.lowercased().contains(query) == true ||
-            // Also search email and phone
             customer.email?.lowercased().contains(query) == true ||
             customer.phone?.contains(query) == true
         }
     }
 
     var filteredGroupedCustomers: [(letter: String, customers: [Customer])] {
-        let grouped = Dictionary(grouping: filteredCustomers) { customer -> String in
+        // Only show letters that have customers - don't pre-sort all customers
+        let allLetters = Set(filteredCustomers.compactMap { customer -> String? in
             let name = customer.displayName.uppercased()
             if let first = name.first, first.isLetter {
                 return String(first)
             }
             return "#"
+        })
+
+        return allLetters.sorted().map { letter in
+            (letter: letter, customers: []) // Empty array - load on demand
         }
-        return grouped.sorted { $0.key < $1.key }.map { (letter: $0.key, customers: $0.value.sorted { $0.displayName < $1.displayName }) }
     }
 
     var body: some View {
@@ -181,6 +180,20 @@ struct CustomerAlphabetGroup: View {
     let onToggle: () -> Void
     @ObservedObject var store: EditorStore
 
+    private var customersForLetter: [Customer] {
+        store.customersForLetter(letter).sorted { $0.displayName < $1.displayName }
+    }
+
+    private var count: Int {
+        store.customers.filter { customer in
+            let name = customer.displayName.uppercased()
+            if letter == "#" {
+                return name.first?.isLetter == false
+            }
+            return name.hasPrefix(letter)
+        }.count
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Button(action: onToggle) {
@@ -195,7 +208,7 @@ struct CustomerAlphabetGroup: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
 
-                    Text("(\(customers.count))")
+                    Text("(\(count))")
                         .font(.system(size: 10))
                         .foregroundColor(DesignSystem.Colors.textTertiary)
 
@@ -207,13 +220,21 @@ struct CustomerAlphabetGroup: View {
             .buttonStyle(.plain)
 
             if isExpanded {
-                ForEach(customers) { customer in
+                ForEach(customersForLetter.prefix(100)) { customer in
                     CustomerTreeItem(
                         customer: customer,
                         isSelected: store.selectedCustomer?.id == customer.id,
                         indentLevel: 1,
                         onSelect: { store.selectCustomer(customer) }
                     )
+                }
+
+                if customersForLetter.count > 100 {
+                    Text("+ \(customersForLetter.count - 100) more")
+                        .font(.system(size: 10))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .padding(.leading, 32)
+                        .padding(.vertical, 4)
                 }
             }
         }

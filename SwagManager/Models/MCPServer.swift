@@ -41,9 +41,9 @@ struct MCPServer: Codable, Identifiable, Hashable {
 
 // MARK: - MCP Definition
 struct MCPDefinition: Codable, Hashable {
-    let name: String
-    let type: String
-    let description: String
+    let name: String?
+    let type: String?
+    let description: String?
     let inputSchema: InputSchema?
 
     enum CodingKeys: String, CodingKey {
