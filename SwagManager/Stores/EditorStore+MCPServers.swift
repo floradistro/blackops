@@ -18,10 +18,29 @@ extension EditorStore {
                 .order("name")
                 .execute()
 
+            // Log raw response for debugging
+            if let jsonString = String(data: response.data, encoding: .utf8) {
+                NSLog("[EditorStore] Raw response (first 500 chars): \(String(jsonString.prefix(500)))")
+            }
+
+            NSLog("[EditorStore] Response data size: \(response.data.count) bytes")
+
             let decoder = JSONDecoder.supabaseDecoder
             mcpServers = try decoder.decode([MCPServer].self, from: response.data)
 
             NSLog("[EditorStore] Loaded \(mcpServers.count) MCP servers")
+        } catch let DecodingError.keyNotFound(key, context) {
+            self.error = "Missing key '\(key.stringValue)' at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            NSLog("[EditorStore] Decoding error - missing key: \(key.stringValue)")
+            NSLog("[EditorStore] Context: \(context.debugDescription)")
+        } catch let DecodingError.typeMismatch(type, context) {
+            self.error = "Type mismatch for \(type) at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            NSLog("[EditorStore] Decoding error - type mismatch: \(type)")
+            NSLog("[EditorStore] Context: \(context.debugDescription)")
+        } catch let DecodingError.valueNotFound(type, context) {
+            self.error = "Value not found for \(type) at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            NSLog("[EditorStore] Decoding error - value not found: \(type)")
+            NSLog("[EditorStore] Context: \(context.debugDescription)")
         } catch {
             self.error = "Failed to load MCP servers: \(error.localizedDescription)"
             NSLog("[EditorStore] Error loading MCP servers: \(error)")

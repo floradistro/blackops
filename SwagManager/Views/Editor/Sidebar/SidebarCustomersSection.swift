@@ -70,6 +70,13 @@ struct SidebarCustomersSection: View {
             count: filteredCustomers.count
         )
         .padding(.top, DesignSystem.Spacing.xxs)
+        .onAppear {
+            if store.customers.isEmpty {
+                Task {
+                    await store.loadCustomers()
+                }
+            }
+        }
 
         if store.sidebarCustomersExpanded {
             // Simple segment picker
