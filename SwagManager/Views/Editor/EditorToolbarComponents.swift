@@ -137,8 +137,11 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
                         .font(.system(size: 13, weight: .medium))
                 }
 
-            case .mcpServer:
-                EmptyToolbarContent()
+            case .mcpServer(let server):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(server.displayName, systemImage: server.typeIcon)
+                        .font(.system(size: 13, weight: .medium))
+                }
             }
         } else if let browserSession = store.selectedBrowserSession {
             let tabManager = BrowserTabManager.forSession(browserSession.id)

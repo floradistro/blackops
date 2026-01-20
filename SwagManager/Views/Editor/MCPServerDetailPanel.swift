@@ -11,7 +11,13 @@ struct MCPServerDetailPanel: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+            content
+        }
+        .background(VisualEffectBackground(material: .underWindowBackground))
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
                 // Header with status and actions
                 HStack {
                     VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
@@ -152,7 +158,7 @@ struct MCPServerDetailPanel: View {
                                     }
                                 }
                                 .padding(DesignSystem.Spacing.sm)
-                                .background(DesignSystem.Colors.surface.opacity(0.5))
+                                .background(DesignSystem.Colors.surfaceSecondary.opacity(0.5))
                                 .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
                             }
                         }
@@ -266,7 +272,7 @@ struct ActionButton: View {
                 Image(systemName: icon)
                     .font(.system(size: 12))
                 Text(title)
-                    .font(DesignSystem.Typography.caption1Medium)
+                    .font(.system(size: 11, weight: .medium))
             }
             .foregroundStyle(color)
             .padding(.horizontal, DesignSystem.Spacing.md)
@@ -296,7 +302,7 @@ struct ConfigRow: View {
                 .textSelection(.enabled)
                 .padding(DesignSystem.Spacing.sm)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DesignSystem.Colors.surface.opacity(0.5))
+                .background(DesignSystem.Colors.surfaceSecondary.opacity(0.5))
                 .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
         }
     }
@@ -333,7 +339,7 @@ struct StatusRow: View {
 
 // MARK: - Contact Row (reused from LocationDetailPanel pattern)
 
-struct ContactRow: View {
+struct MCPContactRow: View {
     let icon: String
     let value: String
 

@@ -66,13 +66,13 @@ struct LocationDetailPanel: View {
 
                         VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
                             if let address = location.address {
-                                ContactRow(icon: "location", value: address)
+                                LocationContactRow(icon: "location", value: address)
                             }
                             if let phone = location.phone {
-                                ContactRow(icon: "phone", value: phone)
+                                LocationContactRow(icon: "phone", value: phone)
                             }
                             if let email = location.email {
-                                ContactRow(icon: "envelope", value: email)
+                                LocationContactRow(icon: "envelope", value: email)
                             }
                         }
                     }
@@ -154,7 +154,7 @@ struct LocationDetailPanel: View {
 
 // MARK: - Supporting Views
 
-private struct ContactRow: View {
+private struct LocationContactRow: View {
     let icon: String
     let value: String
 
