@@ -85,7 +85,7 @@ extension CategoryConfigView {
             .foregroundStyle(.secondary)
         }
         .padding(10)
-        .background(Color.orange.opacity(0.1))
+        .background(DesignSystem.Colors.orange.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }

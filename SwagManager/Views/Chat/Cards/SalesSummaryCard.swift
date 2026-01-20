@@ -69,7 +69,7 @@ struct SalesSummaryCard: View {
         .padding(14)
         .background(
             LinearGradient(
-                colors: [Color.green.opacity(0.08), Color.green.opacity(0.02)],
+                colors: [DesignSystem.Colors.green.opacity(0.08), DesignSystem.Colors.green.opacity(0.02)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -77,7 +77,7 @@ struct SalesSummaryCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.green.opacity(0.15), lineWidth: 1)
+                .stroke(DesignSystem.Colors.green.opacity(0.15), lineWidth: 1)
         )
     }
 }

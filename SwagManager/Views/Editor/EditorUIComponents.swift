@@ -27,7 +27,7 @@ struct CreationListItem: View {
             Spacer()
 
             Circle()
-                .fill(creation.status == .published ? Color.green : Color.orange)
+                .fill(creation.status == .published ? DesignSystem.Colors.green : DesignSystem.Colors.orange)
                 .frame(width: 5, height: 5)
         }
         .padding(.horizontal, 8)

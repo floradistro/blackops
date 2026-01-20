@@ -63,12 +63,12 @@ struct NewCreationSheet: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, DesignSystem.Spacing.sm)
-                                .background(selectedType == type ? Color.blue.opacity(0.3) : DesignSystem.Colors.surfaceElevated)
+                                .background(selectedType == type ? DesignSystem.Colors.accent.opacity(0.3) : DesignSystem.Colors.surfaceElevated)
                                 .foregroundStyle(selectedType == type ? .primary : .secondary)
                                 .cornerRadius(DesignSystem.Radius.md)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                                        .stroke(selectedType == type ? Color.blue : Color.clear, lineWidth: 1)
+                                        .stroke(selectedType == type ? DesignSystem.Colors.accent : Color.clear, lineWidth: 1)
                                 )
                             }
                             .buttonStyle(.plain)

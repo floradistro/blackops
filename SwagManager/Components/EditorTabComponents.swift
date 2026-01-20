@@ -221,7 +221,7 @@ struct EditorTabBar: View {
                     HStack(spacing: 5) {
                         if hasUnsavedChanges {
                             Circle()
-                                .fill(Color.orange)
+                                .fill(DesignSystem.Colors.orange)
                                 .frame(width: 5, height: 5)
                         }
                         Text(creation.name)
@@ -271,7 +271,7 @@ struct TabButton: View {
                     .font(.system(size: 11, weight: .medium))
                 if hasChanges {
                     Circle()
-                        .fill(Color.orange)
+                        .fill(DesignSystem.Colors.orange)
                         .frame(width: 5, height: 5)
                 }
             }
