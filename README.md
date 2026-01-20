@@ -2,31 +2,16 @@
 
 ## How to Open and Build
 
-**IMPORTANT: Always use Package.swift, NOT Xcode project files**
+**Open the Xcode project:**
 
 ```bash
 cd /Users/whale/Desktop/blackops
-open Package.swift
+open SwagManager.xcodeproj
 ```
-
-This will open in Xcode and automatically include ALL Swift files.
-
-## Why Package.swift?
-
-- ✅ Automatically discovers all `.swift` files in `SwagManager/` folder
-- ✅ No need to manually add files to build target
-- ✅ Simple and clean
-- ❌ Never use `.xcodeproj` files - they get out of sync
 
 ## Building
 
-In Xcode: Press `Cmd+B`
-
-Or from terminal:
-```bash
-swift build
-swift run
-```
+In Xcode: Press `Cmd+B` to build, `Cmd+R` to run
 
 ## Project Structure
 
