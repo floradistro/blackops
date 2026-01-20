@@ -61,6 +61,22 @@ struct EditorView: View {
                     // Safari-style browser
                     SafariBrowserWindow(sessionId: session.id)
                         .id("browser-\(session.id)")
+
+                case .order(let order):
+                    OrderDetailPanel(order: order, store: store)
+
+                case .location(let location):
+                    LocationDetailPanel(location: location, store: store)
+
+                case .queue(let location):
+                    LocationQueueView(locationId: location.id)
+                        .id("queue-\(location.id)")
+
+                case .customer(let customer):
+                    CustomerDetailPanel(customer: customer, store: store)
+
+                case .mcpServer(let server):
+                    MCPServerDetailPanel(server: server, store: store)
                 }
             } else if let browserSession = store.selectedBrowserSession {
                 // Safari-style browser
@@ -253,6 +269,11 @@ class EditorStore: ObservableObject {
     @Published var browserSessions: [BrowserSession] = []
     @Published var selectedBrowserSession: BrowserSession?
     @Published var sidebarBrowserExpanded = false
+
+    // MARK: - MCP Servers State
+    @Published var mcpServers: [MCPServer] = []
+    @Published var selectedMCPServer: MCPServer?
+    @Published var sidebarMCPExpanded = false
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []

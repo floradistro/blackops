@@ -1,0 +1,1446 @@
+{
+  "metadata": {
+    "version": 1,
+    "createdAt": 1768881389824,
+    "updatedAt": 1768881389824,
+    "rootPath": "/Users/whale/Desktop/blackops",
+    "fileCount": 154,
+    "symbolCount": 5,
+    "chunkCount": 0
+  },
+  "files": [
+    {
+      "path": "APPLE_ENGINEERING_STANDARDS.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/APPLE_ENGINEERING_STANDARDS.md",
+      "name": "APPLE_ENGINEERING_STANDARDS.md",
+      "extension": ".md",
+      "size": 11607,
+      "modifiedAt": 1768860969328.6406,
+      "type": "file"
+    },
+    {
+      "path": "APPLE_LEVEL_ROADMAP.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/APPLE_LEVEL_ROADMAP.md",
+      "name": "APPLE_LEVEL_ROADMAP.md",
+      "extension": ".md",
+      "size": 9211,
+      "modifiedAt": 1768858962374.3923,
+      "type": "file"
+    },
+    {
+      "path": "APPLY_MIGRATIONS.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/APPLY_MIGRATIONS.md",
+      "name": "APPLY_MIGRATIONS.md",
+      "extension": ".md",
+      "size": 6127,
+      "modifiedAt": 1768846367715.6172,
+      "type": "file"
+    },
+    {
+      "path": "apply-channel-migration.js",
+      "absolutePath": "/Users/whale/Desktop/blackops/apply-channel-migration.js",
+      "name": "apply-channel-migration.js",
+      "extension": ".js",
+      "size": 996,
+      "modifiedAt": 1768877977838.5496,
+      "type": "file"
+    },
+    {
+      "path": "apply-migrations.js",
+      "absolutePath": "/Users/whale/Desktop/blackops/apply-migrations.js",
+      "name": "apply-migrations.js",
+      "extension": ".js",
+      "size": 2383,
+      "modifiedAt": 1768846285166.6914,
+      "type": "file"
+    },
+    {
+      "path": "apply-realtime-migration.js",
+      "absolutePath": "/Users/whale/Desktop/blackops/apply-realtime-migration.js",
+      "name": "apply-realtime-migration.js",
+      "extension": ".js",
+      "size": 3169,
+      "modifiedAt": 1768881376170.5637,
+      "type": "file"
+    },
+    {
+      "path": "check_products.sh",
+      "absolutePath": "/Users/whale/Desktop/blackops/check_products.sh",
+      "name": "check_products.sh",
+      "extension": ".sh",
+      "size": 1864,
+      "modifiedAt": 1768706575245.4326,
+      "type": "file"
+    },
+    {
+      "path": "CODEBASE_ANALYSIS.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/CODEBASE_ANALYSIS.md",
+      "name": "CODEBASE_ANALYSIS.md",
+      "extension": ".md",
+      "size": 13865,
+      "modifiedAt": 1768853644345.7979,
+      "type": "file"
+    },
+    {
+      "path": "fix_fk_constraint.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/fix_fk_constraint.sql",
+      "name": "fix_fk_constraint.sql",
+      "extension": ".sql",
+      "size": 977,
+      "modifiedAt": 1768706575245.502,
+      "type": "file"
+    },
+    {
+      "path": "Package.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/Package.swift",
+      "name": "Package.swift",
+      "extension": ".swift",
+      "size": 841,
+      "modifiedAt": 1768838408479.055,
+      "type": "file"
+    },
+    {
+      "path": "REFACTORING_COMPLETE_PHASE2.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/REFACTORING_COMPLETE_PHASE2.md",
+      "name": "REFACTORING_COMPLETE_PHASE2.md",
+      "extension": ".md",
+      "size": 8732,
+      "modifiedAt": 1768857028620.875,
+      "type": "file"
+    },
+    {
+      "path": "REFACTORING_COMPLETE_PHASE3.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/REFACTORING_COMPLETE_PHASE3.md",
+      "name": "REFACTORING_COMPLETE_PHASE3.md",
+      "extension": ".md",
+      "size": 6477,
+      "modifiedAt": 1768858133448.7314,
+      "type": "file"
+    },
+    {
+      "path": "REFACTORING_COMPLETE.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/REFACTORING_COMPLETE.md",
+      "name": "REFACTORING_COMPLETE.md",
+      "extension": ".md",
+      "size": 12805,
+      "modifiedAt": 1768853462632.6152,
+      "type": "file"
+    },
+    {
+      "path": "REFACTORING_GUIDE.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/REFACTORING_GUIDE.md",
+      "name": "REFACTORING_GUIDE.md",
+      "extension": ".md",
+      "size": 15889,
+      "modifiedAt": 1768853358688.7883,
+      "type": "file"
+    },
+    {
+      "path": "REFACTORING_PROGRESS.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/REFACTORING_PROGRESS.md",
+      "name": "REFACTORING_PROGRESS.md",
+      "extension": ".md",
+      "size": 11363,
+      "modifiedAt": 1768855410198.3777,
+      "type": "file"
+    },
+    {
+      "path": "run-migrations.sh",
+      "absolutePath": "/Users/whale/Desktop/blackops/run-migrations.sh",
+      "name": "run-migrations.sh",
+      "extension": ".sh",
+      "size": 1867,
+      "modifiedAt": 1768846340104.6328,
+      "type": "file"
+    },
+    {
+      "path": "safe_delete_creation.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/safe_delete_creation.sql",
+      "name": "safe_delete_creation.sql",
+      "extension": ".sql",
+      "size": 4112,
+      "modifiedAt": 1768706575245.5823,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260117_cleanup_dust_inventory.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260117_cleanup_dust_inventory.sql",
+      "name": "20260117_cleanup_dust_inventory.sql",
+      "extension": ".sql",
+      "size": 5545,
+      "modifiedAt": 1768706575245.7393,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260117_create_collection_by_slug_rpc.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260117_create_collection_by_slug_rpc.sql",
+      "name": "20260117_create_collection_by_slug_rpc.sql",
+      "extension": ".sql",
+      "size": 2599,
+      "modifiedAt": 1768706575245.8027,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260117_enable_realtime.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260117_enable_realtime.sql",
+      "name": "20260117_enable_realtime.sql",
+      "extension": ".sql",
+      "size": 1344,
+      "modifiedAt": 1768706575245.8655,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260117_fix_products_rpc_primary_category.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260117_fix_products_rpc_primary_category.sql",
+      "name": "20260117_fix_products_rpc_primary_category.sql",
+      "extension": ".sql",
+      "size": 1814,
+      "modifiedAt": 1768706575245.9343,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260117_shrinkage_alerts.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260117_shrinkage_alerts.sql",
+      "name": "20260117_shrinkage_alerts.sql",
+      "extension": ".sql",
+      "size": 5951,
+      "modifiedAt": 1768706575246.1287,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260118_add_catalog_id_to_schemas.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260118_add_catalog_id_to_schemas.sql",
+      "name": "20260118_add_catalog_id_to_schemas.sql",
+      "extension": ".sql",
+      "size": 1735,
+      "modifiedAt": 1768838408487.5732,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260118_catalogs.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260118_catalogs.sql",
+      "name": "20260118_catalogs.sql",
+      "extension": ".sql",
+      "size": 4368,
+      "modifiedAt": 1768710905723.9814,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260118_category_schema_assignments.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260118_category_schema_assignments.sql",
+      "name": "20260118_category_schema_assignments.sql",
+      "extension": ".sql",
+      "size": 2998,
+      "modifiedAt": 1768838408487.6794,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260118_create_default_catalog.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260118_create_default_catalog.sql",
+      "name": "20260118_create_default_catalog.sql",
+      "extension": ".sql",
+      "size": 1019,
+      "modifiedAt": 1768712158716.878,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260118_field_groups_pricing_templates.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260118_field_groups_pricing_templates.sql",
+      "name": "20260118_field_groups_pricing_templates.sql",
+      "extension": ".sql",
+      "size": 7661,
+      "modifiedAt": 1768721041896.235,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_assign_schemas_to_categories.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_assign_schemas_to_categories.sql",
+      "name": "20260119_assign_schemas_to_categories.sql",
+      "extension": ".sql",
+      "size": 2083,
+      "modifiedAt": 1768847196396.4663,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_backend_logic_rpcs.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_backend_logic_rpcs.sql",
+      "name": "20260119_backend_logic_rpcs.sql",
+      "extension": ".sql",
+      "size": 15777,
+      "modifiedAt": 1768869910206.1155,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_fix_order_items_rls_v2.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_fix_order_items_rls_v2.sql",
+      "name": "20260119_fix_order_items_rls_v2.sql",
+      "extension": ".sql",
+      "size": 4311,
+      "modifiedAt": 1768879967600.5544,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_fix_order_items_rls.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_fix_order_items_rls.sql",
+      "name": "20260119_fix_order_items_rls.sql",
+      "extension": ".sql",
+      "size": 3552,
+      "modifiedAt": 1768879671556.9453,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_fix_product_stock_status.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_fix_product_stock_status.sql",
+      "name": "20260119_fix_product_stock_status.sql",
+      "extension": ".sql",
+      "size": 1767,
+      "modifiedAt": 1768845930009.2676,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_product_field_values_and_schema_assignments.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_product_field_values_and_schema_assignments.sql",
+      "name": "20260119_product_field_values_and_schema_assignments.sql",
+      "extension": ".sql",
+      "size": 3484,
+      "modifiedAt": 1768845626082.8862,
+      "type": "file"
+    },
+    {
+      "path": "supabase/migrations/20260119_team_channels_setup.sql",
+      "absolutePath": "/Users/whale/Desktop/blackops/supabase/migrations/20260119_team_channels_setup.sql",
+      "name": "20260119_team_channels_setup.sql",
+      "extension": ".sql",
+      "size": 7074,
+      "modifiedAt": 1768878211930.4827,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/App/SwagManagerApp.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/App/SwagManagerApp.swift",
+      "name": "SwagManagerApp.swift",
+      "extension": ".swift",
+      "size": 7493,
+      "modifiedAt": 1768880258508.2043,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/BrowserComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/BrowserComponents.swift",
+      "name": "BrowserComponents.swift",
+      "extension": ".swift",
+      "size": 4371,
+      "modifiedAt": 1768859651904.8494,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/ButtonStyles.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/ButtonStyles.swift",
+      "name": "ButtonStyles.swift",
+      "extension": ".swift",
+      "size": 7675,
+      "modifiedAt": 1768853279135.8816,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/ChatComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/ChatComponents.swift",
+      "name": "ChatComponents.swift",
+      "extension": ".swift",
+      "size": 11391,
+      "modifiedAt": 1768868550465.4316,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/FloatingContextBar.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/FloatingContextBar.swift",
+      "name": "FloatingContextBar.swift",
+      "extension": ".swift",
+      "size": 4513,
+      "modifiedAt": 1768873747363.165,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/SchemaRowComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/SchemaRowComponents.swift",
+      "name": "SchemaRowComponents.swift",
+      "extension": ".swift",
+      "size": 9987,
+      "modifiedAt": 1768862164490.8901,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/StateViews.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/StateViews.swift",
+      "name": "StateViews.swift",
+      "extension": ".swift",
+      "size": 7852,
+      "modifiedAt": 1768852949948.7354,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/CatalogRow.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/CatalogRow.swift",
+      "name": "CatalogRow.swift",
+      "extension": ".swift",
+      "size": 1273,
+      "modifiedAt": 1768880176311.589,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/CategoryTreeComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/CategoryTreeComponents.swift",
+      "name": "CategoryTreeComponents.swift",
+      "extension": ".swift",
+      "size": 5449,
+      "modifiedAt": 1768880201752.8533,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/CollectionTreeComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/CollectionTreeComponents.swift",
+      "name": "CollectionTreeComponents.swift",
+      "extension": ".swift",
+      "size": 2748,
+      "modifiedAt": 1768880166432.9353,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/ConversationTreeComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/ConversationTreeComponents.swift",
+      "name": "ConversationTreeComponents.swift",
+      "extension": ".swift",
+      "size": 2143,
+      "modifiedAt": 1768880099011.7886,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/CreationTreeItem.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/CreationTreeItem.swift",
+      "name": "CreationTreeItem.swift",
+      "extension": ".swift",
+      "size": 1940,
+      "modifiedAt": 1768880145458.266,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/OrderTreeItem.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/OrderTreeItem.swift",
+      "name": "OrderTreeItem.swift",
+      "extension": ".swift",
+      "size": 4112,
+      "modifiedAt": 1768880135017.1597,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/ProductTreeItem.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/ProductTreeItem.swift",
+      "name": "ProductTreeItem.swift",
+      "extension": ".swift",
+      "size": 1960,
+      "modifiedAt": 1768880112404.464,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Components/Tree/TreeSectionComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/TreeSectionComponents.swift",
+      "name": "TreeSectionComponents.swift",
+      "extension": ".swift",
+      "size": 2025,
+      "modifiedAt": 1768880038505.673,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/BrowserSession.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/BrowserSession.swift",
+      "name": "BrowserSession.swift",
+      "extension": ".swift",
+      "size": 3097,
+      "modifiedAt": 1768842104797.1135,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Chat.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Chat.swift",
+      "name": "Chat.swift",
+      "extension": ".swift",
+      "size": 6430,
+      "modifiedAt": 1768716017802.0974,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Collection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Collection.swift",
+      "name": "Collection.swift",
+      "extension": ".swift",
+      "size": 3482,
+      "modifiedAt": 1768706575237.679,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Creation.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Creation.swift",
+      "name": "Creation.swift",
+      "extension": ".swift",
+      "size": 7527,
+      "modifiedAt": 1768838408480.8936,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Order.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Order.swift",
+      "name": "Order.swift",
+      "extension": ".swift",
+      "size": 17967,
+      "modifiedAt": 1768878634661.0122,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Product.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Product.swift",
+      "name": "Product.swift",
+      "extension": ".swift",
+      "size": 11384,
+      "modifiedAt": 1768864560533.0767,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Product/ProductRelated.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Product/ProductRelated.swift",
+      "name": "ProductRelated.swift",
+      "extension": ".swift",
+      "size": 5683,
+      "modifiedAt": 1768864560522.1975,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Models/Product/StoreModels.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Models/Product/StoreModels.swift",
+      "name": "StoreModels.swift",
+      "extension": ".swift",
+      "size": 5496,
+      "modifiedAt": 1768864560516.176,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/AuthManager.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/AuthManager.swift",
+      "name": "AuthManager.swift",
+      "extension": ".swift",
+      "size": 2906,
+      "modifiedAt": 1768838408482.0227,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/CatalogService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/CatalogService.swift",
+      "name": "CatalogService.swift",
+      "extension": ".swift",
+      "size": 4766,
+      "modifiedAt": 1768869522265.4534,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/ChatService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/ChatService.swift",
+      "name": "ChatService.swift",
+      "extension": ".swift",
+      "size": 7636,
+      "modifiedAt": 1768878941792.4895,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/CreationService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/CreationService.swift",
+      "name": "CreationService.swift",
+      "extension": ".swift",
+      "size": 9041,
+      "modifiedAt": 1768861536213.179,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/LocationQueueService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/LocationQueueService.swift",
+      "name": "LocationQueueService.swift",
+      "extension": ".swift",
+      "size": 8657,
+      "modifiedAt": 1768881161254.885,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/OrderService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/OrderService.swift",
+      "name": "OrderService.swift",
+      "extension": ".swift",
+      "size": 13248,
+      "modifiedAt": 1768879620739.4377,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/ProductSchemaService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/ProductSchemaService.swift",
+      "name": "ProductSchemaService.swift",
+      "extension": ".swift",
+      "size": 746,
+      "modifiedAt": 1768866781152.624,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/ProductSchemaService+CategoryAssignments.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/ProductSchemaService+CategoryAssignments.swift",
+      "name": "ProductSchemaService+CategoryAssignments.swift",
+      "extension": ".swift",
+      "size": 2067,
+      "modifiedAt": 1768866774938.79,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/ProductSchemaService+FieldSchemas.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/ProductSchemaService+FieldSchemas.swift",
+      "name": "ProductSchemaService+FieldSchemas.swift",
+      "extension": ".swift",
+      "size": 5889,
+      "modifiedAt": 1768869470436.477,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/ProductSchemaService+PricingSchemas.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/ProductSchemaService+PricingSchemas.swift",
+      "name": "ProductSchemaService+PricingSchemas.swift",
+      "extension": ".swift",
+      "size": 5175,
+      "modifiedAt": 1768869470120.8967,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/ProductSchemaService+Products.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/ProductSchemaService+Products.swift",
+      "name": "ProductSchemaService+Products.swift",
+      "extension": ".swift",
+      "size": 3298,
+      "modifiedAt": 1768866742042.672,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/StoreLocationService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/StoreLocationService.swift",
+      "name": "StoreLocationService.swift",
+      "extension": ".swift",
+      "size": 5077,
+      "modifiedAt": 1768861667028.6646,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Services/SupabaseService.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Services/SupabaseService.swift",
+      "name": "SupabaseService.swift",
+      "extension": ".swift",
+      "size": 17300,
+      "modifiedAt": 1768878699716.226,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/ChatStore.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/ChatStore.swift",
+      "name": "ChatStore.swift",
+      "extension": ".swift",
+      "size": 5635,
+      "modifiedAt": 1768868425491.5786,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+BrowserSessions.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+BrowserSessions.swift",
+      "name": "EditorStore+BrowserSessions.swift",
+      "extension": ".swift",
+      "size": 4288,
+      "modifiedAt": 1768866632358.6943,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+CatalogOperations.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+CatalogOperations.swift",
+      "name": "EditorStore+CatalogOperations.swift",
+      "extension": ".swift",
+      "size": 7419,
+      "modifiedAt": 1768867591715.6895,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+CategoryHierarchy.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+CategoryHierarchy.swift",
+      "name": "EditorStore+CategoryHierarchy.swift",
+      "extension": ".swift",
+      "size": 4540,
+      "modifiedAt": 1768867593158.1533,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+CategoryManagement.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+CategoryManagement.swift",
+      "name": "EditorStore+CategoryManagement.swift",
+      "extension": ".swift",
+      "size": 2849,
+      "modifiedAt": 1768867592430.7336,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+Conversations.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+Conversations.swift",
+      "name": "EditorStore+Conversations.swift",
+      "extension": ".swift",
+      "size": 2560,
+      "modifiedAt": 1768866631821.7393,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+Creation.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+Creation.swift",
+      "name": "EditorStore+Creation.swift",
+      "extension": ".swift",
+      "size": 2349,
+      "modifiedAt": 1768866631264.5757,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+CreationManagement.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+CreationManagement.swift",
+      "name": "EditorStore+CreationManagement.swift",
+      "extension": ".swift",
+      "size": 7003,
+      "modifiedAt": 1768867203914.267,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+Orders.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+Orders.swift",
+      "name": "EditorStore+Orders.swift",
+      "extension": ".swift",
+      "size": 4772,
+      "modifiedAt": 1768877896724.2415,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+ProductEditor.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+ProductEditor.swift",
+      "name": "EditorStore+ProductEditor.swift",
+      "extension": ".swift",
+      "size": 3480,
+      "modifiedAt": 1768869404909.0295,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+RealtimeHandlers.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+RealtimeHandlers.swift",
+      "name": "EditorStore+RealtimeHandlers.swift",
+      "extension": ".swift",
+      "size": 13185,
+      "modifiedAt": 1768867179441.9739,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+RealtimeSubscriptions.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+RealtimeSubscriptions.swift",
+      "name": "EditorStore+RealtimeSubscriptions.swift",
+      "extension": ".swift",
+      "size": 3138,
+      "modifiedAt": 1768867150354.619,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+StoreManagement.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+StoreManagement.swift",
+      "name": "EditorStore+StoreManagement.swift",
+      "extension": ".swift",
+      "size": 2676,
+      "modifiedAt": 1768867591113.702,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/EditorStore+TabManagement.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+TabManagement.swift",
+      "name": "EditorStore+TabManagement.swift",
+      "extension": ".swift",
+      "size": 7981,
+      "modifiedAt": 1768877684412.3105,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Stores/LocationQueueStore.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Stores/LocationQueueStore.swift",
+      "name": "LocationQueueStore.swift",
+      "extension": ".swift",
+      "size": 9633,
+      "modifiedAt": 1768881125721.3484,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Theme/DesignSystem.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Theme/DesignSystem.swift",
+      "name": "DesignSystem.swift",
+      "extension": ".swift",
+      "size": 12159,
+      "modifiedAt": 1768856359794.2,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Theme/WilsonTheme.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Theme/WilsonTheme.swift",
+      "name": "WilsonTheme.swift",
+      "extension": ".swift",
+      "size": 4394,
+      "modifiedAt": 1768862624409.3445,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Utilities/AnyCodable.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Utilities/AnyCodable.swift",
+      "name": "AnyCodable.swift",
+      "extension": ".swift",
+      "size": 2926,
+      "modifiedAt": 1768706575238.193,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Utilities/Formatters.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Utilities/Formatters.swift",
+      "name": "Formatters.swift",
+      "extension": ".swift",
+      "size": 6980,
+      "modifiedAt": 1768852916603.8188,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Utilities/SupabaseDecoder.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Utilities/SupabaseDecoder.swift",
+      "name": "SupabaseDecoder.swift",
+      "extension": ".swift",
+      "size": 1338,
+      "modifiedAt": 1768866603927.3657,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Utilities/WindowZoomManager.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Utilities/WindowZoomManager.swift",
+      "name": "WindowZoomManager.swift",
+      "extension": ".swift",
+      "size": 2250,
+      "modifiedAt": 1768875308679.6013,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Auth/AuthView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Auth/AuthView.swift",
+      "name": "AuthView.swift",
+      "extension": ".swift",
+      "size": 3571,
+      "modifiedAt": 1768838408482.7725,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/BrowserControls.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserControls.swift",
+      "name": "BrowserControls.swift",
+      "extension": ".swift",
+      "size": 6202,
+      "modifiedAt": 1768863024389.4211,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/BrowserSessionItem.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserSessionItem.swift",
+      "name": "BrowserSessionItem.swift",
+      "extension": ".swift",
+      "size": 9100,
+      "modifiedAt": 1768857995170.586,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/BrowserSessionView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserSessionView.swift",
+      "name": "BrowserSessionView.swift",
+      "extension": ".swift",
+      "size": 6005,
+      "modifiedAt": 1768868135817.9983,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/BrowserTabManager.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserTabManager.swift",
+      "name": "BrowserTabManager.swift",
+      "extension": ".swift",
+      "size": 3517,
+      "modifiedAt": 1768838408483.397,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/BrowserTabView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserTabView.swift",
+      "name": "BrowserTabView.swift",
+      "extension": ".swift",
+      "size": 5461,
+      "modifiedAt": 1768876561063.327,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/Components/EmptyBrowserView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/Components/EmptyBrowserView.swift",
+      "name": "EmptyBrowserView.swift",
+      "extension": ".swift",
+      "size": 1143,
+      "modifiedAt": 1768866406351.7354,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/InteractiveBrowserView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/InteractiveBrowserView.swift",
+      "name": "InteractiveBrowserView.swift",
+      "extension": ".swift",
+      "size": 2528,
+      "modifiedAt": 1768866968320.6396,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/InteractiveBrowserView+Configuration.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/InteractiveBrowserView+Configuration.swift",
+      "name": "InteractiveBrowserView+Configuration.swift",
+      "extension": ".swift",
+      "size": 5736,
+      "modifiedAt": 1768866925857.6716,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/InteractiveBrowserView+Coordinator.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/InteractiveBrowserView+Coordinator.swift",
+      "name": "InteractiveBrowserView+Coordinator.swift",
+      "extension": ".swift",
+      "size": 5150,
+      "modifiedAt": 1768866954888.4497,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/InteractiveBrowserView+DarkMode.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/InteractiveBrowserView+DarkMode.swift",
+      "name": "InteractiveBrowserView+DarkMode.swift",
+      "extension": ".swift",
+      "size": 5549,
+      "modifiedAt": 1768866955392.4712,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Browser/SafariBrowserWindow.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/SafariBrowserWindow.swift",
+      "name": "SafariBrowserWindow.swift",
+      "extension": ".swift",
+      "size": 1851,
+      "modifiedAt": 1768875683438.9148,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/CategoryConfigView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/CategoryConfigView.swift",
+      "name": "CategoryConfigView.swift",
+      "extension": ".swift",
+      "size": 4126,
+      "modifiedAt": 1768870349855.0735,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/CategoryConfigView+DataOperations.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/CategoryConfigView+DataOperations.swift",
+      "name": "CategoryConfigView+DataOperations.swift",
+      "extension": ".swift",
+      "size": 3261,
+      "modifiedAt": 1768867429701.9038,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/CategoryConfigView+Header.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/CategoryConfigView+Header.swift",
+      "name": "CategoryConfigView+Header.swift",
+      "extension": ".swift",
+      "size": 3077,
+      "modifiedAt": 1768868891560.6602,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/CategoryConfigView+Sections.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/CategoryConfigView+Sections.swift",
+      "name": "CategoryConfigView+Sections.swift",
+      "extension": ".swift",
+      "size": 6367,
+      "modifiedAt": 1768867429043.0652,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChat/ChatInputComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChat/ChatInputComponents.swift",
+      "name": "ChatInputComponents.swift",
+      "extension": ".swift",
+      "size": 3423,
+      "modifiedAt": 1768865176245.2275,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChat/ChatMessageRendering.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChat/ChatMessageRendering.swift",
+      "name": "ChatMessageRendering.swift",
+      "extension": ".swift",
+      "size": 2366,
+      "modifiedAt": 1768865165379.9182,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChat/ChatSuggestionsPanel.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChat/ChatSuggestionsPanel.swift",
+      "name": "ChatSuggestionsPanel.swift",
+      "extension": ".swift",
+      "size": 2679,
+      "modifiedAt": 1768865172543.7417,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChat/EnhancedChatView+QuickActions.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChat/EnhancedChatView+QuickActions.swift",
+      "name": "EnhancedChatView+QuickActions.swift",
+      "extension": ".swift",
+      "size": 1759,
+      "modifiedAt": 1768867700171.3396,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChat/EnhancedChatView+WelcomeView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChat/EnhancedChatView+WelcomeView.swift",
+      "name": "EnhancedChatView+WelcomeView.swift",
+      "extension": ".swift",
+      "size": 2391,
+      "modifiedAt": 1768867699335.0305,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChatStore.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChatStore.swift",
+      "name": "EnhancedChatStore.swift",
+      "extension": ".swift",
+      "size": 5270,
+      "modifiedAt": 1768867698274.3054,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/EnhancedChatView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/EnhancedChatView.swift",
+      "name": "EnhancedChatView.swift",
+      "extension": ".swift",
+      "size": 6196,
+      "modifiedAt": 1768867727485.4958,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/MarkdownCodeBlock.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/MarkdownCodeBlock.swift",
+      "name": "MarkdownCodeBlock.swift",
+      "extension": ".swift",
+      "size": 10762,
+      "modifiedAt": 1768862574736.6433,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/MarkdownParser.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/MarkdownParser.swift",
+      "name": "MarkdownParser.swift",
+      "extension": ".swift",
+      "size": 5427,
+      "modifiedAt": 1768862543287.2798,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/MarkdownTableBlocks.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/MarkdownTableBlocks.swift",
+      "name": "MarkdownTableBlocks.swift",
+      "extension": ".swift",
+      "size": 8104,
+      "modifiedAt": 1768862574741.519,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/MarkdownText.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/MarkdownText.swift",
+      "name": "MarkdownText.swift",
+      "extension": ".swift",
+      "size": 3547,
+      "modifiedAt": 1768862595327.1082,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/MarkdownTextBlocks.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/MarkdownTextBlocks.swift",
+      "name": "MarkdownTextBlocks.swift",
+      "extension": ".swift",
+      "size": 12484,
+      "modifiedAt": 1768862574729.8718,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Chat/TeamChatView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Chat/TeamChatView.swift",
+      "name": "TeamChatView.swift",
+      "extension": ".swift",
+      "size": 9430,
+      "modifiedAt": 1768870344267.8218,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/ContentView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/ContentView.swift",
+      "name": "ContentView.swift",
+      "extension": ".swift",
+      "size": 918,
+      "modifiedAt": 1768855816646.4746,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/EditorModels.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorModels.swift",
+      "name": "EditorModels.swift",
+      "extension": ".swift",
+      "size": 4390,
+      "modifiedAt": 1768877269321.8977,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/EditorPanelComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorPanelComponents.swift",
+      "name": "EditorPanelComponents.swift",
+      "extension": ".swift",
+      "size": 6673,
+      "modifiedAt": 1768860815104.6133,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/EditorSidebarView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorSidebarView.swift",
+      "name": "EditorSidebarView.swift",
+      "extension": ".swift",
+      "size": 5183,
+      "modifiedAt": 1768877394635.9512,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/EditorToolbarComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorToolbarComponents.swift",
+      "name": "EditorToolbarComponents.swift",
+      "extension": ".swift",
+      "size": 8648,
+      "modifiedAt": 1768877648145.116,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/EditorUIComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorUIComponents.swift",
+      "name": "EditorUIComponents.swift",
+      "extension": ".swift",
+      "size": 1722,
+      "modifiedAt": 1768868899116.4941,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/EditorWelcomeComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorWelcomeComponents.swift",
+      "name": "EditorWelcomeComponents.swift",
+      "extension": ".swift",
+      "size": 9132,
+      "modifiedAt": 1768876541003.3042,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/HotReloadComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/HotReloadComponents.swift",
+      "name": "HotReloadComponents.swift",
+      "extension": ".swift",
+      "size": 5668,
+      "modifiedAt": 1768876580321.7375,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/LocationDetailPanel.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/LocationDetailPanel.swift",
+      "name": "LocationDetailPanel.swift",
+      "extension": ".swift",
+      "size": 7665,
+      "modifiedAt": 1768877614532.804,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/OrderDetailPanel.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/OrderDetailPanel.swift",
+      "name": "OrderDetailPanel.swift",
+      "extension": ".swift",
+      "size": 26529,
+      "modifiedAt": 1768879612399.745,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/ProductEditor/FormFieldComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ProductEditor/FormFieldComponents.swift",
+      "name": "FormFieldComponents.swift",
+      "extension": ".swift",
+      "size": 4146,
+      "modifiedAt": 1768864742056.1885,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/ProductEditor/ProductDataSections.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ProductEditor/ProductDataSections.swift",
+      "name": "ProductDataSections.swift",
+      "extension": ".swift",
+      "size": 7878,
+      "modifiedAt": 1768864742062.1047,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/ProductEditorComponents.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ProductEditorComponents.swift",
+      "name": "ProductEditorComponents.swift",
+      "extension": ".swift",
+      "size": 8020,
+      "modifiedAt": 1768870338379.5156,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/ReactRenderTemplate.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ReactRenderTemplate.swift",
+      "name": "ReactRenderTemplate.swift",
+      "extension": ".swift",
+      "size": 41126,
+      "modifiedAt": 1768862856094.6284,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarBrowserSessionsSection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarBrowserSessionsSection.swift",
+      "name": "SidebarBrowserSessionsSection.swift",
+      "extension": ".swift",
+      "size": 3344,
+      "modifiedAt": 1768866518713.0447,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarCatalogsSection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarCatalogsSection.swift",
+      "name": "SidebarCatalogsSection.swift",
+      "extension": ".swift",
+      "size": 2876,
+      "modifiedAt": 1768866517011.725,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarCreationsSection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarCreationsSection.swift",
+      "name": "SidebarCreationsSection.swift",
+      "extension": ".swift",
+      "size": 4550,
+      "modifiedAt": 1768866517567.0862,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarEmptyState.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarEmptyState.swift",
+      "name": "SidebarEmptyState.swift",
+      "extension": ".swift",
+      "size": 1410,
+      "modifiedAt": 1768866515921.3457,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarLoadingState.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarLoadingState.swift",
+      "name": "SidebarLoadingState.swift",
+      "extension": ".swift",
+      "size": 630,
+      "modifiedAt": 1768866516457.4197,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarLocationsSection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarLocationsSection.swift",
+      "name": "SidebarLocationsSection.swift",
+      "extension": ".swift",
+      "size": 5121,
+      "modifiedAt": 1768877376785.0225,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarOrdersSection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarOrdersSection.swift",
+      "name": "SidebarOrdersSection.swift",
+      "extension": ".swift",
+      "size": 5610,
+      "modifiedAt": 1768877361582.7075,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarSearchBar.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarSearchBar.swift",
+      "name": "SidebarSearchBar.swift",
+      "extension": ".swift",
+      "size": 1730,
+      "modifiedAt": 1768866515465.131,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Editor/Sidebar/SidebarTeamChatSection.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarTeamChatSection.swift",
+      "name": "SidebarTeamChatSection.swift",
+      "extension": ".swift",
+      "size": 6792,
+      "modifiedAt": 1768880081914.19,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/EditorView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/EditorView.swift",
+      "name": "EditorView.swift",
+      "extension": ".swift",
+      "size": 12215,
+      "modifiedAt": 1768880269081.3086,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Queue/LocationQueueView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Queue/LocationQueueView.swift",
+      "name": "LocationQueueView.swift",
+      "extension": ".swift",
+      "size": 7581,
+      "modifiedAt": 1768881195358.6675,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Settings/SettingsView.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Settings/SettingsView.swift",
+      "name": "SettingsView.swift",
+      "extension": ".swift",
+      "size": 4006,
+      "modifiedAt": 1768706575245.3538,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/FieldSchemaSheets.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/FieldSchemaSheets.swift",
+      "name": "FieldSchemaSheets.swift",
+      "extension": ".swift",
+      "size": 14175,
+      "modifiedAt": 1768862195932.6812,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/NewCatalogSheet.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/NewCatalogSheet.swift",
+      "name": "NewCatalogSheet.swift",
+      "extension": ".swift",
+      "size": 5419,
+      "modifiedAt": 1768865310459.5505,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/NewCategorySheet.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/NewCategorySheet.swift",
+      "name": "NewCategorySheet.swift",
+      "extension": ".swift",
+      "size": 3742,
+      "modifiedAt": 1768865310945.7441,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/NewCollectionSheet.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/NewCollectionSheet.swift",
+      "name": "NewCollectionSheet.swift",
+      "extension": ".swift",
+      "size": 3564,
+      "modifiedAt": 1768865309569.8958,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/NewCreationSheet.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/NewCreationSheet.swift",
+      "name": "NewCreationSheet.swift",
+      "extension": ".swift",
+      "size": 5505,
+      "modifiedAt": 1768868907950.0361,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/NewStoreSheet.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/NewStoreSheet.swift",
+      "name": "NewStoreSheet.swift",
+      "extension": ".swift",
+      "size": 4067,
+      "modifiedAt": 1768865309975.634,
+      "type": "file"
+    },
+    {
+      "path": "SwagManager/Views/Sheets/PricingSchemaSheets.swift",
+      "absolutePath": "/Users/whale/Desktop/blackops/SwagManager/Views/Sheets/PricingSchemaSheets.swift",
+      "name": "PricingSchemaSheets.swift",
+      "extension": ".swift",
+      "size": 11071,
+      "modifiedAt": 1768862219463.9666,
+      "type": "file"
+    },
+    {
+      "path": "TEAM_CHANNELS_MIGRATION.md",
+      "absolutePath": "/Users/whale/Desktop/blackops/TEAM_CHANNELS_MIGRATION.md",
+      "name": "TEAM_CHANNELS_MIGRATION.md",
+      "extension": ".md",
+      "size": 4849,
+      "modifiedAt": 1768878097008.1416,
+      "type": "file"
+    }
+  ],
+  "symbols": [
+    {
+      "name": "applyMigration",
+      "kind": "function",
+      "file": "/Users/whale/Desktop/blackops/apply-channel-migration.js",
+      "line": 19,
+      "column": 1,
+      "signature": "async function applyMigration() {",
+      "exported": false
+    },
+    {
+      "name": "executeSql",
+      "kind": "function",
+      "file": "/Users/whale/Desktop/blackops/apply-migrations.js",
+      "line": 10,
+      "column": 1,
+      "signature": "async function executeSql(sql) {",
+      "exported": false
+    },
+    {
+      "name": "applyMigration",
+      "kind": "function",
+      "file": "/Users/whale/Desktop/blackops/apply-migrations.js",
+      "line": 44,
+      "column": 1,
+      "signature": "async function applyMigration(filePath) {",
+      "exported": false
+    },
+    {
+      "name": "main",
+      "kind": "function",
+      "file": "/Users/whale/Desktop/blackops/apply-migrations.js",
+      "line": 59,
+      "column": 1,
+      "signature": "async function main() {",
+      "exported": false
+    },
+    {
+      "name": "enableRealtime",
+      "kind": "function",
+      "file": "/Users/whale/Desktop/blackops/apply-realtime-migration.js",
+      "line": 13,
+      "column": 1,
+      "signature": "async function enableRealtime() {",
+      "exported": false
+    }
+  ]
+}

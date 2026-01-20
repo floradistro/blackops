@@ -40,6 +40,11 @@ enum OpenTabItem: Identifiable, Hashable {
     case conversation(Conversation)
     case category(Category)
     case browserSession(BrowserSession)
+    case order(Order)
+    case location(Location)
+    case queue(Location)
+    case customer(Customer)
+    case mcpServer(MCPServer)
 
     var id: String {
         switch self {
@@ -48,6 +53,11 @@ enum OpenTabItem: Identifiable, Hashable {
         case .conversation(let c): return "conversation-\(c.id)"
         case .category(let c): return "category-\(c.id)"
         case .browserSession(let s): return "browser-\(s.id)"
+        case .order(let o): return "order-\(o.id)"
+        case .location(let l): return "location-\(l.id)"
+        case .queue(let l): return "queue-\(l.id)"
+        case .customer(let c): return "customer-\(c.id)"
+        case .mcpServer(let m): return "mcp-\(m.id)"
         }
     }
 
@@ -58,6 +68,11 @@ enum OpenTabItem: Identifiable, Hashable {
         case .conversation(let c): return c.displayTitle
         case .category(let c): return c.name
         case .browserSession(let s): return s.displayName
+        case .order(let o): return o.displayTitle
+        case .location(let l): return l.name
+        case .queue(let l): return "\(l.name) Queue"
+        case .customer(let c): return c.displayName
+        case .mcpServer(let m): return m.displayName
         }
     }
 
@@ -77,6 +92,11 @@ enum OpenTabItem: Identifiable, Hashable {
         case .conversation(let c): return c.chatTypeIcon
         case .category: return "folder"
         case .browserSession: return "globe"
+        case .order(let o): return o.orderTypeIcon
+        case .location: return "mappin.and.ellipse"
+        case .queue: return "person.3.fill"
+        case .customer(let c): return c.statusIcon
+        case .mcpServer(let m): return m.typeIcon
         }
     }
 
@@ -87,6 +107,11 @@ enum OpenTabItem: Identifiable, Hashable {
         case .conversation: return .blue
         case .category: return .orange
         case .browserSession: return .cyan
+        case .order(let o): return o.statusColor
+        case .location: return .purple
+        case .queue: return .blue
+        case .customer(let c): return Color(c.statusColor)
+        case .mcpServer(let m): return m.typeColor
         }
     }
 
@@ -108,6 +133,11 @@ enum OpenTabItem: Identifiable, Hashable {
         case .conversation: return "◈"
         case .category: return "▢"
         case .browserSession: return "◎"
+        case .order: return "⬡"
+        case .location: return "⌘"
+        case .queue: return "⚡"
+        case .customer(let c): return c.terminalIcon
+        case .mcpServer(let m): return m.serverType.terminalIcon
         }
     }
 
@@ -119,6 +149,11 @@ enum OpenTabItem: Identifiable, Hashable {
         case .conversation: return .purple
         case .category: return .yellow
         case .browserSession: return .cyan
+        case .order: return .orange
+        case .location: return .purple
+        case .queue: return .blue
+        case .customer(let c): return Color(c.terminalColor)
+        case .mcpServer(let m): return m.typeColor
         }
     }
 
