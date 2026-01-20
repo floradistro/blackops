@@ -85,7 +85,7 @@ struct SidebarPanel: View {
     @ViewBuilder
     private var sidebarContent: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
+            VStack(alignment: .leading, spacing: 0) {
                 SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.top, DesignSystem.Spacing.xxs)
 
@@ -103,8 +103,8 @@ struct SidebarPanel: View {
                 SidebarBrowserSessionsSection(store: store)
             }
             .padding(.vertical, DesignSystem.Spacing.xxs)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxHeight: .infinity)
         .scrollBounceBehavior(.always)
     }
 }
