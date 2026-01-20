@@ -319,6 +319,10 @@ class EditorStore: ObservableObject {
     @Published var emails: [ResendEmail] = []
     @Published var selectedEmail: ResendEmail?
     @Published var sidebarEmailsExpanded = false
+    @Published var isLoadingEmails = false
+    @Published var emailTotalCount: Int = 0
+    @Published var emailCategoryCounts: [String: Int] = [:]
+    @Published var loadedCategories: Set<String> = [] // Track which categories have loaded emails
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []

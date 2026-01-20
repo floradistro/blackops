@@ -1,0 +1,19 @@
+{
+  "" : {
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache-primary.dia",
+    "emit-module-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache-primary-emit-module.dia",
+    "pch" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache-primary.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/LRUCache/Sources/LRUCache.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.dia",
+    "index-unit-output-path" : "/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.o",
+    "llvm-bc" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.bc",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache.swiftdeps",
+    "swiftmodule" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/LRUCache.build/Debug/LRUCache.build/Objects-normal/arm64/LRUCache~partial.swiftmodule"
+  }
+}

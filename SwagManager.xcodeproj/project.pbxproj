@@ -81,6 +81,7 @@
 		8CD78421C2637C2D5F88A43A /* LocationDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4685DF3978AF967D1A41A97 /* LocationDetailPanel.swift */; };
 		90C3C0369B9B6B90E811AE8D /* ProductSchemaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F94E64A9DC0C3DB0DDB99B9 /* ProductSchemaService.swift */; };
 		9355917976DFD7DCE615719F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13E9796FDD6C45C1E624D9B /* ChatService.swift */; };
+		99F7D86E9CCBDF17EA993985 /* EmailCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = E679485E9F62BF1F1D0496D5 /* EmailCategory.swift */; };
 		9C02DD38BDB8C9A82BAE099E /* LocationDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BFCD28BA63C68E24475B335 /* LocationDetailPanel.swift */; };
 		A311162A2D7B94BCA638B7A3 /* PricingSchemaSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43041469A40063BA9CA998E1 /* PricingSchemaSheets.swift */; };
 		A3C6743F87A05A55C6CC2BDE /* EditorUIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D5D947EFC2A41C1512D3C2 /* EditorUIComponents.swift */; };
@@ -146,6 +147,7 @@
 		D3CD51E01ABFC86844BA4797 /* ConversationTreeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 665D9F4AF3E2F177931D0AD8 /* ConversationTreeComponents.swift */; };
 		D3E5C4F5B7A8901234567890 /* ChatStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F6D5G6C8B9012345678901 /* ChatStore.swift */; };
 		D8A4DA2D9326FB8C2524631E /* EditorStore+CategoryHierarchy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0593AC952EEA0C69C0B00A9B /* EditorStore+CategoryHierarchy.swift */; };
+		DBDE6A556F23FB6AC8DB61DA /* EmailCategorySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1762D1EB98D85ED3D194398A /* EmailCategorySection.swift */; };
 		DF53F2F9F0425CECFC401881 /* EditorPanelComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2838530950992B2372F9AD11 /* EditorPanelComponents.swift */; };
 		E26CCFE2D892FAAEAF15BEFB /* ReactRenderTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */; };
 		E65D847A2AF097606952D703 /* EditorStore+Customers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 478D246137C60F1798553032 /* EditorStore+Customers.swift */; };
@@ -170,6 +172,7 @@
 		0E5061F1D58EAD698860FCC6 /* MCPTestRunner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MCPTestRunner.swift; path = SwagManager/Services/MCPTestRunner.swift; sourceTree = "<group>"; };
 		1384502F94A273E8E462DCA3 /* MCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MCPServer.swift; path = SwagManager/Models/MCPServer.swift; sourceTree = "<group>"; };
 		13AC7CCBC4DCC5B56C08CD8E /* EditorStore+Zoom.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+Zoom.swift"; sourceTree = "<group>"; };
+		1762D1EB98D85ED3D194398A /* EmailCategorySection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EmailCategorySection.swift; path = SwagManager/Views/Editor/Sidebar/EmailCategorySection.swift; sourceTree = "<group>"; };
 		179843FC4D5653733EDE4E08 /* EnhancedChatView+QuickActions.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EnhancedChatView+QuickActions.swift"; sourceTree = "<group>"; };
 		18446BCB78F42A59D8E7DCAE /* TreeSectionComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TreeSectionComponents.swift; sourceTree = "<group>"; };
 		18BDF648DCD5D976C0A43897 /* ProductSchemaService+PricingSchemas.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ProductSchemaService+PricingSchemas.swift"; sourceTree = "<group>"; };
@@ -280,6 +283,7 @@
 		E13E9796FDD6C45C1E624D9B /* ChatService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		E16626E4BEA5C99026F8165F /* LocationQueueStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocationQueueStore.swift; path = SwagManager/Stores/LocationQueueStore.swift; sourceTree = "<group>"; };
 		E4F6D5G6C8B9012345678901 /* ChatStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatStore.swift; sourceTree = "<group>"; };
+		E679485E9F62BF1F1D0496D5 /* EmailCategory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EmailCategory.swift; path = SwagManager/Models/EmailCategory.swift; sourceTree = "<group>"; };
 		E8DEB09AD0B10D4B47015288 /* SidebarLocationsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarLocationsSection.swift; sourceTree = "<group>"; };
 		EBA3593C2B10866A7D964F19 /* MCPEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MCPEditorView.swift; path = SwagManager/Views/MCP/MCPEditorView.swift; sourceTree = "<group>"; };
 		F02AF96328BE578E43804220 /* MarkdownParser.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownParser.swift; sourceTree = "<group>"; };
@@ -467,6 +471,8 @@
 				DEA9C2AF2568CB069636E24B /* LocationQueueService.swift */,
 				AC8B6FFCF613C621FBF93F8E /* EditorStore+QueueManagement.swift */,
 				E16626E4BEA5C99026F8165F /* LocationQueueStore.swift */,
+				E679485E9F62BF1F1D0496D5 /* EmailCategory.swift */,
+				1762D1EB98D85ED3D194398A /* EmailCategorySection.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -897,6 +903,8 @@
 				B9C7BE41E5197E8C0BEF5856 /* LocationQueueService.swift in Sources */,
 				F18A8C7AEF81C8E2D6D09479 /* EditorStore+QueueManagement.swift in Sources */,
 				2F0B076C28F367AE696B3F6D /* LocationQueueStore.swift in Sources */,
+				99F7D86E9CCBDF17EA993985 /* EmailCategory.swift in Sources */,
+				DBDE6A556F23FB6AC8DB61DA /* EmailCategorySection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

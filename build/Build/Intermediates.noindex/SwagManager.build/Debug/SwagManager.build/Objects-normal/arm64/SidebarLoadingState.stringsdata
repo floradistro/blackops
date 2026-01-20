@@ -1,0 +1,16 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarLoadingState.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Loading...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 14
+        }
+      }
+    ]
+  },
+  "version": 1
+}

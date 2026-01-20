@@ -1,0 +1,24 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarEmptyState.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No Store Selected",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 18
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create Store",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 27
+        }
+      }
+    ]
+  },
+  "version": 1
+}

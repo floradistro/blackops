@@ -1,0 +1,86 @@
+{
+  "/Users/whale/Desktop/blackops/SwagManager/Components/BrowserComponents.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserComponents.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserComponents.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserComponents.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserComponents.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserComponents.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Components/FloatingContextBar.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/FloatingContextBar.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/FloatingContextBar.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/FloatingContextBar.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/FloatingContextBar.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/FloatingContextBar.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Services/CatalogService.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CatalogService.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CatalogService.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CatalogService.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CatalogService.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CatalogService.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Services/CreationService.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CreationService.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CreationService.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CreationService.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CreationService.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CreationService.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserTabManager.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabManager.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabManager.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabManager.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabManager.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabManager.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserTabView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/BrowserTabView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/CategoryConfigView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CategoryConfigView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CategoryConfigView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CategoryConfigView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CategoryConfigView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/CategoryConfigView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorPanelComponents.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorPanelComponents.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorPanelComponents.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorPanelComponents.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorPanelComponents.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorPanelComponents.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorToolbarComponents.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorToolbarComponents.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorToolbarComponents.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorToolbarComponents.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorToolbarComponents.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorToolbarComponents.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorWelcomeComponents.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorWelcomeComponents.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorWelcomeComponents.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorWelcomeComponents.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorWelcomeComponents.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorWelcomeComponents.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/HotReloadComponents.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/HotReloadComponents.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/HotReloadComponents.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/HotReloadComponents.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/HotReloadComponents.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/HotReloadComponents.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ProductEditorComponents.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ProductEditorComponents.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ProductEditorComponents.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ProductEditorComponents.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ProductEditorComponents.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ProductEditorComponents.swiftdeps"
+  }
+}

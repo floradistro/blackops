@@ -1,0 +1,30 @@
+{
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/SwiftSoup/Sources/QueryParserCache.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/QueryParserCache.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/QueryParserCache.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/QueryParserCache.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/QueryParserCache.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/QueryParserCache.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/SwiftSoup/Sources/StreamReader.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StreamReader.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StreamReader.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StreamReader.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StreamReader.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StreamReader.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/SwiftSoup/Sources/String.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/String.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/String.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/String.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/String.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/String.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/SwiftSoup/Sources/StringBuilder.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StringBuilder.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StringBuilder.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StringBuilder.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StringBuilder.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwiftSoup.build/Debug/SwiftSoup.build/Objects-normal/arm64/StringBuilder.swiftdeps"
+  }
+}

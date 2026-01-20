@@ -1,0 +1,16 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarSearchBar.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Search",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 18
+        }
+      }
+    ]
+  },
+  "version": 1
+}

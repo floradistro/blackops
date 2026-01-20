@@ -1,0 +1,24 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/EditorToolbarComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%@ Queue",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 202
+        }
+      }
+    ]
+  },
+  "version": 1
+}

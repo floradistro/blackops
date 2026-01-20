@@ -1,0 +1,59 @@
+{
+  "" : {
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Supabase-primary.dia",
+    "emit-module-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Supabase-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Supabase-primary-emit-module.dia",
+    "pch" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Supabase-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Supabase-primary.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/supabase-swift/Sources/Supabase/Constants.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.dia",
+    "index-unit-output-path" : "/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.o",
+    "llvm-bc" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.bc",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants.swiftdeps",
+    "swiftmodule" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Constants~partial.swiftmodule"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/supabase-swift/Sources/Supabase/Deprecated.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.dia",
+    "index-unit-output-path" : "/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.o",
+    "llvm-bc" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.bc",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated.swiftdeps",
+    "swiftmodule" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Deprecated~partial.swiftmodule"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/supabase-swift/Sources/Supabase/Exports.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.dia",
+    "index-unit-output-path" : "/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.o",
+    "llvm-bc" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.bc",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports.swiftdeps",
+    "swiftmodule" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Exports~partial.swiftmodule"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/supabase-swift/Sources/Supabase/SupabaseClient.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.dia",
+    "index-unit-output-path" : "/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.o",
+    "llvm-bc" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.bc",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient.swiftdeps",
+    "swiftmodule" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/SupabaseClient~partial.swiftmodule"
+  },
+  "/Users/whale/Desktop/blackops/build/SourcePackages/checkouts/supabase-swift/Sources/Supabase/Types.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.dia",
+    "index-unit-output-path" : "/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.o",
+    "llvm-bc" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.bc",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types.swiftdeps",
+    "swiftmodule" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/Supabase.build/Debug/Supabase.build/Objects-normal/arm64/Types~partial.swiftmodule"
+  }
+}

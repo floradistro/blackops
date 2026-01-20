@@ -1,0 +1,16 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserSessionView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No URL available",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 69
+        }
+      }
+    ]
+  },
+  "version": 1
+}

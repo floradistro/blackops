@@ -1,0 +1,48 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Components/ButtonStyles.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Primary Action",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Secondary Action",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pill Button",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Minimal Link",
+        "location": {
+          "startingColumn": 1,
+          "startingLine": 182
+        }
+      }
+    ]
+  },
+  "version": 1
+}

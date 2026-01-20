@@ -1,0 +1,16 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ProductEditor/ProductDataSections.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "(%@ %@)",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 100
+        }
+      }
+    ]
+  },
+  "version": 1
+}

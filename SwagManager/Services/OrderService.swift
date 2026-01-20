@@ -27,25 +27,36 @@ final class OrderService {
 
     // MARK: - Fetch Orders
 
-    func fetchOrders(storeId: UUID, status: String? = nil, limit: Int = 100) async throws -> [Order] {
-        if let status = status {
-            return try await client.from("orders")
+    func fetchOrders(storeId: UUID, status: String? = nil) async throws -> [Order] {
+        // Paginate to get ALL orders (Supabase hard limit is 1000 per query)
+        var allOrders: [Order] = []
+        let batchSize = 1000
+        var offset = 0
+
+        while true {
+            var query = client.from("orders")
                 .select(orderSelectColumns)
                 .eq("store_id", value: storeId)
-                .eq("status", value: status)
+
+            if let status = status {
+                query = query.eq("status", value: status)
+            }
+
+            let batch: [Order] = try await query
                 .order("created_at", ascending: false)
-                .limit(limit)
+                .range(from: offset, to: offset + batchSize - 1)
                 .execute()
                 .value
-        } else {
-            return try await client.from("orders")
-                .select(orderSelectColumns)
-                .eq("store_id", value: storeId)
-                .order("created_at", ascending: false)
-                .limit(limit)
-                .execute()
-                .value
+
+            allOrders.append(contentsOf: batch)
+
+            if batch.count < batchSize {
+                break // No more orders
+            }
+            offset += batchSize
         }
+
+        return allOrders
     }
 
     func fetchOrder(id: UUID) async throws -> Order {
@@ -57,25 +68,57 @@ final class OrderService {
             .value
     }
 
-    func fetchOrdersByLocation(locationId: UUID, limit: Int = 50) async throws -> [Order] {
-        return try await client.from("orders")
-            .select(orderSelectColumns)
-            .eq("location_id", value: locationId)
-            .order("created_at", ascending: false)
-            .limit(limit)
-            .execute()
-            .value
+    func fetchOrdersByLocation(locationId: UUID) async throws -> [Order] {
+        // Paginate to get ALL orders for location (Supabase hard limit is 1000 per query)
+        var allOrders: [Order] = []
+        let batchSize = 1000
+        var offset = 0
+
+        while true {
+            let batch: [Order] = try await client.from("orders")
+                .select(orderSelectColumns)
+                .eq("location_id", value: locationId)
+                .order("created_at", ascending: false)
+                .range(from: offset, to: offset + batchSize - 1)
+                .execute()
+                .value
+
+            allOrders.append(contentsOf: batch)
+
+            if batch.count < batchSize {
+                break // No more orders
+            }
+            offset += batchSize
+        }
+
+        return allOrders
     }
 
-    func fetchOrdersByStatus(storeId: UUID, status: String, limit: Int = 50) async throws -> [Order] {
-        return try await client.from("orders")
-            .select(orderSelectColumns)
-            .eq("store_id", value: storeId)
-            .eq("status", value: status)
-            .order("created_at", ascending: false)
-            .limit(limit)
-            .execute()
-            .value
+    func fetchOrdersByStatus(storeId: UUID, status: String) async throws -> [Order] {
+        // Paginate to get ALL orders by status (Supabase hard limit is 1000 per query)
+        var allOrders: [Order] = []
+        let batchSize = 1000
+        var offset = 0
+
+        while true {
+            let batch: [Order] = try await client.from("orders")
+                .select(orderSelectColumns)
+                .eq("store_id", value: storeId)
+                .eq("status", value: status)
+                .order("created_at", ascending: false)
+                .range(from: offset, to: offset + batchSize - 1)
+                .execute()
+                .value
+
+            allOrders.append(contentsOf: batch)
+
+            if batch.count < batchSize {
+                break // No more orders
+            }
+            offset += batchSize
+        }
+
+        return allOrders
     }
 
     func fetchRecentOrders(storeId: UUID, limit: Int = 20) async throws -> [Order] {
@@ -87,6 +130,8 @@ final class OrderService {
             .execute()
             .value
     }
+
+    // Note: fetchRecentOrders keeps a limit parameter for performance on dashboards/widgets
 
     // MARK: - Update Order
 

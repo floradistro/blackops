@@ -359,20 +359,20 @@ class SupabaseService {
 
     // MARK: - Orders
 
-    func fetchOrders(storeId: UUID, status: String? = nil, limit: Int = 100) async throws -> [Order] {
-        try await orders.fetchOrders(storeId: storeId, status: status, limit: limit)
+    func fetchOrders(storeId: UUID, status: String? = nil) async throws -> [Order] {
+        try await orders.fetchOrders(storeId: storeId, status: status)
     }
 
     func fetchOrder(id: UUID) async throws -> Order {
         try await orders.fetchOrder(id: id)
     }
 
-    func fetchOrdersByLocation(locationId: UUID, limit: Int = 50) async throws -> [Order] {
-        try await orders.fetchOrdersByLocation(locationId: locationId, limit: limit)
+    func fetchOrdersByLocation(locationId: UUID) async throws -> [Order] {
+        try await orders.fetchOrdersByLocation(locationId: locationId)
     }
 
-    func fetchOrdersByStatus(storeId: UUID, status: String, limit: Int = 50) async throws -> [Order] {
-        try await orders.fetchOrdersByStatus(storeId: storeId, status: status, limit: limit)
+    func fetchOrdersByStatus(storeId: UUID, status: String) async throws -> [Order] {
+        try await orders.fetchOrdersByStatus(storeId: storeId, status: status)
     }
 
     func fetchRecentOrders(storeId: UUID, limit: Int = 20) async throws -> [Order] {

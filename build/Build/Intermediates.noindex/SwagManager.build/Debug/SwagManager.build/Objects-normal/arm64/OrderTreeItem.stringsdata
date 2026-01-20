@@ -1,0 +1,16 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/OrderTreeItem.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 87
+        }
+      }
+    ]
+  },
+  "version": 1
+}

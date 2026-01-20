@@ -1,0 +1,72 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Views/Browser/BrowserControls.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Forward",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stop",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refresh",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disable Dark Mode",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable Dark Mode",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "New tab",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter URL or search...",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 84
+        }
+      }
+    ]
+  },
+  "version": 1
+}

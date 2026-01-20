@@ -12,6 +12,7 @@ struct ResendEmail: Codable, Identifiable, Hashable {
     let campaignId: UUID?
     let templateId: UUID?
     let emailType: String // transactional, marketing
+    let category: String? // Granular category (auth_password_reset, order_shipped, etc.)
     let toEmail: String
     let toName: String?
     let fromEmail: String
@@ -38,6 +39,7 @@ struct ResendEmail: Codable, Identifiable, Hashable {
         case campaignId = "campaign_id"
         case templateId = "template_id"
         case emailType = "email_type"
+        case category
         case toEmail = "to_email"
         case toName = "to_name"
         case fromEmail = "from_email"
@@ -96,6 +98,54 @@ struct ResendEmail: Codable, Identifiable, Hashable {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    // MARK: - Category Properties
+
+    /// Parsed email category enum (converts String to EmailCategory)
+    var categoryEnum: EmailCategory? {
+        guard let category = category else { return nil }
+        return EmailCategory(rawValue: category)
+    }
+
+    /// Display name for the category (e.g., "Password Reset", "Order Shipped")
+    var categoryDisplayName: String {
+        categoryEnum?.displayName ?? "Uncategorized"
+    }
+
+    /// SF Symbol icon for the category
+    var categoryIcon: String {
+        categoryEnum?.icon ?? "envelope.fill"
+    }
+
+    /// Semantic color for the category
+    var categoryColor: Color {
+        categoryEnum?.color ?? .gray
+    }
+
+    /// The group this email belongs to (Authentication, Orders, Marketing, etc.)
+    var categoryGroup: EmailCategory.Group? {
+        categoryEnum?.group
+    }
+
+    /// Whether this is an authentication-related email
+    var isAuthEmail: Bool {
+        categoryGroup == .authentication
+    }
+
+    /// Whether this is an order-related email
+    var isOrderEmail: Bool {
+        categoryGroup == .orders
+    }
+
+    /// Whether this is a marketing email
+    var isMarketingEmail: Bool {
+        categoryGroup == .campaigns
+    }
+
+    /// Whether this is a loyalty/retention email
+    var isLoyaltyEmail: Bool {
+        categoryGroup == .loyalty
     }
 }
 

@@ -13,14 +13,14 @@ extension EditorStore {
         do {
             let response = try await supabase.client
                 .from("ai_tool_registry")
-                .select()
+                .select("*")  // Explicitly select all columns
                 .eq("is_active", value: true)
                 .order("name")
                 .execute()
 
             // Log raw response for debugging
             if let jsonString = String(data: response.data, encoding: .utf8) {
-                NSLog("[EditorStore] Raw response (first 500 chars): \(String(jsonString.prefix(500)))")
+                NSLog("[EditorStore] Raw response (first 2000 chars): \(String(jsonString.prefix(2000)))")
             }
 
             NSLog("[EditorStore] Response data size: \(response.data.count) bytes")

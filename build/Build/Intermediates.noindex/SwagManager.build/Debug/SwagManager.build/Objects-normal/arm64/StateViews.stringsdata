@@ -1,0 +1,16 @@
+{
+  "source": "/Users/whale/Desktop/blackops/SwagManager/Components/StateViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Try Again",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 151
+        }
+      }
+    ]
+  },
+  "version": 1
+}

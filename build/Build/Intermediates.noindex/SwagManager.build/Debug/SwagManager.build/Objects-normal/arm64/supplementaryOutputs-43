@@ -1,0 +1,86 @@
+{
+  "/Users/whale/Desktop/blackops/SwagManager/Models/Customer.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Customer.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Customer.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Customer.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Customer.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Customer.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Services/MCPMonitor.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitor.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitor.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitor.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitor.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitor.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+MCPServers.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+MCPServers.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+MCPServers.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+MCPServers.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+MCPServers.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+MCPServers.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+Resend.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Resend.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Resend.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Resend.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Resend.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Resend.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/MCPServerDetailView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPServerDetailView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPServerDetailView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPServerDetailView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPServerDetailView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPServerDetailView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/ResendEmailDetailPanel.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmailDetailPanel.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmailDetailPanel.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmailDetailPanel.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmailDetailPanel.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmailDetailPanel.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarResendSection.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarResendSection.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarResendSection.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarResendSection.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarResendSection.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarResendSection.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/MCP/ExecutionDetailView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetailView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetailView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetailView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetailView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetailView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/MCP/ExecutionHistoryView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionHistoryView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionHistoryView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionHistoryView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionHistoryView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionHistoryView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/MCP/MCPEditorView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditorView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditorView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditorView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditorView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditorView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/MCP/MCPMonitoringView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitoringView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitoringView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitoringView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitoringView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPMonitoringView.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/MCP/MCPTestView.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestView.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestView.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestView.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestView.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestView.swiftdeps"
+  }
+}

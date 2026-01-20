@@ -49,7 +49,7 @@ struct ResendEmailDetailPanel: View {
             // Refresh button
             Button(action: {
                 Task {
-                    await store.loadEmails()
+                    await store.refreshEmails()
                 }
             }) {
                 HStack(spacing: 4) {

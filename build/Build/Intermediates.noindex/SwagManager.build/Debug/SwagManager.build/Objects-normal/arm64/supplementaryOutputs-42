@@ -1,0 +1,86 @@
+{
+  "/Users/whale/Desktop/blackops/SwagManager/Components/Tree/OrderTreeItem.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderTreeItem-e3b0d38a48e5d2675bff0ab4721b8443.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderTreeItem-e3b0d38a48e5d2675bff0ab4721b8443.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderTreeItem-e3b0d38a48e5d2675bff0ab4721b8443.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderTreeItem-e3b0d38a48e5d2675bff0ab4721b8443.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderTreeItem-e3b0d38a48e5d2675bff0ab4721b8443.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Models/ExecutionDetail.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetail.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetail.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetail.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetail.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ExecutionDetail.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Models/Order.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Order-0c777467f9a0fa9f826eb37c084616d4.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Order-0c777467f9a0fa9f826eb37c084616d4.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Order-0c777467f9a0fa9f826eb37c084616d4.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Order-0c777467f9a0fa9f826eb37c084616d4.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/Order-0c777467f9a0fa9f826eb37c084616d4.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Models/ResendEmail.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmail.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmail.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmail.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmail.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/ResendEmail.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Services/MCPEditor.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditor.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditor.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditor.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditor.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPEditor.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Services/MCPTestRunner.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestRunner.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestRunner.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestRunner.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestRunner.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/MCPTestRunner.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Services/OrderService.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderService-1f9a7b2380a55eee275fb861ff0895da.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderService-1f9a7b2380a55eee275fb861ff0895da.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderService-1f9a7b2380a55eee275fb861ff0895da.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderService-1f9a7b2380a55eee275fb861ff0895da.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderService-1f9a7b2380a55eee275fb861ff0895da.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Stores/EditorStore+Orders.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Orders-d67b27e24841b1225931ffbd3405a2f2.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Orders-d67b27e24841b1225931ffbd3405a2f2.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Orders-d67b27e24841b1225931ffbd3405a2f2.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Orders-d67b27e24841b1225931ffbd3405a2f2.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/EditorStore+Orders-d67b27e24841b1225931ffbd3405a2f2.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/LocationDetailPanel.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/LocationDetailPanel-943fc6aa2488fe46f3af5b17e01bc15c.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/LocationDetailPanel-943fc6aa2488fe46f3af5b17e01bc15c.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/LocationDetailPanel-943fc6aa2488fe46f3af5b17e01bc15c.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/LocationDetailPanel-943fc6aa2488fe46f3af5b17e01bc15c.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/LocationDetailPanel-943fc6aa2488fe46f3af5b17e01bc15c.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/OrderDetailPanel.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderDetailPanel-a2f427fa4178f00c30e34e799fa9e7bf.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderDetailPanel-a2f427fa4178f00c30e34e799fa9e7bf.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderDetailPanel-a2f427fa4178f00c30e34e799fa9e7bf.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderDetailPanel-a2f427fa4178f00c30e34e799fa9e7bf.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/OrderDetailPanel-a2f427fa4178f00c30e34e799fa9e7bf.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarLocationsSection.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarLocationsSection-b0b4b1b98de84f04e80236ba4d14e026.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarLocationsSection-b0b4b1b98de84f04e80236ba4d14e026.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarLocationsSection-b0b4b1b98de84f04e80236ba4d14e026.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarLocationsSection-b0b4b1b98de84f04e80236ba4d14e026.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarLocationsSection-b0b4b1b98de84f04e80236ba4d14e026.swiftdeps"
+  },
+  "/Users/whale/Desktop/blackops/SwagManager/Views/Editor/Sidebar/SidebarOrdersSection.swift" : {
+    "const-values" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarOrdersSection-e03cbf3f572daa9ccbc9245d9d474a58.swiftconstvalues",
+    "dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarOrdersSection-e03cbf3f572daa9ccbc9245d9d474a58.d",
+    "diagnostics" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarOrdersSection-e03cbf3f572daa9ccbc9245d9d474a58.dia",
+    "object" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarOrdersSection-e03cbf3f572daa9ccbc9245d9d474a58.o",
+    "swift-dependencies" : "/Users/whale/Desktop/blackops/build/Build/Intermediates.noindex/SwagManager.build/Debug/SwagManager.build/Objects-normal/arm64/SidebarOrdersSection-e03cbf3f572daa9ccbc9245d9d474a58.swiftdeps"
+  }
+}

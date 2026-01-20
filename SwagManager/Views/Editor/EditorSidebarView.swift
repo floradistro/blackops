@@ -61,8 +61,8 @@ struct SidebarPanel: View {
                 if store.locations.isEmpty {
                     await store.loadLocations()
                 }
-                if store.emails.isEmpty {
-                    await store.loadEmails()
+                if store.emailTotalCount == 0 {
+                    await store.loadEmailCounts()
                 }
             }
             if store.mcpServers.isEmpty {
@@ -74,7 +74,7 @@ struct SidebarPanel: View {
                 await store.loadBrowserSessions()
                 await store.loadOrders()
                 await store.loadLocations()
-                await store.loadEmails()
+                await store.loadEmailCounts()
             }
         }
         .onChange(of: searchText) { _, newValue in
@@ -119,9 +119,6 @@ struct SidebarPanel: View {
 
                 // SidebarCustomersSection(store: store)
                 // Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
-                SidebarOrdersSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
                 SidebarLocationsSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
