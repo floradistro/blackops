@@ -5,18 +5,122 @@ import SwiftUI
 
 struct SidebarCustomersSection: View {
     @ObservedObject var store: EditorStore
-    @State private var expandedTiers: Set<String> = ["platinum", "gold"]
+    @State private var expandedTiers: Set<String> = []
     @State private var searchQuery: String = ""
+    @State private var selectedSegment: CustomerSegment = .all
+
+    enum CustomerSegment: String, CaseIterable {
+        case all = "All"
+        case vip = "VIP"
+        case platinum = "Platinum"
+        case gold = "Gold"
+        case silver = "Silver"
+        case bronze = "Bronze"
+        case verified = "Verified"
+        case active = "Active"
+
+        var icon: String {
+            switch self {
+            case .all: return "person.2"
+            case .vip: return "star.fill"
+            case .platinum: return "star.circle.fill"
+            case .gold: return "star.fill"
+            case .silver: return "star"
+            case .bronze: return "star.leadinghalf.filled"
+            case .verified: return "checkmark.shield"
+            case .active: return "checkmark.circle"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .all: return .blue
+            case .vip: return .purple
+            case .platinum: return .purple
+            case .gold: return .yellow
+            case .silver: return .gray
+            case .bronze: return .orange
+            case .verified: return .green
+            case .active: return .green
+            }
+        }
+    }
+
+    var filteredCustomers: [Customer] {
+        switch selectedSegment {
+        case .all: return store.customers
+        case .vip: return store.customers.filter { ($0.lifetimeValue ?? 0) >= 1000 || $0.idVerified == true }
+        case .platinum: return store.platinumCustomers
+        case .gold: return store.goldCustomers
+        case .silver: return store.silverCustomers
+        case .bronze: return store.bronzeCustomers
+        case .verified: return store.verifiedCustomers
+        case .active: return store.activeCustomers
+        }
+    }
+
+    var filteredGroupedCustomers: [(letter: String, customers: [Customer])] {
+        let grouped = Dictionary(grouping: filteredCustomers) { customer -> String in
+            let name = customer.displayName.uppercased()
+            if let first = name.first, first.isLetter {
+                return String(first)
+            }
+            return "#"
+        }
+        return grouped.sorted { $0.key < $1.key }.map { (letter: $0.key, customers: $0.value.sorted { $0.displayName < $1.displayName }) }
+    }
 
     var body: some View {
         TreeSectionHeader(
             title: "CUSTOMERS",
             isExpanded: $store.sidebarCustomersExpanded,
-            count: store.customers.count
+            count: filteredCustomers.count
         )
         .padding(.top, DesignSystem.Spacing.xxs)
 
         if store.sidebarCustomersExpanded {
+            // Segment selector dropdown
+            Menu {
+                ForEach(CustomerSegment.allCases, id: \.self) { segment in
+                    Button {
+                        withAnimation(DesignSystem.Animation.fast) {
+                            selectedSegment = segment
+                        }
+                    } label: {
+                        Label(segment.rawValue, systemImage: segment.icon)
+                    }
+                }
+            } label: {
+                HStack(spacing: DesignSystem.Spacing.xs) {
+                    Image(systemName: selectedSegment.icon)
+                        .font(.system(size: 11))
+                        .foregroundColor(selectedSegment.color)
+
+                    Text(selectedSegment.rawValue)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+                .padding(.horizontal, DesignSystem.Spacing.sm)
+                .padding(.vertical, DesignSystem.Spacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(selectedSegment.color.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(selectedSegment.color.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, DesignSystem.Spacing.sm)
+            .padding(.bottom, DesignSystem.Spacing.xs)
+
             // Search bar
             HStack(spacing: DesignSystem.Spacing.xs) {
                 Image(systemName: "magnifyingglass")
@@ -91,70 +195,15 @@ struct SidebarCustomersSection: View {
                 .padding(.bottom, DesignSystem.Spacing.sm)
             }
 
-            // Customer groups by tier
+            // Customer groups alphabetically (Apple Contacts style)
             if searchQuery.isEmpty {
-                // Platinum Customers
-                if !store.platinumCustomers.isEmpty {
-                    CustomerTierGroup(
-                        title: "Platinum",
-                        customers: store.platinumCustomers,
-                        color: .purple,
-                        icon: "star.circle.fill",
-                        isExpanded: expandedTiers.contains("platinum"),
-                        onToggle: { toggleTier("platinum") },
-                        store: store
-                    )
-                }
-
-                // Gold Customers
-                if !store.goldCustomers.isEmpty {
-                    CustomerTierGroup(
-                        title: "Gold",
-                        customers: store.goldCustomers,
-                        color: .yellow,
-                        icon: "star.fill",
-                        isExpanded: expandedTiers.contains("gold"),
-                        onToggle: { toggleTier("gold") },
-                        store: store
-                    )
-                }
-
-                // Silver Customers
-                if !store.silverCustomers.isEmpty {
-                    CustomerTierGroup(
-                        title: "Silver",
-                        customers: store.silverCustomers,
-                        color: .gray,
-                        icon: "star",
-                        isExpanded: expandedTiers.contains("silver"),
-                        onToggle: { toggleTier("silver") },
-                        store: store
-                    )
-                }
-
-                // Bronze Customers
-                if !store.bronzeCustomers.isEmpty {
-                    CustomerTierGroup(
-                        title: "Bronze",
-                        customers: store.bronzeCustomers,
-                        color: .orange,
-                        icon: "star.leadinghalf.filled",
-                        isExpanded: expandedTiers.contains("bronze"),
-                        onToggle: { toggleTier("bronze") },
-                        store: store
-                    )
-                }
-
-                // Other/No Tier Customers
-                let otherCustomers = store.customers.filter { $0.loyaltyTier == nil || $0.loyaltyTier?.isEmpty == true }
-                if !otherCustomers.isEmpty {
-                    CustomerTierGroup(
-                        title: "Other",
-                        customers: otherCustomers,
-                        color: .gray,
-                        icon: "person",
-                        isExpanded: expandedTiers.contains("other"),
-                        onToggle: { toggleTier("other") },
+                // Group by first letter - using filtered customers
+                ForEach(filteredGroupedCustomers, id: \.letter) { group in
+                    CustomerAlphabetGroup(
+                        letter: group.letter,
+                        customers: group.customers,
+                        isExpanded: expandedTiers.contains(group.letter),
+                        onToggle: { toggleTier(group.letter) },
                         store: store
                     )
                 }
@@ -195,6 +244,63 @@ struct SidebarCustomersSection: View {
                 expandedTiers.remove(tier)
             } else {
                 expandedTiers.insert(tier)
+            }
+        }
+    }
+}
+
+// MARK: - Customer Alphabet Group (Apple Contacts style)
+
+struct CustomerAlphabetGroup: View {
+    let letter: String
+    let customers: [Customer]
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: onToggle) {
+                HStack(spacing: DesignSystem.Spacing.xs) {
+                    // Letter badge
+                    Text(letter)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(width: 20, height: 20)
+                        .background(
+                            Circle()
+                                .fill(Color.blue.gradient)
+                        )
+
+                    Text("\(customers.count) contacts")
+                        .font(.system(size: 11))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, DesignSystem.Spacing.sm)
+                .padding(.vertical, DesignSystem.Spacing.xs)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                // Apple-style: LazyVStack for virtualization
+                LazyVStack(spacing: 0) {
+                    ForEach(customers) { customer in
+                        CustomerTreeItem(
+                            customer: customer,
+                            isSelected: store.selectedCustomer?.id == customer.id,
+                            indentLevel: 1,
+                            onSelect: { store.selectCustomer(customer) }
+                        )
+                        .id(customer.id)
+                    }
+                }
             }
         }
     }
@@ -241,31 +347,17 @@ struct CustomerTierGroup: View {
             .buttonStyle(.plain)
 
             if isExpanded {
-                ForEach(customers.prefix(20)) { customer in
-                    CustomerTreeItem(
-                        customer: customer,
-                        isSelected: store.selectedCustomer?.id == customer.id,
-                        indentLevel: 1,
-                        onSelect: { store.selectCustomer(customer) }
-                    )
-                }
-
-                if customers.count > 20 {
-                    Button(action: {
-                        Task {
-                            await store.loadCustomersByTier(tier: title.lowercased())
-                        }
-                    }) {
-                        HStack {
-                            Text("Load \(customers.count - 20) more...")
-                                .font(.system(size: 11))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
-                            Spacer()
-                        }
-                        .padding(.leading, DesignSystem.Spacing.lg)
-                        .padding(.vertical, DesignSystem.Spacing.xs)
+                // Apple-style: LazyVStack for virtualization - only renders visible items
+                LazyVStack(spacing: 0) {
+                    ForEach(customers) { customer in
+                        CustomerTreeItem(
+                            customer: customer,
+                            isSelected: store.selectedCustomer?.id == customer.id,
+                            indentLevel: 1,
+                            onSelect: { store.selectCustomer(customer) }
+                        )
+                        .id(customer.id)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }

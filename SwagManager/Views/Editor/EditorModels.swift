@@ -72,7 +72,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .location(let l): return l.name
         case .queue(let l): return "\(l.name) Queue"
         case .customer(let c): return c.displayName
-        case .mcpServer(let m): return m.displayName
+        case .mcpServer(let m): return m.name
         }
     }
 
@@ -96,7 +96,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .location: return "mappin.and.ellipse"
         case .queue: return "person.3.fill"
         case .customer(let c): return c.statusIcon
-        case .mcpServer(let m): return m.typeIcon
+        case .mcpServer: return "server.rack"
         }
     }
 
@@ -111,7 +111,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .location: return .purple
         case .queue: return .blue
         case .customer(let c): return Color(c.statusColor)
-        case .mcpServer(let m): return m.typeColor
+        case .mcpServer: return .indigo
         }
     }
 
@@ -137,7 +137,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .location: return "⌘"
         case .queue: return "⚡"
         case .customer(let c): return c.terminalIcon
-        case .mcpServer(let m): return m.serverType.terminalIcon
+        case .mcpServer: return "⚙"
         }
     }
 
@@ -153,7 +153,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .location: return .purple
         case .queue: return .blue
         case .customer(let c): return Color(c.terminalColor)
-        case .mcpServer(let m): return m.typeColor
+        case .mcpServer: return .indigo
         }
     }
 

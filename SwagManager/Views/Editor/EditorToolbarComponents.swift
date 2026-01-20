@@ -139,7 +139,7 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
 
             case .mcpServer(let server):
                 ToolbarItem(id: "context", placement: .principal) {
-                    Label(server.displayName, systemImage: server.typeIcon)
+                    Label(server.name, systemImage: "server.rack")
                         .font(.system(size: 13, weight: .medium))
                 }
             }

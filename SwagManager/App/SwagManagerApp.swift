@@ -1,11 +1,20 @@
 import SwiftUI
 import AppKit
 
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // CRITICAL FIX: Set activation policy to regular (not daemon/background)
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        print("✅ App activation policy set to .regular")
+    }
+}
+
 @main
 struct SwagManagerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var appState = AppState.shared
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
         WindowGroup {
@@ -13,11 +22,7 @@ struct SwagManagerApp: App {
                 .environmentObject(authManager)
                 .environmentObject(appState)
                 .frame(minWidth: 900, minHeight: 600)
-                .preferredColorScheme(.dark)
-                .handlesExternalEvents(preferring: Set(["*"]), allowing: Set(["*"]))
         }
-        .handlesExternalEvents(matching: Set(["*"]))
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Store...") {
@@ -81,6 +86,25 @@ struct SwagManagerApp: App {
                 .keyboardShortcut("]", modifiers: .command)
             }
 
+            // MCP Server commands
+            CommandMenu("MCP") {
+                Button("Show MCP Servers") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowMCPServers"), object: nil)
+                }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+
+                Button("Refresh MCP Servers") {
+                    NotificationCenter.default.post(name: NSNotification.Name("RefreshMCPServers"), object: nil)
+                }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+
+                Divider()
+
+                Button("MCP Server Documentation...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowMCPDocs"), object: nil)
+                }
+            }
+
             // File commands
             CommandGroup(replacing: .saveItem) {
                 Button("Save") {
@@ -93,116 +117,6 @@ struct SwagManagerApp: App {
         Settings {
             SettingsView()
                 .environmentObject(authManager)
-                .preferredColorScheme(.dark)
-        }
-    }
-}
-
-class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.appearance = NSAppearance(named: .darkAqua)
-
-        // Configure all windows with glass effect
-        configureAllWindows()
-
-        // Close duplicate windows - keep only one main window
-        closeDuplicateWindows()
-
-        // Watch for new windows
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didBecomeKeyNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            if let window = notification.object as? NSWindow {
-                self?.configureWindow(window)
-            }
-        }
-    }
-
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // Prevent opening new windows on dock click - just show existing
-        if !flag {
-            for window in NSApp.windows where window.canBecomeMain {
-                window.makeKeyAndOrderFront(nil)
-                return false
-            }
-        }
-        return true
-    }
-
-    private func closeDuplicateWindows() {
-        // Filter to main content windows (exclude Settings, About, etc.)
-        let mainWindows = NSApp.windows.filter { window in
-            window.canBecomeMain && window.styleMask.contains(.titled) && window.contentView != nil
-        }
-
-        // Keep only the first main window, close others
-        if mainWindows.count > 1 {
-            for window in mainWindows.dropFirst() {
-                window.close()
-            }
-        }
-    }
-
-    func applicationDidBecomeActive(_ notification: Notification) {
-        configureAllWindows()
-    }
-
-    private func configureAllWindows() {
-        for window in NSApp.windows {
-            configureWindow(window)
-        }
-    }
-
-    private func configureWindow(_ window: NSWindow) {
-        // Minimal unified titlebar with glass effect
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.toolbarStyle = .unifiedCompact
-        window.isMovableByWindowBackground = true
-
-        // Transparent background for glass effect
-        window.backgroundColor = .clear
-        window.isOpaque = false
-
-        // Configure toolbar appearance
-        if let toolbar = window.toolbar {
-            toolbar.showsBaselineSeparator = false
-        }
-
-        // Set the window's titlebar to be compact
-        if let contentView = window.contentView {
-            contentView.wantsLayer = true
-            contentView.layer?.backgroundColor = NSColor.clear.cgColor
-        }
-
-        // Handle fullscreen transitions properly
-        window.collectionBehavior.insert(.fullScreenPrimary)
-
-        // Add observer for fullscreen changes - maintain glass effect
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.willEnterFullScreenNotification,
-            object: window,
-            queue: .main
-        ) { _ in
-            window.titlebarAppearsTransparent = true
-            window.backgroundColor = .clear
-        }
-
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didExitFullScreenNotification,
-            object: window,
-            queue: .main
-        ) { _ in
-            window.titlebarAppearsTransparent = true
-            window.backgroundColor = .clear
-        }
-
-        // Ensure window is key and accepts input
-        if window.canBecomeKey {
-            window.makeKeyAndOrderFront(nil)
-            window.makeFirstResponder(window.contentView)
         }
     }
 }

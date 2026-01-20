@@ -25,15 +25,39 @@ class AuthManager: ObservableObject {
 
     private func checkSession() async {
         isLoading = true
+        print("🔐 AuthManager: Checking session...")
+
         do {
-            session = try await supabase.auth.session
-            currentUser = session?.user
-            isAuthenticated = session != nil
+            // Add timeout to prevent hanging
+            try await withTimeout(seconds: 3) {
+                self.session = try await self.supabase.auth.session
+                self.currentUser = self.session?.user
+                self.isAuthenticated = self.session != nil
+                print("🔐 AuthManager: Session check complete. Authenticated: \(self.isAuthenticated)")
+            }
         } catch {
-            // No active session
+            // No active session or timeout
+            print("🔐 AuthManager: No session or timeout - \(error.localizedDescription)")
             isAuthenticated = false
         }
         isLoading = false
+        print("🔐 AuthManager: Loading complete. isLoading = false")
+    }
+
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw NSError(domain: "Timeout", code: -1, userInfo: nil)
+            }
+
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
     }
 
     private func listenToAuthChanges() async {

@@ -11,8 +11,9 @@ class CustomerService {
 
     // MARK: - Fetch Customers
 
-    /// Fetch all customers for a store from the unified view
-    func fetchCustomers(storeId: UUID, limit: Int = 100, offset: Int = 0) async throws -> [Customer] {
+    /// Fetch all customers for a store from the unified view with pagination
+    /// Apple-style: Uses limit/offset for simple pagination, performant for large datasets
+    func fetchCustomers(storeId: UUID, limit: Int = 50, offset: Int = 0) async throws -> [Customer] {
         let response = try await client
             .from("v_store_customers")
             .select()
@@ -22,9 +23,7 @@ class CustomerService {
             .range(from: offset, to: offset + limit - 1)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let customers = try decoder.decode([Customer].self, from: response.data)
+        let customers = try JSONDecoder.supabaseDecoder.decode([Customer].self, from: response.data)
         return customers
     }
 
@@ -37,9 +36,7 @@ class CustomerService {
             .single()
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let customer = try decoder.decode(Customer.self, from: response.data)
+        let customer = try JSONDecoder.supabaseDecoder.decode(Customer.self, from: response.data)
         return customer
     }
 
@@ -55,9 +52,7 @@ class CustomerService {
             .limit(limit)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let customers = try decoder.decode([Customer].self, from: response.data)
+        let customers = try JSONDecoder.supabaseDecoder.decode([Customer].self, from: response.data)
         return customers
     }
 
@@ -72,9 +67,7 @@ class CustomerService {
             .limit(limit)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let customers = try decoder.decode([Customer].self, from: response.data)
+        let customers = try JSONDecoder.supabaseDecoder.decode([Customer].self, from: response.data)
         return customers
     }
 
@@ -89,9 +82,7 @@ class CustomerService {
             .limit(limit)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let customers = try decoder.decode([Customer].self, from: response.data)
+        let customers = try JSONDecoder.supabaseDecoder.decode([Customer].self, from: response.data)
         return customers
     }
 
@@ -105,9 +96,7 @@ class CustomerService {
             .limit(limit)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let customers = try decoder.decode([Customer].self, from: response.data)
+        let customers = try JSONDecoder.supabaseDecoder.decode([Customer].self, from: response.data)
         return customers
     }
 
@@ -123,9 +112,7 @@ class CustomerService {
             .limit(limit)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let notes = try decoder.decode([CustomerNote].self, from: response.data)
+        let notes = try JSONDecoder.supabaseDecoder.decode([CustomerNote].self, from: response.data)
         return notes
     }
 
@@ -152,9 +139,7 @@ class CustomerService {
             .single()
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let createdNote = try decoder.decode(CustomerNote.self, from: response.data)
+        let createdNote = try JSONDecoder.supabaseDecoder.decode(CustomerNote.self, from: response.data)
         return createdNote
     }
 
@@ -170,10 +155,7 @@ class CustomerService {
             .limit(1)
             .execute()
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
-        let loyalties = try? decoder.decode([CustomerLoyalty].self, from: response.data)
+        let loyalties = try? JSONDecoder.supabaseDecoder.decode([CustomerLoyalty].self, from: response.data)
         return loyalties?.first
     }
 
@@ -186,9 +168,6 @@ class CustomerService {
             .select("id, total_spent, total_orders, loyalty_tier, is_active")
             .eq("store_id", value: storeId.uuidString)
             .execute()
-
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
 
         struct CustomerStat: Codable {
             var totalSpent: Decimal?
@@ -204,7 +183,7 @@ class CustomerService {
             }
         }
 
-        let stats = try decoder.decode([CustomerStat].self, from: response.data)
+        let stats = try JSONDecoder.supabaseDecoder.decode([CustomerStat].self, from: response.data)
 
         var totalCustomers = stats.count
         var activeCustomers = stats.filter { $0.isActive == true }.count

@@ -11,9 +11,24 @@ extension EditorStore {
 
         do {
             isLoading = true
-            let fetchedCustomers = try await supabase.fetchCustomers(storeId: storeId, limit: 200)
-            customers = fetchedCustomers
-            print("✅ Loaded \(customers.count) customers")
+
+            // Apple-style: Load ALL customers in batches
+            var allCustomers: [Customer] = []
+            var offset = 0
+            let batchSize = 500
+
+            while true {
+                let batch = try await supabase.fetchCustomers(storeId: storeId, limit: batchSize, offset: offset)
+                if batch.isEmpty { break }
+                allCustomers.append(contentsOf: batch)
+                offset += batchSize
+
+                // Stop if we got less than batch size (last batch)
+                if batch.count < batchSize { break }
+            }
+
+            customers = allCustomers
+            print("✅ Loaded \(customers.count) customers in batches")
 
             // Load stats
             let stats = try await supabase.fetchCustomerStats(storeId: storeId)
@@ -153,5 +168,29 @@ extension EditorStore {
 
     var bronzeCustomers: [Customer] {
         customersByTier("bronze")
+    }
+
+    // MARK: - Alphabetical Grouping (Apple Contacts style)
+
+    var customersGroupedByFirstLetter: [(letter: String, customers: [Customer])] {
+        let grouped = Dictionary(grouping: customers) { customer -> String in
+            let name = customer.displayName.uppercased()
+            if let first = name.first, first.isLetter {
+                return String(first)
+            }
+            return "#"
+        }
+
+        return grouped.sorted { $0.key < $1.key }.map { (letter: $0.key, customers: $0.value.sorted { $0.displayName < $1.displayName }) }
+    }
+
+    func customersForLetter(_ letter: String) -> [Customer] {
+        customers.filter { customer in
+            let name = customer.displayName.uppercased()
+            if letter == "#" {
+                return name.first?.isLetter == false
+            }
+            return name.hasPrefix(letter.uppercased())
+        }.sorted { $0.displayName < $1.displayName }
     }
 }

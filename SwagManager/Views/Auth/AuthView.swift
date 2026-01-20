@@ -1,109 +1,88 @@
 import SwiftUI
+import AppKit
 
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
-    @State private var isSignUp = false
-
-    @State private var confirmPassword = ""
-    @State private var isLoading = false
-    @State private var showError = false
+    @State private var email = ""
+    @State private var password = ""
     @State private var errorMessage = ""
-    @FocusState private var focusedField: FocusedField?
-    
-    enum FocusedField {
-        case email, password, confirmPassword
-    }
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            // Logo
-            Image(systemName: "cube.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-
-            Text("Swag Manager")
-                .font(.title)
-                .fontWeight(.semibold)
-
-            // Form
-            VStack(spacing: 12) {
-                TextField("Email", text: $authManager.email)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .email)
-                    .onSubmit {
-                        focusedField = .password
+        ZStack {
+            // Invisible background that accepts clicks to make window key
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if let window = NSApp.windows.first(where: { $0.isVisible }) {
+                        window.makeKeyAndOrderFront(nil)
+                        NSApp.activate(ignoringOtherApps: true)
+                        print("🖱️ Background clicked - activating window")
                     }
-
-                SecureField("Password", text: $authManager.password)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .password)
-                    .onSubmit {
-                        if isSignUp {
-                            focusedField = .confirmPassword
-                        } else {
-                            submit()
-                        }
-                    }
-
-                if isSignUp {
-                    SecureField("Confirm Password", text: $confirmPassword)
-                        .textFieldStyle(.roundedBorder)
-                        .focused($focusedField, equals: .confirmPassword)
-                        .onSubmit {
-                            submit()
-                        }
                 }
 
-                Button(isSignUp ? "Create Account" : "Sign In") {
-                    submit()
+            VStack(spacing: 20) {
+                Text("Swag Manager Login")
+                    .font(.largeTitle)
+                    .padding(.bottom, 40)
+
+                VStack(spacing: 15) {
+                    NativeTextField(text: $email, placeholder: "Email") {
+                        // Focus password field
+                    }
+                    .frame(height: 30)
+
+                    NativeSecureField(text: $password, placeholder: "Password") {
+                        login()
+                    }
+                    .frame(height: 30)
+
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+
+                    Button("Sign In") {
+                        login()
+                    }
+                    .keyboardShortcut(.return)
+                    .padding(.top, 10)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(isLoading || !isFormValid)
-                .padding(.top, 8)
+                .frame(width: 350)
             }
-            .frame(width: 260)
-
-            Button(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up") {
-                isSignUp.toggle()
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-
-            Spacer()
-            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            focusedField = .email
-        }
-        .alert("Error", isPresented: $showError) {
-            Button("OK") { }
-        } message: {
-            Text(errorMessage)
+            // FORCE the window to become key - multiple attempts
+            for delay in [0.1, 0.3, 0.5] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    NSApp.activate(ignoringOtherApps: true)
+
+                    if let window = NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }) {
+                        // Try multiple methods to force it
+                        window.makeKeyAndOrderFront(nil)
+                        window.orderFrontRegardless()
+                        window.makeMain()
+                        NSApp.activate(ignoringOtherApps: true)
+
+                        print("🪟 Attempt \(delay): Window isKeyWindow: \(window.isKeyWindow), isMainWindow: \(window.isMainWindow)")
+                    }
+                }
+            }
         }
     }
 
-    private var isFormValid: Bool {
-        authManager.email.contains("@") && authManager.password.count >= 6 && (!isSignUp || authManager.password == confirmPassword)
-    }
+    private func login() {
+        print("🔐 Login attempt: \(email)")
+        errorMessage = ""
 
-    private func submit() {
-        guard isFormValid else { return }
-        isLoading = true
         Task {
             do {
-                if isSignUp {
-                    try await authManager.signUp(email: authManager.email, password: authManager.password)
-                } else {
-                    try await authManager.signIn(email: authManager.email, password: authManager.password)
-                }
+                try await authManager.signIn(email: email, password: password)
             } catch {
                 errorMessage = error.localizedDescription
-                showError = true
+                print("❌ Login error: \(error.localizedDescription)")
             }
-            isLoading = false
         }
     }
 }

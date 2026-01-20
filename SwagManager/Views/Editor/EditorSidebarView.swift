@@ -64,9 +64,9 @@ struct SidebarPanel: View {
                 if store.customers.isEmpty {
                     await store.loadCustomers()
                 }
-                if store.mcpServers.isEmpty {
-                    await store.loadMCPServers()
-                }
+            }
+            if store.mcpServers.isEmpty {
+                await store.loadMCPServers()
             }
         }
         .onChange(of: store.selectedStore?.id) { _, _ in
@@ -75,7 +75,6 @@ struct SidebarPanel: View {
                 await store.loadOrders()
                 await store.loadLocations()
                 await store.loadCustomers()
-                await store.loadMCPServers()
             }
         }
         .onChange(of: searchText) { _, newValue in
@@ -130,10 +129,10 @@ struct SidebarPanel: View {
                 SidebarQueuesSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarMCPServersSection(store: store)
+                SidebarBrowserSessionsSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarBrowserSessionsSection(store: store)
+                SidebarMCPServersSection(store: store)
 
                 // Bottom padding to ensure content isn't cut off
                 Spacer().frame(height: 20)

@@ -70,7 +70,7 @@ struct EditorView: View {
                 CustomerDetailPanel(customer: customer, store: store)
 
             case .mcpServer(let server):
-                MCPServerDetailPanel(server: server, store: store)
+                MCPServerDetailView(server: server, store: store)
             }
         } else if let browserSession = store.selectedBrowserSession {
             SafariBrowserWindow(sessionId: browserSession.id)
@@ -81,8 +81,6 @@ struct EditorView: View {
             TeamChatView(store: store)
         } else if let product = store.selectedProduct {
             ProductEditorPanel(product: product, store: store)
-        } else if let mcpServer = store.selectedMCPServer {
-            MCPServerDetailPanel(server: mcpServer, store: store)
         } else if let creation = store.selectedCreation {
             switch selectedTab {
             case .preview:
@@ -191,6 +189,20 @@ struct EditorView: View {
                 BrowserTabManager.forSession(session.id).activeTab?.goForward()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMCPServers"))) { _ in
+            store.sidebarMCPServersExpanded = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMCPServers"))) { _ in
+            Task {
+                await store.loadMCPServers()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMCPDocs"))) { _ in
+            // Open MCP documentation URL
+            if let url = URL(string: "https://modelcontextprotocol.io/docs") {
+                NSWorkspace.shared.open(url)
+            }
+        }
         .task {
             await store.loadCreations()
             // RLS handles filtering - just load stores
@@ -280,7 +292,7 @@ class EditorStore: ObservableObject {
     // MARK: - MCP Servers State
     @Published var mcpServers: [MCPServer] = []
     @Published var selectedMCPServer: MCPServer?
-    @Published var sidebarMCPExpanded = false
+    @Published var sidebarMCPServersExpanded = false
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []
