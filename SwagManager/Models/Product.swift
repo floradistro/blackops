@@ -31,6 +31,7 @@ struct Product: Identifiable, Hashable {
     var productVisibility: String?
     var customFields: [String: AnyCodable]?  // Maps to custom_fields in database
     var pricingSchemaId: UUID?
+    var pricingSchema: PricingSchema?  // Embedded pricing schema with tiers (from PostgREST join)
     var pricingData: AnyCodable?  // Pricing tiers array (ONLY pricing system)
     var createdAt: String?
     var updatedAt: String?
@@ -55,6 +56,7 @@ struct Product: Identifiable, Hashable {
         case productVisibility = "product_visibility"
         case customFields = "custom_fields"
         case pricingSchemaId = "pricing_schema_id"
+        case pricingSchema = "pricing_schema"
         case pricingData = "pricing_data"
         case createdAt = "created_at"
         case updatedAt = "updated_at"

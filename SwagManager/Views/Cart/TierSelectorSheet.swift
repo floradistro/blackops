@@ -32,8 +32,15 @@ struct TierSelectorSheet: View {
     }
 
     private var allTiers: [PricingTier] {
+        // Use embedded pricing schema from product (loaded via PostgREST join)
+        if let schema = product.pricingSchema {
+            NSLog("[TierSelector] ✅ Found \(schema.tiers.count) tiers for product '\(product.name)' in embedded schema '\(schema.name)'")
+            return schema.tiers
+        }
+
+        // Fallback: Look up schema from store's pricing schemas array
         guard let schemaId = product.pricingSchemaId else {
-            NSLog("[TierSelector] ⚠️ Product '\(product.name)' has no pricingSchemaId")
+            NSLog("[TierSelector] ⚠️ Product '\(product.name)' has no pricingSchemaId and no embedded schema")
             return []
         }
 
