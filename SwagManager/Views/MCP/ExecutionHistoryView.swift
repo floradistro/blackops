@@ -4,10 +4,16 @@ import SwiftUI
 // Searchable, filterable list of all tool executions
 
 struct ExecutionHistoryView: View {
-    @StateObject private var viewModel = ExecutionHistoryViewModel()
+    let serverName: String? // Filter by specific server, or nil for all
+    @StateObject private var viewModel: ExecutionHistoryViewModel
     @State private var searchText = ""
     @State private var selectedExecution: ExecutionDetail?
     @State private var showDetailSheet = false
+
+    init(serverName: String? = nil) {
+        self.serverName = serverName
+        _viewModel = StateObject(wrappedValue: ExecutionHistoryViewModel(serverName: serverName))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -216,60 +222,46 @@ class ExecutionHistoryViewModel: ObservableObject {
     @Published var timeFilter: TimeFilter = .last24Hours
 
     private let supabase = SupabaseService.shared
+    let serverName: String? // Filter by specific server, or nil for all
+
+    init(serverName: String? = nil) {
+        self.serverName = serverName
+    }
 
     func loadExecutions() async {
         isLoading = true
 
         do {
-            // Build query with filters - use if/else pattern to avoid var query issues
-            let response: Data
+            // Build base query
+            var query = supabase.client
+                .from("lisa_tool_execution_log")
+                .select("id, tool_name, result_status, execution_time_ms, error_message, error_code, request, response, user_id, store_id, created_at")
 
-            if timeFilter != .all && statusFilter != .all {
+            // Filter by server name if specified
+            if let serverName = serverName {
+                query = query.eq("tool_name", value: serverName)
+            }
+
+            // Apply time filter
+            if timeFilter != .all {
                 let startDate = Calendar.current.date(
                     byAdding: .hour,
                     value: -timeFilter.hours,
                     to: Date()
                 )!
-                response = try await supabase.client
-                    .from("lisa_tool_execution_log")
-                    .select("id, tool_name, result_status, execution_time_ms, error_message, error_code, request, response, user_id, store_id, created_at")
-                    .gte("created_at", value: ISO8601DateFormatter().string(from: startDate))
-                    .eq("result_status", value: statusFilter == .success ? "success" : "error")
-                    .order("created_at", ascending: false)
-                    .limit(500)
-                    .execute()
-                    .data
-            } else if timeFilter != .all {
-                let startDate = Calendar.current.date(
-                    byAdding: .hour,
-                    value: -timeFilter.hours,
-                    to: Date())!
-                response = try await supabase.client
-                    .from("lisa_tool_execution_log")
-                    .select("id, tool_name, result_status, execution_time_ms, error_message, error_code, request, response, user_id, store_id, created_at")
-                    .gte("created_at", value: ISO8601DateFormatter().string(from: startDate))
-                    .order("created_at", ascending: false)
-                    .limit(500)
-                    .execute()
-                    .data
-            } else if statusFilter != .all {
-                response = try await supabase.client
-                    .from("lisa_tool_execution_log")
-                    .select("id, tool_name, result_status, execution_time_ms, error_message, error_code, request, response, user_id, store_id, created_at")
-                    .eq("result_status", value: statusFilter == .success ? "success" : "error")
-                    .order("created_at", ascending: false)
-                    .limit(500)
-                    .execute()
-                    .data
-            } else {
-                response = try await supabase.client
-                    .from("lisa_tool_execution_log")
-                    .select("id, tool_name, result_status, execution_time_ms, error_message, error_code, request, response, user_id, store_id, created_at")
-                    .order("created_at", ascending: false)
-                    .limit(500)
-                    .execute()
-                    .data
+                query = query.gte("created_at", value: ISO8601DateFormatter().string(from: startDate))
             }
+
+            // Apply status filter
+            if statusFilter != .all {
+                query = query.eq("result_status", value: statusFilter == .success ? "success" : "error")
+            }
+
+            let response = try await query
+                .order("created_at", ascending: false)
+                .limit(500)
+                .execute()
+                .data
 
             let decoder = JSONDecoder.supabaseDecoder
             executions = try decoder.decode([ExecutionDetail].self, from: response)

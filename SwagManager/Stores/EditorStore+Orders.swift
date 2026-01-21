@@ -12,13 +12,28 @@ extension EditorStore {
             return
         }
 
+        await MainActor.run { isLoadingOrders = true }
+
         do {
             NSLog("[EditorStore] Loading orders for store: \(store.id)")
-            orders = try await supabase.fetchOrders(storeId: store.id)
-            NSLog("[EditorStore] Loaded \(orders.count) orders")
+            let fetchedOrders = try await supabase.fetchOrders(storeId: store.id)
+            await MainActor.run {
+                orders = fetchedOrders
+                isLoadingOrders = false
+            }
+            NSLog("[EditorStore] Loaded \(fetchedOrders.count) orders")
+
+            // Gate realtime subscription until UI is idle (reduces input system churn)
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+
+            // Start realtime subscription
+            await subscribeToOrders()
         } catch {
             NSLog("[EditorStore] Failed to load orders: \(error)")
-            self.error = "Failed to load orders: \(error.localizedDescription)"
+            await MainActor.run {
+                self.error = "Failed to load orders: \(error.localizedDescription)"
+                isLoadingOrders = false
+            }
         }
     }
 
@@ -123,13 +138,22 @@ extension EditorStore {
             return
         }
 
+        await MainActor.run { isLoadingLocations = true }
+
         do {
             NSLog("[EditorStore] Loading locations for store: \(store.id)")
-            locations = try await supabase.fetchLocations(storeId: store.id)
-            NSLog("[EditorStore] Loaded \(locations.count) locations")
+            let fetchedLocations = try await supabase.fetchLocations(storeId: store.id)
+            await MainActor.run {
+                locations = fetchedLocations
+                isLoadingLocations = false
+            }
+            NSLog("[EditorStore] Loaded \(fetchedLocations.count) locations")
         } catch {
             NSLog("[EditorStore] Failed to load locations: \(error)")
-            self.error = "Failed to load locations: \(error.localizedDescription)"
+            await MainActor.run {
+                self.error = "Failed to load locations: \(error.localizedDescription)"
+                isLoadingLocations = false
+            }
         }
     }
 

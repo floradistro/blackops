@@ -4,10 +4,16 @@ import SwiftUI
 // Real-time monitoring and analytics for MCP servers
 
 struct MCPMonitoringView: View {
-    @StateObject private var monitor = MCPMonitor()
+    let serverName: String? // Filter by specific server, or nil for all
+    @StateObject private var monitor: MCPMonitor
     @State private var selectedCategory: String?
     @State private var timeRange: TimeRange = .last24Hours
     @State private var selectedTab: MonitorTab = .overview
+
+    init(serverName: String? = nil) {
+        self.serverName = serverName
+        _monitor = StateObject(wrappedValue: MCPMonitor(serverName: serverName))
+    }
 
     enum MonitorTab: String, CaseIterable {
         case overview = "Overview"
@@ -32,7 +38,7 @@ struct MCPMonitoringView: View {
             if selectedTab == .overview {
                 overviewContent
             } else {
-                ExecutionHistoryView()
+                ExecutionHistoryView(serverName: serverName)
             }
         }
         .background(VisualEffectBackground(material: .underWindowBackground))

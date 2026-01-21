@@ -9,48 +9,69 @@ extension EditorStore {
 
     /// Load all MCP servers from ai_tool_registry
     func loadMCPServers() async {
-        isLoading = true
+        await MainActor.run { isLoadingMCPServers = true }
+
         do {
             let response = try await supabase.client
                 .from("ai_tool_registry")
-                .select("*")  // Explicitly select all columns
+                .select("*")
                 .eq("is_active", value: true)
                 .order("name")
                 .execute()
 
             // Log raw response for debugging
-            if let jsonString = String(data: response.data, encoding: .utf8) {
-                NSLog("[EditorStore] Raw response (first 2000 chars): \(String(jsonString.prefix(2000)))")
+            if let jsonString = String(data: response.data, encoding: .utf8),
+               let jsonData = jsonString.data(using: .utf8),
+               let jsonArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]],
+               let firstServer = jsonArray.first {
+                NSLog("[EditorStore] 🔍 First server raw JSON keys: \(firstServer.keys.sorted().joined(separator: ", "))")
+                NSLog("[EditorStore] 🔍 rpc_function = \(firstServer["rpc_function"] ?? "NULL")")
+                NSLog("[EditorStore] 🔍 edge_function = \(firstServer["edge_function"] ?? "NULL")")
+                NSLog("[EditorStore] 🔍 tool_mode = \(firstServer["tool_mode"] ?? "NULL")")
             }
-
-            NSLog("[EditorStore] Response data size: \(response.data.count) bytes")
 
             let decoder = JSONDecoder.supabaseDecoder
-            mcpServers = try decoder.decode([MCPServer].self, from: response.data)
+            let decodedServers = try decoder.decode([MCPServer].self, from: response.data)
 
-            NSLog("[EditorStore] Loaded \(mcpServers.count) MCP servers")
+            NSLog("[EditorStore] Loaded \(decodedServers.count) MCP servers")
 
             // Log details of first few servers to debug rpcFunction/edgeFunction
-            for (index, server) in mcpServers.prefix(5).enumerated() {
+            for (index, server) in decodedServers.prefix(5).enumerated() {
                 NSLog("[EditorStore] Server[\(index)] name=\(server.name), rpcFunction=\(server.rpcFunction ?? "nil"), edgeFunction=\(server.edgeFunction ?? "nil"), category=\(server.category)")
             }
+
+            await MainActor.run {
+                mcpServers = decodedServers
+                isLoadingMCPServers = false
+            }
         } catch let DecodingError.keyNotFound(key, context) {
-            self.error = "Missing key '\(key.stringValue)' at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            await MainActor.run {
+                self.error = "Missing key '\(key.stringValue)' at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                isLoadingMCPServers = false
+            }
             NSLog("[EditorStore] Decoding error - missing key: \(key.stringValue)")
             NSLog("[EditorStore] Context: \(context.debugDescription)")
         } catch let DecodingError.typeMismatch(type, context) {
-            self.error = "Type mismatch for \(type) at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            await MainActor.run {
+                self.error = "Type mismatch for \(type) at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                isLoadingMCPServers = false
+            }
             NSLog("[EditorStore] Decoding error - type mismatch: \(type)")
             NSLog("[EditorStore] Context: \(context.debugDescription)")
         } catch let DecodingError.valueNotFound(type, context) {
-            self.error = "Value not found for \(type) at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            await MainActor.run {
+                self.error = "Value not found for \(type) at: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                isLoadingMCPServers = false
+            }
             NSLog("[EditorStore] Decoding error - value not found: \(type)")
             NSLog("[EditorStore] Context: \(context.debugDescription)")
         } catch {
-            self.error = "Failed to load MCP servers: \(error.localizedDescription)"
+            await MainActor.run {
+                self.error = "Failed to load MCP servers: \(error.localizedDescription)"
+                isLoadingMCPServers = false
+            }
             NSLog("[EditorStore] Error loading MCP servers: \(error)")
         }
-        isLoading = false
     }
 
     /// Open MCP server in a new tab

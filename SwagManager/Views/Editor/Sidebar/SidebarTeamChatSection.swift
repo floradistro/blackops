@@ -11,7 +11,8 @@ struct SidebarTeamChatSection: View {
         TreeSectionHeader(
             title: "COMMUNICATIONS",
             isExpanded: $store.sidebarChatExpanded,
-            count: store.conversations.count
+            count: store.conversations.count,
+            isLoading: store.isLoadingConversations
         )
 
         if store.sidebarChatExpanded {

@@ -13,13 +13,22 @@ extension EditorStore {
             return
         }
 
+        await MainActor.run { isLoadingBrowserSessions = true }
+
         do {
             NSLog("[EditorStore] Loading browser sessions for store: \(store.id)")
-            browserSessions = try await supabase.fetchBrowserSessions(storeId: store.id)
-            NSLog("[EditorStore] Loaded \(browserSessions.count) browser sessions")
+            let fetchedSessions = try await supabase.fetchBrowserSessions(storeId: store.id)
+            await MainActor.run {
+                browserSessions = fetchedSessions
+                isLoadingBrowserSessions = false
+            }
+            NSLog("[EditorStore] Loaded \(fetchedSessions.count) browser sessions")
         } catch {
             NSLog("[EditorStore] Failed to load browser sessions: \(error)")
-            self.error = "Failed to load browser sessions: \(error.localizedDescription)"
+            await MainActor.run {
+                self.error = "Failed to load browser sessions: \(error.localizedDescription)"
+                isLoadingBrowserSessions = false
+            }
         }
     }
 

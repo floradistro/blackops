@@ -69,15 +69,29 @@ struct EditorView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .id("queue-\(location.id)")
 
+            case .cart(let queueEntry):
+                CartPanel(store: store, queueEntry: queueEntry)
+                    .id("cart-\(queueEntry.id)")
+
             case .customer(let customer):
                 Text("Customer detail for \(customer.displayName)")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             case .mcpServer(let server):
                 MCPServerDetailView(server: server, store: store)
+                    .id("mcp-\(server.id)")
 
             case .email(let email):
                 ResendEmailDetailPanel(email: email, store: store)
+
+            case .emailCampaign(let campaign):
+                EmailCampaignDetailPanel(campaign: campaign, store: store)
+
+            case .metaCampaign(let campaign):
+                MetaCampaignDetailPanel(campaign: campaign, store: store)
+
+            case .metaIntegration(let integration):
+                MetaIntegrationDetailPanel(integration: integration, store: store)
             }
         } else if let browserSession = store.selectedBrowserSession {
             SafariBrowserWindow(sessionId: browserSession.id)
@@ -169,28 +183,28 @@ struct EditorView: View {
             store.showNewStoreSheet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserNewTab"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
                 if case .browserSession(let s) = tab { return s } else { return nil }
             } : nil) {
                 BrowserTabManager.forSession(session.id).newTab()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserReload"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
                 if case .browserSession(let s) = tab { return s } else { return nil }
             } : nil) {
                 BrowserTabManager.forSession(session.id).activeTab?.refresh()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserBack"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
                 if case .browserSession(let s) = tab { return s } else { return nil }
             } : nil) {
                 BrowserTabManager.forSession(session.id).activeTab?.goBack()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserForward"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? (store.activeTab as? OpenTabItem).flatMap { tab in
+            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
                 if case .browserSession(let s) = tab { return s } else { return nil }
             } : nil) {
                 BrowserTabManager.forSession(session.id).activeTab?.goForward()
@@ -269,20 +283,23 @@ class EditorStore: ObservableObject {
     @Published var selectedCreationIds: Set<UUID> = []
     @Published var editedCode: String?
 
-    // MARK: - Catalog State (Pgerroducts, Categories & Stores)
+    // MARK: - Catalog State (Products, Categories & Stores)
     @Published var stores: [Store] = []
     @Published var selectedStore: Store?
     @Published var catalogs: [Catalog] = []
     @Published var selectedCatalog: Catalog?
     @Published var products: [Product] = []
     @Published var categories: [Category] = []
+    @Published var pricingSchemas: [PricingSchema] = []
     @Published var selectedProduct: Product?
     @Published var selectedProductIds: Set<UUID> = []
+    @Published var isLoadingCatalogs = false
 
     // MARK: - Chat/Conversations State
     @Published var locations: [Location] = []
     @Published var conversations: [Conversation] = []
     @Published var selectedConversation: Conversation?
+    @Published var isLoadingConversations = false
 
     // MARK: - Category Config State
     @Published var selectedCategory: Category?
@@ -291,6 +308,7 @@ class EditorStore: ObservableObject {
     @Published var browserSessions: [BrowserSession] = []
     @Published var selectedBrowserSession: BrowserSession?
     @Published var sidebarBrowserExpanded = false
+    @Published var isLoadingBrowserSessions = false
 
     // MARK: - Orders State
     @Published var orders: [Order] = []
@@ -298,6 +316,13 @@ class EditorStore: ObservableObject {
     @Published var selectedLocation: Location?
     @Published var sidebarOrdersExpanded = false
     @Published var sidebarLocationsExpanded = false
+    @Published var isLoadingOrders = false
+    @Published var isLoadingLocations = false
+
+    // Orders Realtime State
+    @Published var ordersRealtimeConnected = false
+    var ordersRealtimeChannel: RealtimeChannelV2?
+    var ordersRealtimeTask: Task<Void, Never>?
 
     // MARK: - Queue State
     @Published var selectedQueue: Location?
@@ -309,11 +334,13 @@ class EditorStore: ObservableObject {
     @Published var sidebarCustomersExpanded = false
     @Published var customerSearchQuery: String = ""
     @Published var customerStats: CustomerStats?
+    @Published var isLoadingCustomers = false
 
     // MARK: - MCP Servers State
     @Published var mcpServers: [MCPServer] = []
     @Published var selectedMCPServer: MCPServer?
     @Published var sidebarMCPServersExpanded = false
+    @Published var isLoadingMCPServers = false
 
     // MARK: - Emails State (Resend)
     @Published var emails: [ResendEmail] = []
@@ -323,6 +350,21 @@ class EditorStore: ObservableObject {
     @Published var emailTotalCount: Int = 0
     @Published var emailCategoryCounts: [String: Int] = [:]
     @Published var loadedCategories: Set<String> = [] // Track which categories have loaded emails
+
+    // MARK: - CRM/Campaigns State
+    @Published var emailCampaigns: [EmailCampaign] = []
+    @Published var selectedEmailCampaign: EmailCampaign?
+    @Published var metaCampaigns: [MetaCampaign] = []
+    @Published var selectedMetaCampaign: MetaCampaign?
+    @Published var metaIntegrations: [MetaIntegration] = []
+    @Published var selectedMetaIntegration: MetaIntegration?
+    @Published var smsCampaigns: [SMSCampaign] = []
+    @Published var marketingCampaigns: [MarketingCampaign] = []
+    @Published var sidebarCRMExpanded = false
+    @Published var sidebarEmailCampaignsExpanded = false
+    @Published var sidebarMetaCampaignsExpanded = false
+    @Published var sidebarSMSCampaignsExpanded = false
+    @Published var isLoadingCampaigns = false
 
     // MARK: - Tabs (Safari/Xcode style)
     @Published var openTabs: [OpenTabItem] = []

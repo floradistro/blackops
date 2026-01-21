@@ -33,12 +33,12 @@ final class LocationQueueStore: ObservableObject {
 
     // MARK: - Published State
 
-    @Published private(set) var queue: [QueueEntry] = []
-    @Published private(set) var isLoading = false
-    @Published private(set) var error: String?
+    @Published internal(set) var queue: [QueueEntry] = []
+    @Published internal(set) var isLoading = false
+    @Published internal(set) var error: String?
     @Published var selectedCartId: UUID?
-    @Published private(set) var lastUpdated: Date?
-    @Published private(set) var connectionState: ConnectionState = .disconnected
+    @Published internal(set) var lastUpdated: Date?
+    @Published internal(set) var connectionState: ConnectionState = .disconnected
 
     enum ConnectionState {
         case connected
@@ -55,10 +55,10 @@ final class LocationQueueStore: ObservableObject {
     let locationId: UUID
     private var refreshTask: Task<Void, Never>?
     private var pollingTask: Task<Void, Never>?
-    private var realtimeChannel: RealtimeChannelV2?
-    private var realtimeTask: Task<Void, Never>?
-    private var isSubscribed = false
-    private let supabase: SupabaseClient
+    internal var realtimeChannel: RealtimeChannelV2?
+    internal var realtimeTask: Task<Void, Never>?
+    internal var isSubscribed = false
+    internal let supabase: SupabaseClient
 
     // MARK: - Computed Properties
 

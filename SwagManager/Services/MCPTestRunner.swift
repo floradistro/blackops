@@ -48,6 +48,15 @@ class MCPTestRunner: ObservableObject {
                 result: testResult
             ))
 
+            // Log execution to database
+            await logExecution(
+                toolName: server.name,
+                parameters: parameters,
+                result: result,
+                duration: duration,
+                success: true
+            )
+
             NSLog("[MCPTestRunner] Successfully executed \(server.name) in \(String(format: "%.2f", duration))s")
         } catch {
             let duration = Date().timeIntervalSince(startTime)
@@ -65,6 +74,16 @@ class MCPTestRunner: ObservableObject {
                 parameters: parameters,
                 result: testResult
             ))
+
+            // Log failed execution to database
+            await logExecution(
+                toolName: server.name,
+                parameters: parameters,
+                result: ["error": error.localizedDescription],
+                duration: duration,
+                success: false,
+                errorMessage: error.localizedDescription
+            )
 
             NSLog("[MCPTestRunner] Error executing \(server.name): \(error)")
         }
@@ -177,7 +196,7 @@ class MCPTestRunner: ObservableObject {
 
         // Build request body with context
         var requestBody: [String: Any] = [
-            "tool_name": serverName,
+            "operation": serverName,  // Edge function expects "operation" not "tool_name"
             "parameters": typedParams
         ]
 
@@ -226,6 +245,61 @@ class MCPTestRunner: ObservableObject {
             return string
         }
         return String(describing: result)
+    }
+
+    private func logExecution(
+        toolName: String,
+        parameters: [String: String],
+        result: Any,
+        duration: TimeInterval,
+        success: Bool,
+        errorMessage: String? = nil
+    ) async {
+        do {
+            // Get user ID if available
+            let userId = try? await supabase.client.auth.session.user.id
+
+            // Get store ID (hardcoded for now, should come from context)
+            let storeId = UUID(uuidString: "cd2e1122-d511-4edb-be5d-98ef274b4baf")!
+
+            // Prepare request and response JSON as strings
+            let requestJson = try? JSONSerialization.data(withJSONObject: parameters)
+            let responseJson = try? JSONSerialization.data(withJSONObject: result)
+
+            let requestString = requestJson.flatMap { String(data: $0, encoding: .utf8) }
+            let responseString = responseJson.flatMap { String(data: $0, encoding: .utf8) }
+
+            struct ExecutionLog: Encodable {
+                let store_id: String
+                let user_id: String?
+                let tool_name: String
+                let execution_time_ms: Int
+                let result_status: String
+                let error_message: String?
+                let request: String?
+                let response: String?
+            }
+
+            let log = ExecutionLog(
+                store_id: storeId.uuidString,
+                user_id: userId?.uuidString,
+                tool_name: toolName,
+                execution_time_ms: Int(duration * 1000),
+                result_status: success ? "success" : "error",
+                error_message: errorMessage,
+                request: requestString,
+                response: responseString
+            )
+
+            _ = try await supabase.client
+                .from("lisa_tool_execution_log")
+                .insert(log)
+                .execute()
+
+            NSLog("[MCPTestRunner] Logged execution to database: \(toolName)")
+        } catch {
+            NSLog("[MCPTestRunner] Failed to log execution: \(error)")
+        }
     }
 }
 

@@ -31,9 +31,10 @@ struct SidebarMCPServersSection: View {
 
                     Spacer()
 
-                    Text("\(store.mcpServers.count)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    LoadingCountBadge(
+                        count: store.mcpServers.count,
+                        isLoading: store.isLoadingMCPServers
+                    )
                 }
                 .padding(.horizontal, DesignSystem.Spacing.sm)
                 .padding(.vertical, DesignSystem.Spacing.xs)

@@ -8,9 +8,12 @@ extension EditorStore {
     // MARK: - Catalog Operations
 
     func loadCatalogs() async {
+        await MainActor.run { isLoadingCatalogs = true }
+
         do {
             NSLog("[EditorStore] Loading catalogs for store: %@ (%@)", selectedStore?.storeName ?? "unknown", currentStoreId.uuidString)
-            catalogs = try await supabase.fetchCatalogs(storeId: currentStoreId)
+            let fetchedCatalogs = try await supabase.fetchCatalogs(storeId: currentStoreId)
+            await MainActor.run { catalogs = fetchedCatalogs }
             NSLog("[EditorStore] Found %d catalogs for store %@:", catalogs.count, selectedStore?.storeName ?? "unknown")
             for cat in catalogs {
                 NSLog("[EditorStore]   - %@ (id: %@, store_id: %@)", cat.name, cat.id.uuidString, cat.storeId.uuidString)
@@ -26,6 +29,7 @@ extension EditorStore {
                 if orphanCount > 0 {
                     NSLog("[EditorStore] Creating default Distro catalog and migrating %d categories...", orphanCount)
                     await createDefaultCatalogAndMigrate()
+                    await MainActor.run { isLoadingCatalogs = false }
                     return // createDefaultCatalogAndMigrate will reload catalogs
                 }
             } else if let defaultCatalog = catalogs.first(where: { $0.isDefault == true }) ?? catalogs.first {
@@ -42,8 +46,10 @@ extension EditorStore {
 
             // Don't auto-select - let user expand catalog to see contents
             NSLog("[EditorStore] Loaded %d catalogs for store %@", catalogs.count, selectedStore?.storeName ?? "default")
+            await MainActor.run { isLoadingCatalogs = false }
         } catch {
             NSLog("[EditorStore] Error loading catalogs: %@", String(describing: error))
+            await MainActor.run { isLoadingCatalogs = false }
             // Don't show error if table doesn't exist yet
         }
     }

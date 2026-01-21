@@ -11,6 +11,7 @@ struct SidebarBrowserSessionsSection: View {
         BrowserSessionsSectionHeader(
             isExpanded: $store.sidebarBrowserExpanded,
             count: store.browserSessions.filter { $0.isActive }.count,
+            isLoading: store.isLoadingBrowserSessions,
             onNewSession: {
                 Task {
                     await store.createNewBrowserSession()

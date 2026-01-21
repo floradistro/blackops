@@ -10,60 +10,39 @@ struct ExecutionDetail: Codable, Identifiable {
     let executionTimeMs: Int?
     let errorMessage: String?
     let errorCode: String?
-    let request: ExecutionRequest?
-    let response: ExecutionResponse?
+    let request: String?
+    let response: String?
     let userId: UUID?
     let storeId: UUID?
     let createdAt: Date
 
     var success: Bool { resultStatus == "success" }
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case toolName = "tool_name"
-        case resultStatus = "result_status"
-        case executionTimeMs = "execution_time_ms"
-        case errorMessage = "error_message"
-        case errorCode = "error_code"
-        case request
-        case response
-        case userId = "user_id"
-        case storeId = "store_id"
-        case createdAt = "created_at"
-    }
-}
+    // No CodingKeys - JSONDecoder uses .convertFromSnakeCase
+    // which automatically converts tool_name -> toolName, etc.
 
-struct ExecutionRequest: Codable {
-    let parameters: [String: AnyCodable]?
-    let headers: [String: String]?
-    let method: String?
-    let url: String?
-
-    var prettyJSON: String {
-        if let params = parameters {
-            let dict = params.mapValues { $0.value }
-            if let data = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted),
-               let string = String(data: data, encoding: .utf8) {
-                return string
-            }
+    // Helper to pretty-print request JSON
+    var prettyRequest: String {
+        guard let request = request,
+              let data = request.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+              let prettyString = String(data: prettyData, encoding: .utf8) else {
+            return request ?? "{}"
         }
-        return "{}"
+        return prettyString
     }
-}
 
-struct ExecutionResponse: Codable {
-    let data: AnyCodable?
-    let statusCode: Int?
-    let headers: [String: String]?
-
-    var prettyJSON: String {
-        if let responseData = data?.value {
-            if let data = try? JSONSerialization.data(withJSONObject: responseData, options: .prettyPrinted),
-               let string = String(data: data, encoding: .utf8) {
-                return string
-            }
+    // Helper to pretty-print response JSON
+    var prettyResponse: String {
+        guard let response = response,
+              let data = response.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let prettyData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+              let prettyString = String(data: prettyData, encoding: .utf8) else {
+            return response ?? "{}"
         }
-        return "{}"
+        return prettyString
     }
 }
 

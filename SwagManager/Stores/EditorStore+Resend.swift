@@ -123,31 +123,18 @@ extension EditorStore {
             var offset = 0
             let batchSize = 1000
 
-            // Pagination loop to get ALL categories
+            // Pagination loop to get ALL categories (ALL STORES - no filter)
             while true {
                 NSLog("[EditorStore] 📊 Fetching batch at offset \(offset)...")
+                NSLog("[EditorStore] 📊 Querying ALL email_sends (ignoring store filter to get true total)")
 
-                let batch: [EmailCategory]
-                if let storeId = selectedStore?.id {
-                    NSLog("[EditorStore] 📊 Querying for store: \(storeId)")
-                    batch = try await supabase.client
-                        .from("email_sends")
-                        .select("category")
-                        .eq("store_id", value: storeId.uuidString)
-                        .order("created_at", ascending: false)
-                        .range(from: offset, to: offset + batchSize - 1)
-                        .execute()
-                        .value
-                } else {
-                    NSLog("[EditorStore] 📊 Querying all email_sends (no store filter)")
-                    batch = try await supabase.client
-                        .from("email_sends")
-                        .select("category")
-                        .order("created_at", ascending: false)
-                        .range(from: offset, to: offset + batchSize - 1)
-                        .execute()
-                        .value
-                }
+                let batch: [EmailCategory] = try await supabase.client
+                    .from("email_sends")
+                    .select("category")
+                    .order("created_at", ascending: false)
+                    .range(from: offset, to: offset + batchSize - 1)
+                    .execute()
+                    .value
 
                 NSLog("[EditorStore] 📊 Received batch: \(batch.count) rows")
 
@@ -185,6 +172,10 @@ extension EditorStore {
                 self.emailCategoryCounts = categoryCounts
                 self.isLoadingEmails = false
                 NSLog("[EditorStore] ✅ Loaded counts for \(allCategories.count) emails across \(categoryCounts.count) categories")
+                NSLog("[EditorStore] 📊 Category breakdown:")
+                for (category, count) in categoryCounts.sorted(by: { $0.value > $1.value }) {
+                    NSLog("[EditorStore]   - \(category): \(count)")
+                }
             }
 
         } catch {
@@ -218,51 +209,27 @@ extension EditorStore {
         do {
             NSLog("[EditorStore] 📧 Loading emails for category: \(categoryKey)")
 
+            // Load ALL emails for category (no store filter - get everything)
             let response: [ResendEmail]
-            if let storeId = selectedStore?.id {
-                if let category = category {
-                    response = try await supabase.client
-                        .from("email_sends")
-                        .select()
-                        .eq("store_id", value: storeId.uuidString)
-                        .eq("category", value: category)
-                        .order("created_at", ascending: false)
-                        .limit(10000) // Very high limit to get all
-                        .execute()
-                        .value
-                } else {
-                    // Uncategorized (NULL category) - load all then filter client-side
-                    let allEmails: [ResendEmail] = try await supabase.client
-                        .from("email_sends")
-                        .select()
-                        .eq("store_id", value: storeId.uuidString)
-                        .order("created_at", ascending: false)
-                        .limit(10000)
-                        .execute()
-                        .value
-                    response = allEmails.filter { $0.category == nil }
-                }
+            if let category = category {
+                response = try await supabase.client
+                    .from("email_sends")
+                    .select()
+                    .eq("category", value: category)
+                    .order("created_at", ascending: false)
+                    .limit(100000) // Very high limit to get all
+                    .execute()
+                    .value
             } else {
-                if let category = category {
-                    response = try await supabase.client
-                        .from("email_sends")
-                        .select()
-                        .eq("category", value: category)
-                        .order("created_at", ascending: false)
-                        .limit(10000)
-                        .execute()
-                        .value
-                } else {
-                    // Uncategorized (NULL category) - load all then filter client-side
-                    let allEmails: [ResendEmail] = try await supabase.client
-                        .from("email_sends")
-                        .select()
-                        .order("created_at", ascending: false)
-                        .limit(10000)
-                        .execute()
-                        .value
-                    response = allEmails.filter { $0.category == nil }
-                }
+                // Uncategorized (NULL category) - load all then filter client-side
+                let allEmails: [ResendEmail] = try await supabase.client
+                    .from("email_sends")
+                    .select()
+                    .order("created_at", ascending: false)
+                    .limit(100000)
+                    .execute()
+                    .value
+                response = allEmails.filter { $0.category == nil }
             }
 
             await MainActor.run {

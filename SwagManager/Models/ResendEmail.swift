@@ -6,7 +6,7 @@ import SwiftUI
 
 struct ResendEmail: Codable, Identifiable, Hashable {
     let id: UUID
-    let storeId: UUID
+    let storeId: UUID? // Optional to handle emails without store assignment
     let customerId: UUID?
     let orderId: UUID?
     let campaignId: UUID?

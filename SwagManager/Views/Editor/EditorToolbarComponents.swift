@@ -148,6 +148,32 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
                     Label(email.displaySubject, systemImage: "envelope.fill")
                         .font(.system(size: 13, weight: .medium))
                 }
+
+            case .cart(let entry):
+                let customerName = entry.customerFirstName.map { "\($0) \(entry.customerLastName ?? "")" } ?? "Guest"
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(customerName, systemImage: "cart.fill")
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .emailCampaign(let campaign):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(campaign.name, systemImage: "envelope.badge")
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .metaCampaign(let campaign):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(campaign.name, systemImage: "megaphone")
+                        .font(.system(size: 13, weight: .medium))
+                }
+
+            case .metaIntegration(let integration):
+                let name = integration.businessName ?? "Meta Integration"
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(name, systemImage: "link.badge.plus")
+                        .font(.system(size: 13, weight: .medium))
+                }
             }
         } else if let browserSession = store.selectedBrowserSession {
             let tabManager = BrowserTabManager.forSession(browserSession.id)
@@ -215,9 +241,13 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
             case .order: return "Order"
             case .location: return "Location"
             case .queue: return "Queue"
+            case .cart: return "Cart"
             case .customer: return "Customer"
             case .mcpServer: return "MCP Server"
             case .email: return "Email"
+            case .emailCampaign: return "Email Campaign"
+            case .metaCampaign: return "Meta Campaign"
+            case .metaIntegration: return "Meta Integration"
             }
         } else if store.selectedBrowserSession != nil {
             return "Browser"

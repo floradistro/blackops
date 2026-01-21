@@ -66,7 +66,8 @@ struct SidebarCustomersSection: View {
         TreeSectionHeader(
             title: "CUSTOMERS",
             isExpanded: $store.sidebarCustomersExpanded,
-            count: filteredCustomers.count
+            count: filteredCustomers.count,
+            isLoading: store.isLoadingCustomers
         )
         .padding(.top, DesignSystem.Spacing.xxs)
         .onAppear {

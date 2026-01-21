@@ -11,6 +11,11 @@ class MCPMonitor: ObservableObject {
     @Published var errors: [ErrorLog] = []
 
     private let supabase = SupabaseService.shared
+    let serverName: String? // Filter by specific server, or nil for all
+
+    init(serverName: String? = nil) {
+        self.serverName = serverName
+    }
 
     func loadStats(timeRange: MCPMonitoringView.TimeRange) async {
         await loadExecutionStats(timeRange: timeRange)
@@ -29,10 +34,17 @@ class MCPMonitor: ObservableObject {
             let startDate = Calendar.current.date(byAdding: .hour, value: -hoursAgo, to: Date())!
 
             // Query lisa_tool_execution_log for statistics
-            let response = try await supabase.client
+            var query = supabase.client
                 .from("lisa_tool_execution_log")
                 .select("tool_name, result_status, execution_time_ms, created_at")
                 .gte("created_at", value: ISO8601DateFormatter().string(from: startDate))
+
+            // Filter by server name if specified
+            if let serverName = serverName {
+                query = query.eq("tool_name", value: serverName)
+            }
+
+            let response = try await query
                 .order("created_at", ascending: false)
                 .limit(1000)
                 .execute()
@@ -44,7 +56,7 @@ class MCPMonitor: ObservableObject {
             let totalExecutions = executions.count
             let successCount = executions.filter { $0.success }.count
             let successRate = totalExecutions > 0 ? Double(successCount) / Double(totalExecutions) * 100 : 0
-            let avgResponseTime = executions.compactMap { $0.executionTimeMs }.reduce(0.0, +) / Double(max(executions.count, 1))
+            let avgResponseTime = executions.compactMap { $0.executionTimeMs.map(Double.init) }.reduce(0.0, +) / Double(max(executions.count, 1))
 
             // Category breakdown - map tool_name to category via ai_tool_registry
             var categoryMap: [String: Int] = [:]
@@ -91,9 +103,16 @@ class MCPMonitor: ObservableObject {
 
     private func loadRecentExecutions() async {
         do {
-            let response = try await supabase.client
+            var query = supabase.client
                 .from("lisa_tool_execution_log")
                 .select("tool_name, result_status, execution_time_ms, created_at")
+
+            // Filter by server name if specified
+            if let serverName = serverName {
+                query = query.eq("tool_name", value: serverName)
+            }
+
+            let response = try await query
                 .order("created_at", ascending: false)
                 .limit(50)
                 .execute()
@@ -106,7 +125,7 @@ class MCPMonitor: ObservableObject {
                     id: UUID(),
                     serverName: raw.toolName,
                     success: raw.success,
-                    duration: raw.executionTimeMs != nil ? raw.executionTimeMs! / 1000 : nil,
+                    duration: raw.executionTimeMs != nil ? Double(raw.executionTimeMs!) / 1000.0 : nil,
                     timestamp: raw.createdAt
                 )
             }
@@ -119,11 +138,18 @@ class MCPMonitor: ObservableObject {
 
     private func loadErrors() async {
         do {
-            let response = try await supabase.client
+            var query = supabase.client
                 .from("lisa_tool_execution_log")
                 .select("tool_name, error_message, created_at")
                 .eq("result_status", value: "error")
                 .not("error_message", operator: .is, value: "null")
+
+            // Filter by server name if specified
+            if let serverName = serverName {
+                query = query.eq("tool_name", value: serverName)
+            }
+
+            let response = try await query
                 .order("created_at", ascending: false)
                 .limit(20)
                 .execute()
@@ -202,17 +228,12 @@ struct ErrorLog: Identifiable {
 private struct RawExecution: Codable {
     let toolName: String
     let resultStatus: String
-    let executionTimeMs: Double?
+    let executionTimeMs: Int?
     let createdAt: Date
 
     var success: Bool { resultStatus == "success" }
 
-    enum CodingKeys: String, CodingKey {
-        case toolName = "tool_name"
-        case resultStatus = "result_status"
-        case executionTimeMs = "execution_time_ms"
-        case createdAt = "created_at"
-    }
+    // No CodingKeys - JSONDecoder uses .convertFromSnakeCase
 }
 
 private struct RawError: Codable {
@@ -220,11 +241,7 @@ private struct RawError: Codable {
     let errorMessage: String?
     let createdAt: Date
 
-    enum CodingKeys: String, CodingKey {
-        case toolName = "tool_name"
-        case errorMessage = "error_message"
-        case createdAt = "created_at"
-    }
+    // No CodingKeys - JSONDecoder uses .convertFromSnakeCase
 }
 
 private struct ToolRegistryEntry: Codable {

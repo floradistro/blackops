@@ -79,6 +79,17 @@ extension EditorStore {
                     selectedOrder = nil
                     selectedLocation = nil
                     editedCode = nil
+                case .cart:
+                    // Cart doesn't set any selection state
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    selectedLocation = nil
+                    selectedQueue = nil
+                    editedCode = nil
                 case .customer(let c):
                     selectedCustomer = c
                     selectedCreation = nil
@@ -114,6 +125,20 @@ extension EditorStore {
                     selectedLocation = nil
                     selectedQueue = nil
                     selectedCustomer = nil
+                    editedCode = nil
+                case .emailCampaign, .metaCampaign, .metaIntegration:
+                    // Campaign tabs don't have dedicated state
+                    selectedCreation = nil
+                    selectedProduct = nil
+                    selectedConversation = nil
+                    selectedCategory = nil
+                    selectedBrowserSession = nil
+                    selectedOrder = nil
+                    selectedLocation = nil
+                    selectedQueue = nil
+                    selectedCustomer = nil
+                    selectedMCPServer = nil
+                    selectedEmail = nil
                     editedCode = nil
                 }
             } else {
@@ -197,6 +222,17 @@ extension EditorStore {
             selectedOrder = nil
             selectedLocation = nil
             editedCode = nil
+        case .cart:
+            // Cart doesn't set any selection state
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            editedCode = nil
         case .customer(let c):
             selectedCustomer = c
             selectedCreation = nil
@@ -233,6 +269,20 @@ extension EditorStore {
             selectedQueue = nil
             selectedCustomer = nil
             selectedMCPServer = nil
+            editedCode = nil
+        case .emailCampaign, .metaCampaign, .metaIntegration:
+            // Campaign tabs don't have dedicated state
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            selectedCustomer = nil
+            selectedMCPServer = nil
+            selectedEmail = nil
             editedCode = nil
         }
     }
@@ -306,6 +356,17 @@ extension EditorStore {
             selectedOrder = nil
             selectedLocation = nil
             editedCode = nil
+        case .cart:
+            // Cart doesn't set any selection state
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            editedCode = nil
         case .customer(let c):
             selectedCustomer = c
             selectedCreation = nil
@@ -342,6 +403,20 @@ extension EditorStore {
             selectedQueue = nil
             selectedCustomer = nil
             selectedMCPServer = nil
+            editedCode = nil
+        case .emailCampaign, .metaCampaign, .metaIntegration:
+            // Campaign tabs don't have dedicated state
+            selectedCreation = nil
+            selectedProduct = nil
+            selectedConversation = nil
+            selectedCategory = nil
+            selectedBrowserSession = nil
+            selectedOrder = nil
+            selectedLocation = nil
+            selectedQueue = nil
+            selectedCustomer = nil
+            selectedMCPServer = nil
+            selectedEmail = nil
             editedCode = nil
         }
     }

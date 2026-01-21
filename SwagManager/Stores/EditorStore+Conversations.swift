@@ -13,22 +13,33 @@ extension EditorStore {
             return
         }
 
+        await MainActor.run { isLoadingConversations = true }
+
         do {
             // Load locations first
             NSLog("[EditorStore] Loading locations for store: \(store.id)")
-            locations = try await supabase.fetchLocations(storeId: store.id)
-            NSLog("[EditorStore] Loaded \(locations.count) locations")
+            let fetchedLocations = try await supabase.fetchLocations(storeId: store.id)
+            NSLog("[EditorStore] Loaded \(fetchedLocations.count) locations")
 
             // Load conversations
             NSLog("[EditorStore] Loading conversations for store: \(store.id)")
-            conversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: store.id, fetchLocations: { [weak self] storeId in
+            let fetchedConversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: store.id, fetchLocations: { [weak self] storeId in
                 guard let self = self else { return [] }
                 return try await self.supabase.fetchLocations(storeId: storeId)
             })
-            NSLog("[EditorStore] Loaded \(conversations.count) conversations")
+            NSLog("[EditorStore] Loaded \(fetchedConversations.count) conversations")
+
+            await MainActor.run {
+                locations = fetchedLocations
+                conversations = fetchedConversations
+                isLoadingConversations = false
+            }
         } catch {
             NSLog("[EditorStore] Failed to load conversations: \(error)")
-            self.error = "Failed to load conversations: \(error.localizedDescription)"
+            await MainActor.run {
+                self.error = "Failed to load conversations: \(error.localizedDescription)"
+                isLoadingConversations = false
+            }
         }
     }
 

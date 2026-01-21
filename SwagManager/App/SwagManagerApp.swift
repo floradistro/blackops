@@ -7,6 +7,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         print("✅ App activation policy set to .regular")
+
+        // Configure URLCache for optimized image loading
+        let memoryCapacity = 100 * 1024 * 1024  // 100 MB memory cache
+        let diskCapacity = 500 * 1024 * 1024    // 500 MB disk cache
+        let cache = URLCache(memoryCapacity: memoryCapacity, diskCapacity: diskCapacity)
+        URLCache.shared = cache
+        print("✅ URLCache configured: \(memoryCapacity/1024/1024)MB memory, \(diskCapacity/1024/1024)MB disk")
     }
 }
 

@@ -12,7 +12,8 @@ struct SidebarOrdersSection: View {
         TreeSectionHeader(
             title: "ORDERS",
             isExpanded: $store.sidebarOrdersExpanded,
-            count: store.orders.count
+            count: store.orders.count,
+            isLoading: store.isLoadingOrders
         )
         .padding(.top, DesignSystem.Spacing.xxs)
 

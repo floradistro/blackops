@@ -20,23 +20,8 @@ struct MCPServer: Codable, Identifiable, Hashable {
     let edgeFunction: String?
     let toolMode: String?
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case category
-        case definition
-        case description
-        case rpcFunction = "rpc_function"
-        case requiresUserId = "requires_user_id"
-        case requiresStoreId = "requires_store_id"
-        case isReadOnly = "is_read_only"
-        case isActive = "is_active"
-        case version
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case edgeFunction = "edge_function"
-        case toolMode = "tool_mode"
-    }
+    // No CodingKeys needed - JSONDecoder uses .convertFromSnakeCase
+    // which automatically converts rpc_function -> rpcFunction, etc.
 }
 
 // MARK: - MCP Definition

@@ -43,9 +43,13 @@ enum OpenTabItem: Identifiable, Hashable {
     case order(Order)
     case location(Location)
     case queue(Location)
+    case cart(QueueEntry)
     case customer(Customer)
     case mcpServer(MCPServer)
     case email(ResendEmail)
+    case emailCampaign(EmailCampaign)
+    case metaCampaign(MetaCampaign)
+    case metaIntegration(MetaIntegration)
 
     var id: String {
         switch self {
@@ -57,9 +61,13 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order(let o): return "order-\(o.id)"
         case .location(let l): return "location-\(l.id)"
         case .queue(let l): return "queue-\(l.id)"
+        case .cart(let q): return "cart-\(q.id)"
         case .customer(let c): return "customer-\(c.id)"
         case .mcpServer(let m): return "mcp-\(m.id)"
         case .email(let e): return "email-\(e.id)"
+        case .emailCampaign(let c): return "emailcampaign-\(c.id)"
+        case .metaCampaign(let c): return "metacampaign-\(c.id)"
+        case .metaIntegration(let m): return "metaintegration-\(m.id)"
         }
     }
 
@@ -73,9 +81,17 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order(let o): return o.displayTitle
         case .location(let l): return l.name
         case .queue(let l): return "\(l.name) Queue"
+        case .cart(let q):
+            if let firstName = q.customerFirstName, let lastName = q.customerLastName {
+                return "\(firstName) \(lastName)"
+            }
+            return "Guest Customer"
         case .customer(let c): return c.displayName
         case .mcpServer(let m): return m.name
         case .email(let e): return e.displaySubject
+        case .emailCampaign(let c): return c.name
+        case .metaCampaign(let c): return c.name
+        case .metaIntegration(let m): return m.businessName ?? "Meta Integration"
         }
     }
 
@@ -98,9 +114,13 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order(let o): return o.orderTypeIcon
         case .location: return "mappin.and.ellipse"
         case .queue: return "person.3.fill"
+        case .cart: return "cart.fill"
         case .customer(let c): return c.statusIcon
         case .mcpServer: return "server.rack"
         case .email: return "envelope.fill"
+        case .emailCampaign: return "envelope.badge"
+        case .metaCampaign: return "megaphone"
+        case .metaIntegration: return "link.badge.plus"
         }
     }
 
@@ -114,9 +134,13 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order(let o): return o.statusColor
         case .location: return .purple
         case .queue: return .blue
+        case .cart(let q): return q.cartItemCount > 0 ? .green : .gray
         case .customer(let c): return Color(c.statusColor)
         case .mcpServer: return .indigo
         case .email(let e): return e.statusColor
+        case .emailCampaign: return .blue
+        case .metaCampaign: return .pink
+        case .metaIntegration: return .indigo
         }
     }
 
@@ -141,9 +165,13 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order: return "⬡"
         case .location: return "⌘"
         case .queue: return "⚡"
+        case .cart: return "🛒"
         case .customer(let c): return c.terminalIcon
         case .mcpServer: return "⚙"
         case .email: return "✉"
+        case .emailCampaign: return "📧"
+        case .metaCampaign: return "📢"
+        case .metaIntegration: return "🔗"
         }
     }
 
@@ -158,9 +186,13 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order: return .orange
         case .location: return .purple
         case .queue: return .blue
+        case .cart(let q): return q.cartItemCount > 0 ? .green : .gray
         case .customer(let c): return Color(c.terminalColor)
         case .mcpServer: return .indigo
         case .email(let e): return e.statusColor
+        case .emailCampaign: return .blue
+        case .metaCampaign: return .pink
+        case .metaIntegration: return .indigo
         }
     }
 

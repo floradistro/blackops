@@ -10,12 +10,14 @@ extension EditorStore {
         let storeId = selectedStore?.id ?? defaultStoreId
 
         do {
-            isLoading = true
+            await MainActor.run { isLoadingCustomers = true }
 
             // Load first batch immediately for instant UI
             let firstBatch = try await supabase.fetchCustomers(storeId: storeId, limit: 100, offset: 0)
-            customers = firstBatch
-            isLoading = false
+            await MainActor.run {
+                customers = firstBatch
+                isLoadingCustomers = false
+            }
             print("✅ Loaded initial \(customers.count) customers")
 
             // Load stats in background
@@ -43,8 +45,10 @@ extension EditorStore {
             }
         } catch {
             print("❌ Error loading customers: \(error)")
-            self.error = "Failed to load customers: \(error.localizedDescription)"
-            isLoading = false
+            await MainActor.run {
+                self.error = "Failed to load customers: \(error.localizedDescription)"
+                isLoadingCustomers = false
+            }
         }
     }
 

@@ -234,35 +234,8 @@ struct ExecutionDetailView: View {
             Text("Request Details")
                 .font(.system(size: 16, weight: .semibold))
 
-            if let request = execution.request {
-                CodeBlock(title: "Parameters", code: request.prettyJSON)
-
-                if let method = request.method, let url = request.url {
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-                        Text("HTTP Details")
-                            .font(.system(size: 14, weight: .semibold))
-
-                        MetadataRow(label: "Method", value: method)
-                        MetadataRow(label: "URL", value: url)
-                    }
-                    .padding(DesignSystem.Spacing.md)
-                    .background(VisualEffectBackground(material: .sidebar))
-                    .cornerRadius(6)
-                }
-
-                if let headers = request.headers, !headers.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-                        Text("Headers")
-                            .font(.system(size: 14, weight: .semibold))
-
-                        ForEach(Array(headers.keys.sorted()), id: \.self) { key in
-                            MetadataRow(label: key, value: headers[key] ?? "")
-                        }
-                    }
-                    .padding(DesignSystem.Spacing.md)
-                    .background(VisualEffectBackground(material: .sidebar))
-                    .cornerRadius(6)
-                }
+            if execution.request != nil {
+                CodeBlock(title: "Parameters", code: execution.prettyRequest)
             } else {
                 Text("No request data available")
                     .font(.system(size: 12))
@@ -279,38 +252,8 @@ struct ExecutionDetailView: View {
             Text("Response Details")
                 .font(.system(size: 16, weight: .semibold))
 
-            if let response = execution.response {
-                if let statusCode = response.statusCode {
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-                        Text("HTTP Status")
-                            .font(.system(size: 14, weight: .semibold))
-
-                        StatItem(
-                            label: "Status Code",
-                            value: "\(statusCode)",
-                            color: statusCode < 300 ? .green : statusCode < 400 ? .orange : .red
-                        )
-                    }
-                    .padding(DesignSystem.Spacing.md)
-                    .background(VisualEffectBackground(material: .sidebar))
-                    .cornerRadius(6)
-                }
-
-                CodeBlock(title: "Response Body", code: response.prettyJSON)
-
-                if let headers = response.headers, !headers.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-                        Text("Headers")
-                            .font(.system(size: 14, weight: .semibold))
-
-                        ForEach(Array(headers.keys.sorted()), id: \.self) { key in
-                            MetadataRow(label: key, value: headers[key] ?? "")
-                        }
-                    }
-                    .padding(DesignSystem.Spacing.md)
-                    .background(VisualEffectBackground(material: .sidebar))
-                    .cornerRadius(6)
-                }
+            if execution.response != nil {
+                CodeBlock(title: "Response Body", code: execution.prettyResponse)
             } else {
                 Text("No response data available")
                     .font(.system(size: 12))
@@ -337,27 +280,13 @@ struct ExecutionDetailView: View {
     // MARK: - Actions
 
     private func copyAsCurl() {
-        guard let request = execution.request else { return }
+        guard let requestString = execution.request else { return }
 
-        var curl = "curl -X \(request.method ?? "POST")"
-
-        if let url = request.url {
-            curl += " '\(url)'"
-        }
-
-        if let headers = request.headers {
-            for (key, value) in headers {
-                curl += " \\\n  -H '\(key): \(value)'"
-            }
-        }
-
-        if let params = request.parameters {
-            let dict = params.mapValues { $0.value }
-            if let data = try? JSONSerialization.data(withJSONObject: dict),
-               let json = String(data: data, encoding: .utf8) {
-                curl += " \\\n  -d '\(json)'"
-            }
-        }
+        // Build a simple curl command with the request JSON
+        var curl = "curl -X POST"
+        curl += " 'https://uaednwpxursknmwdeejn.supabase.co/functions/v1/tools-gateway'"
+        curl += " \\\n  -H 'Content-Type: application/json'"
+        curl += " \\\n  -d '\(requestString)'"
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(curl, forType: .string)

@@ -85,16 +85,11 @@ struct SidebarResendSection: View {
 
                 Spacer()
 
-                // Show total count or loading indicator
-                if store.isLoadingEmails && store.emailTotalCount == 0 {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                        .frame(width: 16, height: 16)
-                } else {
-                    Text("\(store.emailTotalCount)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
+                // Show total count with loading animation
+                LoadingCountBadge(
+                    count: store.emailTotalCount,
+                    isLoading: store.isLoadingEmails
+                )
             }
             .padding(.horizontal, DesignSystem.Spacing.sm)
             .padding(.vertical, DesignSystem.Spacing.xs)

@@ -117,14 +117,17 @@ struct SidebarPanel: View {
                 SidebarTeamChatSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
+                SidebarCRMSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
                 // SidebarCustomersSection(store: store)
                 // Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
                 SidebarLocationsSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                // SidebarQueuesSection(store: store)
-                // Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                SidebarQueuesSection(store: store)
+                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
                 SidebarBrowserSessionsSection(store: store)
                 Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)

@@ -1,0 +1,138 @@
+import Foundation
+
+extension EditorStore {
+    private var campaignService: CampaignService {
+        CampaignService()
+    }
+
+    // MARK: - Load Campaigns
+
+    func loadAllCampaigns() async {
+        guard let storeId = selectedStore?.id else { return }
+
+        isLoadingCampaigns = true
+        defer { isLoadingCampaigns = false }
+
+        async let emailCampaignsTask = loadEmailCampaigns(storeId: storeId)
+        async let metaCampaignsTask = loadMetaCampaigns(storeId: storeId)
+        async let metaIntegrationsTask = loadMetaIntegrations(storeId: storeId)
+        async let marketingCampaignsTask = loadMarketingCampaigns(storeId: storeId)
+        async let smsCampaignsTask = loadSMSCampaigns(storeId: storeId)
+
+        _ = await (emailCampaignsTask, metaCampaignsTask, metaIntegrationsTask, marketingCampaignsTask, smsCampaignsTask)
+    }
+
+    func loadEmailCampaigns(storeId: UUID) async {
+        do {
+            emailCampaigns = try await campaignService.loadEmailCampaigns(storeId: storeId)
+        } catch {
+            print("Error loading email campaigns: \(error)")
+            self.error = "Failed to load email campaigns: \(error.localizedDescription)"
+        }
+    }
+
+    func loadMetaCampaigns(storeId: UUID) async {
+        do {
+            metaCampaigns = try await campaignService.loadMetaCampaigns(storeId: storeId)
+        } catch {
+            print("Error loading meta campaigns: \(error)")
+            self.error = "Failed to load meta campaigns: \(error.localizedDescription)"
+        }
+    }
+
+    func loadMetaIntegrations(storeId: UUID) async {
+        do {
+            metaIntegrations = try await campaignService.loadMetaIntegrations(storeId: storeId)
+        } catch {
+            print("Error loading meta integrations: \(error)")
+            self.error = "Failed to load meta integrations: \(error.localizedDescription)"
+        }
+    }
+
+    func loadMarketingCampaigns(storeId: UUID) async {
+        do {
+            marketingCampaigns = try await campaignService.loadMarketingCampaigns(storeId: storeId)
+        } catch {
+            print("Error loading marketing campaigns: \(error)")
+            self.error = "Failed to load marketing campaigns: \(error.localizedDescription)"
+        }
+    }
+
+    func loadSMSCampaigns(storeId: UUID) async {
+        do {
+            smsCampaigns = try await campaignService.loadSMSCampaigns(storeId: storeId)
+        } catch {
+            // SMS campaigns table uses different RLS approach - skip for now
+            if error.localizedDescription.contains("app.current_store_id") {
+                print("SMS campaigns require custom RLS configuration - skipping")
+                smsCampaigns = []
+            } else {
+                print("Error loading SMS campaigns: \(error)")
+                self.error = "Failed to load SMS campaigns: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    // MARK: - Select Campaigns
+
+    func selectEmailCampaign(_ campaign: EmailCampaign) {
+        selectedEmailCampaign = campaign
+        openTab(.emailCampaign(campaign))
+    }
+
+    func selectMetaCampaign(_ campaign: MetaCampaign) {
+        selectedMetaCampaign = campaign
+        openTab(.metaCampaign(campaign))
+    }
+
+    func selectMetaIntegration(_ integration: MetaIntegration) {
+        selectedMetaIntegration = integration
+        openTab(.metaIntegration(integration))
+    }
+
+    // MARK: - Refresh Campaign
+
+    func refreshEmailCampaign(_ campaign: EmailCampaign) async {
+        do {
+            let updated = try await campaignService.getEmailCampaign(id: campaign.id)
+            if let index = emailCampaigns.firstIndex(where: { $0.id == campaign.id }) {
+                emailCampaigns[index] = updated
+            }
+            if selectedEmailCampaign?.id == campaign.id {
+                selectedEmailCampaign = updated
+            }
+            // Update active tab if showing this campaign
+            if let activeTab = activeTab, case .emailCampaign(let c) = activeTab, c.id == campaign.id {
+                self.activeTab = .emailCampaign(updated)
+                if let tabIndex = openTabs.firstIndex(where: { $0.id == activeTab.id }) {
+                    openTabs[tabIndex] = .emailCampaign(updated)
+                }
+            }
+        } catch {
+            print("Error refreshing email campaign: \(error)")
+            self.error = "Failed to refresh campaign: \(error.localizedDescription)"
+        }
+    }
+
+    func refreshMetaCampaign(_ campaign: MetaCampaign) async {
+        do {
+            let updated = try await campaignService.getMetaCampaign(id: campaign.id)
+            if let index = metaCampaigns.firstIndex(where: { $0.id == campaign.id }) {
+                metaCampaigns[index] = updated
+            }
+            if selectedMetaCampaign?.id == campaign.id {
+                selectedMetaCampaign = updated
+            }
+            // Update active tab if showing this campaign
+            if let activeTab = activeTab, case .metaCampaign(let c) = activeTab, c.id == campaign.id {
+                self.activeTab = .metaCampaign(updated)
+                if let tabIndex = openTabs.firstIndex(where: { $0.id == activeTab.id }) {
+                    openTabs[tabIndex] = .metaCampaign(updated)
+                }
+            }
+        } catch {
+            print("Error refreshing meta campaign: \(error)")
+            self.error = "Failed to refresh campaign: \(error.localizedDescription)"
+        }
+    }
+}

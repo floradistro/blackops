@@ -126,7 +126,15 @@ struct BrowserSessionItem: View {
 struct BrowserSessionsSectionHeader: View {
     @Binding var isExpanded: Bool
     let count: Int
+    let isLoading: Bool
     let onNewSession: () -> Void
+
+    init(isExpanded: Binding<Bool>, count: Int, isLoading: Bool = false, onNewSession: @escaping () -> Void) {
+        self._isExpanded = isExpanded
+        self.count = count
+        self.isLoading = isLoading
+        self.onNewSession = onNewSession
+    }
 
     @State private var isHovering = false
 
@@ -147,13 +155,10 @@ struct BrowserSessionsSectionHeader: View {
                     .foregroundStyle(DesignSystem.Colors.textSecondary)
                     .tracking(0.5)
 
-                Text("\(count)")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                LoadingCountBadge(
+                    count: count,
+                    isLoading: isLoading
+                )
 
                 Spacer()
 
