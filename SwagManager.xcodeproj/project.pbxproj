@@ -7,6 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A8DDA6DB3671D5FA975EC06C /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9375A8E86B621D767A48C79E /* Order.swift */; };
+		7DE504D50E8CE166B67DC2E9 /* OrderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653599816CD077BEC43CC8F1 /* OrderService.swift */; };
+		FAD57031AF4FF2B911EEBE77 /* EditorStore+Orders.swift in Sources */ = {isa = PBXBuildFile; fileRef = C928D28576D30D7C50E0ACD5 /* EditorStore+Orders.swift */; };
+		0B1DDF8A9DDAD6291FD0BACE /* OrderTreeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704C0253D88C071E7B7D5EEF /* OrderTreeItem.swift */; };
+		1B39A4188EE17BAE75D4E020 /* SidebarOrdersSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D77CF00E903CD55B3237554 /* SidebarOrdersSection.swift */; };
+		C02CFE23A2C1BF4C65F14F6B /* SidebarLocationsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 694A3765E8A648C6860734DA /* SidebarLocationsSection.swift */; };
+		4C849EB57E8A2E137DB23D3F /* OrderDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DEF62983DA1DD286F95D1D /* OrderDetailPanel.swift */; };
+		8CD78421C2637C2D5F88A43A /* LocationDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BFCD28BA63C68E24475B335 /* LocationDetailPanel.swift */; };
+		1AB7818AFD6D8215FE6BC2F7 /* CustomerDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49D7DBB968DEE2FAE1DC2D1 /* CustomerDetailPanel.swift */; };
+		E427CE93C44D5CF850BC5549 /* CartPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EEC474AB06AA7A612097F5 /* CartPanel.swift */; };
+		DBDE6EF29DFDA9A356588C69 /* CheckoutSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4881BD50FE1E1CF266450582 /* CheckoutSheet.swift */; };
+		5F8A9B2C3D4E1A7F6G9H0I1J /* CartStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BC5F6C59E6C6D7CBC8E6BC /* CartStore.swift */; };
 		02E752E57BEDC920B9E6875E /* MCPTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21009677FD1663F08DF7872A /* MCPTestView.swift */; };
 		056B802DFD1A814921946476 /* EditorStore+RealtimeSubscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E997DEEA064B81D83FD7F05 /* EditorStore+RealtimeSubscriptions.swift */; };
 		067A11172933EA46E4D268F8 /* CategoryConfigView+DataOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = E067A517274BF27C800ED3D8 /* CategoryConfigView+DataOperations.swift */; };

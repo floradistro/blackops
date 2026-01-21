@@ -2,14 +2,27 @@
 .build/
 .swiftpm/
 DerivedData/
+Build/
+build/
 
 # macOS
 .DS_Store
 *.xcuserstate
+*.orig
+*.swp
+*~
 
 # Xcode
 *.xcworkspace
 xcuserdata/
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+
+# Swift
+*.swiftmodule
+*.swiftdoc
+*.swiftsourceinfo
 
 # Environment files
 .env
@@ -24,4 +37,7 @@ node_modules/
 *.key
 credentials.json
 .wilson
-build/
+
+# Temporary files
+*.corrupted
+*.tmp

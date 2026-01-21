@@ -33,12 +33,12 @@ final class LocationQueueStore: ObservableObject {
 
     // MARK: - Published State
 
-    @Published internal(set) var queue: [QueueEntry] = []
-    @Published internal(set) var isLoading = false
-    @Published internal(set) var error: String?
+    @Published var queue: [QueueEntry] = []
+    @Published var isLoading = false
+    @Published var error: String?
     @Published var selectedCartId: UUID?
-    @Published internal(set) var lastUpdated: Date?
-    @Published internal(set) var connectionState: ConnectionState = .disconnected
+    @Published var lastUpdated: Date?
+    @Published var connectionState: ConnectionState = .disconnected
 
     enum ConnectionState {
         case connected

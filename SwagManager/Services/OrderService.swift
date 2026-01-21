@@ -5,7 +5,7 @@ import Foundation
 import Supabase
 
 @MainActor
-final class OrderService {
+public final class OrderService {
     private let client: SupabaseClient
 
     init(client: SupabaseClient) {

@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import Supabase
+import Foundation
 
 // MARK: - Main Editor View
 // Refactored following Apple engineering standards - extracted utilities and store extensions

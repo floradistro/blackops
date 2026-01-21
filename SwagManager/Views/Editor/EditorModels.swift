@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 // MARK: - Editor Models & Types
 // Extracted from EditorView.swift following Apple engineering standards

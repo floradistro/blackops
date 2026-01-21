@@ -1,13 +1,13 @@
 import Foundation
 
-struct AnyCodable: Codable, Hashable {
-    let value: Any
+public struct AnyCodable: Codable, Hashable {
+    public let value: Any
 
-    init(_ value: Any) {
+    public init(_ value: Any) {
         self.value = value
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
@@ -29,7 +29,7 @@ struct AnyCodable: Codable, Hashable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
         switch value {
@@ -52,7 +52,7 @@ struct AnyCodable: Codable, Hashable {
         }
     }
 
-    static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (NSNull, NSNull):
             return true
@@ -69,7 +69,7 @@ struct AnyCodable: Codable, Hashable {
         }
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         switch value {
         case is NSNull:
             hasher.combine(0)

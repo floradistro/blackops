@@ -63,10 +63,11 @@ struct TaxBreakdownItem: Codable, Equatable {
 
 // MARK: - Cart Service
 
+@MainActor
 class CartService {
     private let supabase: SupabaseService
 
-    init(supabase: SupabaseService = .shared) {
+    nonisolated init(supabase: SupabaseService = .shared) {
         self.supabase = supabase
     }
 

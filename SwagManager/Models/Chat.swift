@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Location
 
-struct Location: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct Location: Codable, Identifiable, Hashable {
+    public let id: UUID
     var storeId: UUID?
     var name: String
     var slug: String?
@@ -25,19 +25,19 @@ struct Location: Codable, Identifiable, Hashable {
         case updatedAt = "updated_at"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: Location, rhs: Location) -> Bool {
+    public static func == (lhs: Location, rhs: Location) -> Bool {
         lhs.id == rhs.id
     }
 }
 
 // MARK: - Conversation
 
-struct Conversation: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct Conversation: Codable, Identifiable, Hashable {
+    public let id: UUID
     var storeId: UUID?
     var userId: UUID?
     var title: String?
@@ -62,11 +62,11 @@ struct Conversation: Codable, Identifiable, Hashable {
         case updatedAt = "updated_at"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: Conversation, rhs: Conversation) -> Bool {
+    public static func == (lhs: Conversation, rhs: Conversation) -> Bool {
         lhs.id == rhs.id
     }
 

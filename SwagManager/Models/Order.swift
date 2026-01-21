@@ -5,8 +5,8 @@ import SwiftUI
 // Following Apple engineering standards
 // Maps to the orders table in Supabase
 
-struct Order: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct Order: Codable, Identifiable, Hashable {
+    public let id: UUID
     var orderNumber: String
     var customerId: UUID?
     var headlessCustomerId: UUID?  // For customers without platform accounts
@@ -92,11 +92,11 @@ struct Order: Codable, Identifiable, Hashable {
         case deliveredAt = "delivered_at"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: Order, rhs: Order) -> Bool {
+    public static func == (lhs: Order, rhs: Order) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -191,7 +191,7 @@ struct Order: Codable, Identifiable, Hashable {
 
 // MARK: - Order Status Enum
 
-enum OrderStatus: String, CaseIterable {
+public enum OrderStatus: String, CaseIterable {
     case pending
     case confirmed
     case preparing
@@ -239,7 +239,7 @@ enum OrderStatus: String, CaseIterable {
 
 // MARK: - Order Type Enum
 
-enum OrderType: String, CaseIterable {
+public enum OrderType: String, CaseIterable {
     case walkIn = "walk_in"
     case pickup
     case delivery
@@ -269,8 +269,8 @@ enum OrderType: String, CaseIterable {
 
 // MARK: - Order Item
 
-struct OrderItem: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct OrderItem: Codable, Identifiable, Hashable {
+    public let id: UUID
     var orderId: UUID
     var productId: UUID?
     var productName: String
@@ -318,11 +318,11 @@ struct OrderItem: Codable, Identifiable, Hashable {
         case createdAt = "created_at"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: OrderItem, rhs: OrderItem) -> Bool {
+    public static func == (lhs: OrderItem, rhs: OrderItem) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -363,8 +363,8 @@ struct OrderItem: Codable, Identifiable, Hashable {
 
 // MARK: - Order Status History
 
-struct OrderStatusHistory: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct OrderStatusHistory: Codable, Identifiable, Hashable {
+    public let id: UUID
     var orderId: UUID
     var fromStatus: String?
     var toStatus: String
@@ -384,11 +384,11 @@ struct OrderStatusHistory: Codable, Identifiable, Hashable {
         case createdAt = "created_at"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: OrderStatusHistory, rhs: OrderStatusHistory) -> Bool {
+    public static func == (lhs: OrderStatusHistory, rhs: OrderStatusHistory) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -403,8 +403,8 @@ struct OrderStatusHistory: Codable, Identifiable, Hashable {
 
 // MARK: - Order Customer (simplified for order context)
 
-struct OrderCustomer: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct OrderCustomer: Codable, Identifiable, Hashable {
+    public let id: UUID
     var email: String?
     var phone: String?
     var displayName: String?
@@ -418,11 +418,11 @@ struct OrderCustomer: Codable, Identifiable, Hashable {
         case lastName = "last_name"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: OrderCustomer, rhs: OrderCustomer) -> Bool {
+    public static func == (lhs: OrderCustomer, rhs: OrderCustomer) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -437,8 +437,8 @@ struct OrderCustomer: Codable, Identifiable, Hashable {
 
 // MARK: - Staff Member (for order fulfillment tracking)
 
-struct StaffMember: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct StaffMember: Codable, Identifiable, Hashable {
+    public let id: UUID
     var email: String?
     var phone: String?
     var firstName: String?
@@ -457,11 +457,11 @@ struct StaffMember: Codable, Identifiable, Hashable {
         case avatarUrl = "avatar_url"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: StaffMember, rhs: StaffMember) -> Bool {
+    public static func == (lhs: StaffMember, rhs: StaffMember) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -497,8 +497,8 @@ struct StaffMember: Codable, Identifiable, Hashable {
 
 // MARK: - Headless Customer (customers without platform accounts)
 
-struct HeadlessCustomer: Codable, Identifiable, Hashable {
-    let id: UUID
+public struct HeadlessCustomer: Codable, Identifiable, Hashable {
+    public let id: UUID
     var storeId: UUID?
     var email: String?
     var phone: String?
@@ -542,11 +542,11 @@ struct HeadlessCustomer: Codable, Identifiable, Hashable {
         case updatedAt = "updated_at"
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 
-    static func == (lhs: HeadlessCustomer, rhs: HeadlessCustomer) -> Bool {
+    public static func == (lhs: HeadlessCustomer, rhs: HeadlessCustomer) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -582,23 +582,42 @@ struct HeadlessCustomer: Codable, Identifiable, Hashable {
 
 // MARK: - Order Staff Info (aggregated staff for an order)
 
-struct OrderStaffInfo {
-    var createdBy: StaffMember?
-    var preparedBy: StaffMember?
-    var shippedBy: StaffMember?
-    var deliveredBy: StaffMember?
-    var employee: StaffMember?
-    var updatedBy: StaffMember?
+public struct OrderStaffInfo {
+    public var createdBy: StaffMember?
+    public var preparedBy: StaffMember?
+    public var shippedBy: StaffMember?
+    public var deliveredBy: StaffMember?
+    public var employee: StaffMember?
+    public var updatedBy: StaffMember?
+
+    public init(createdBy: StaffMember? = nil, preparedBy: StaffMember? = nil, shippedBy: StaffMember? = nil, deliveredBy: StaffMember? = nil, employee: StaffMember? = nil, updatedBy: StaffMember? = nil) {
+        self.createdBy = createdBy
+        self.preparedBy = preparedBy
+        self.shippedBy = shippedBy
+        self.deliveredBy = deliveredBy
+        self.employee = employee
+        self.updatedBy = updatedBy
+    }
 }
 
 // MARK: - Order With Details (for full order view)
 
-struct OrderWithDetails {
-    let order: Order
-    let items: [OrderItem]
-    let statusHistory: [OrderStatusHistory]
-    let customer: OrderCustomer?
-    let headlessCustomer: HeadlessCustomer?
-    let location: Location?
-    let staff: OrderStaffInfo
+public struct OrderWithDetails {
+    public let order: Order
+    public let items: [OrderItem]
+    public let statusHistory: [OrderStatusHistory]
+    public let customer: OrderCustomer?
+    public let headlessCustomer: HeadlessCustomer?
+    public let location: Location?
+    public let staff: OrderStaffInfo
+
+    public init(order: Order, items: [OrderItem], statusHistory: [OrderStatusHistory], customer: OrderCustomer?, headlessCustomer: HeadlessCustomer?, location: Location?, staff: OrderStaffInfo) {
+        self.order = order
+        self.items = items
+        self.statusHistory = statusHistory
+        self.customer = customer
+        self.headlessCustomer = headlessCustomer
+        self.location = location
+        self.staff = staff
+    }
 }
