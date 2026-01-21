@@ -224,6 +224,7 @@ extension Product: Codable {
         // JSONB fields
         customFields = try? container.decodeIfPresent([String: AnyCodable].self, forKey: .customFields)
         pricingSchemaId = try? container.decodeIfPresent(UUID.self, forKey: .pricingSchemaId)
+        pricingSchema = try? container.decodeIfPresent(PricingSchema.self, forKey: .pricingSchema)
         pricingData = try? container.decodeIfPresent(AnyCodable.self, forKey: .pricingData)
 
         createdAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
@@ -260,6 +261,7 @@ extension Product: Codable {
         try container.encodeIfPresent(productVisibility, forKey: .productVisibility)
         try container.encodeIfPresent(customFields, forKey: .customFields)
         try container.encodeIfPresent(pricingSchemaId, forKey: .pricingSchemaId)
+        try container.encodeIfPresent(pricingSchema, forKey: .pricingSchema)
         try container.encodeIfPresent(pricingData, forKey: .pricingData)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
