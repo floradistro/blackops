@@ -55,7 +55,7 @@ struct ProductSelectorSheet: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(DesignSystem.Colors.surfaceSecondary)
 
             Divider()
 
@@ -68,7 +68,7 @@ struct ProductSelectorSheet: View {
                 }
             }
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(DesignSystem.Colors.surfaceSecondary)
     }
 
     private func categoryRow(title: String, icon: String, category: Category?) -> some View {
@@ -116,8 +116,8 @@ struct ProductSelectorSheet: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(8)
+            .background(DesignSystem.Colors.surfaceElevated)
+            .cornerRadius(DesignSystem.Radius.md)
 
             Spacer()
 
@@ -130,7 +130,7 @@ struct ProductSelectorSheet: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(DesignSystem.Colors.surfacePrimary)
     }
 
     // MARK: - Product Grid
@@ -141,18 +141,24 @@ struct ProductSelectorSheet: View {
                 emptyState
             } else {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(180), spacing: 0), count: 5),
-                    spacing: 0
+                    columns: Array(repeating: GridItem(.fixed(180), spacing: 12), count: 5),
+                    spacing: 12
                 ) {
                     ForEach(filteredProducts) { product in
-                        ProductCard(product: product) {
+                        GlassProductCard(
+                            product: product,
+                            size: .standard,
+                            showPrice: true,
+                            showStock: false
+                        ) {
                             selectedProduct = product
                         }
                     }
                 }
+                .padding(12)
             }
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(DesignSystem.Colors.surfaceSecondary)
     }
 
     private var emptyState: some View {
@@ -213,66 +219,8 @@ struct ProductSelectorSheet: View {
     }
 }
 
-// MARK: - Product Card
-
-struct ProductCard: View {
-    let product: Product
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 0) {
-                // Product image
-                if let imageURL = product.featuredImage, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        placeholderView
-                    }
-                    .frame(width: 180, height: 180)
-                    .clipped()
-                } else {
-                    placeholderView.frame(width: 180, height: 180)
-                }
-
-                // Product info
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(product.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .lineLimit(2)
-                        .foregroundStyle(.primary)
-
-                    if let price = product.wholesalePrice {
-                        Text(formatCurrency(price))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.primary)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .frame(width: 180, alignment: .leading)
-            }
-            .background(Color(NSColor.controlBackgroundColor))
-            .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var placeholderView: some View {
-        ZStack {
-            Rectangle().fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-            Image(systemName: "leaf")
-                .font(.system(size: 32))
-                .foregroundStyle(.secondary.opacity(0.3))
-        }
-    }
-
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
-    }
-}
+// MARK: - Legacy Product Card (DEPRECATED - Use GlassProductCard)
+// Kept for backward compatibility, will be removed in future version
 
 // MARK: - Tier Selector Sheet (Native macOS Form)
 
@@ -305,7 +253,7 @@ struct TierSelectorSheet: View {
                 }
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(DesignSystem.Colors.surfaceSecondary)
 
             Divider()
 
@@ -360,7 +308,7 @@ struct TierSelectorSheet: View {
                 .keyboardShortcut(.defaultAction)
             }
             .padding()
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(DesignSystem.Colors.surfaceSecondary)
         }
         .frame(width: 400, height: tiers.isEmpty ? 300 : 500)
         .onAppear {

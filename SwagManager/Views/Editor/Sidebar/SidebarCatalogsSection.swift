@@ -10,18 +10,20 @@ struct SidebarCatalogsSection: View {
 
     var body: some View {
         TreeSectionHeader(
-            title: "CATALOGS",
+            title: "Catalogs",
+            icon: "book.fill",
+            iconColor: DesignSystem.Colors.purple,
             isExpanded: $store.sidebarCatalogExpanded,
             count: store.catalogs.count,
             isLoading: store.isLoadingCatalogs
         )
-        .padding(.top, DesignSystem.Spacing.xxs)
+        .padding(.top, DesignSystem.TreeSpacing.sectionPaddingTop)
 
         if store.sidebarCatalogExpanded {
             if store.catalogs.isEmpty {
                 Text("No catalogs")
                     .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(.tertiary)
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
                     .padding(.horizontal, DesignSystem.Spacing.md)
                     .padding(.vertical, DesignSystem.Spacing.xxs)
             } else {
@@ -51,6 +53,7 @@ struct SidebarCatalogsSection: View {
                                 expandedCategoryIds: $expandedCategoryIds,
                                 indentLevel: 1
                             )
+                            .environmentObject(store)
                         }
 
                         if !store.uncategorizedProducts.isEmpty {
@@ -62,6 +65,7 @@ struct SidebarCatalogsSection: View {
                                     indentLevel: 1,
                                     onSelect: { store.selectProduct(product) }
                                 )
+                                .environmentObject(store)
                             }
                         }
                     }

@@ -11,19 +11,20 @@ struct SidebarCRMSection: View {
                     store.sidebarCRMExpanded.toggle()
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xxs) {
-                    Image(systemName: store.sidebarCRMExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 12)
+                HStack(spacing: DesignSystem.Spacing.xs) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(store.sidebarCRMExpanded ? 90 : 0))
+                        .frame(width: 16)
 
                     Image(systemName: "megaphone")
                         .font(.system(size: 13))
-                        .foregroundStyle(.pink)
+                        .foregroundColor(DesignSystem.Colors.pink)
 
                     Text("CRM")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     Spacer()
 
@@ -34,20 +35,14 @@ struct SidebarCRMSection: View {
                     } else {
                         let totalCount = store.emailCampaigns.count + store.metaCampaigns.count
                         if totalCount > 0 {
-                            Text("\(totalCount)")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.secondary.opacity(0.2))
-                                )
+                            Text("(\(totalCount))")
+                                .font(.system(size: 10))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
                         }
                     }
                 }
                 .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xs)
+                .padding(.vertical, DesignSystem.Spacing.xxs)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -101,29 +96,30 @@ struct EmailCampaignsSubsection: View {
                     store.sidebarEmailCampaignsExpanded.toggle()
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xxs) {
-                    Image(systemName: store.sidebarEmailCampaignsExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: DesignSystem.TreeSpacing.chevronSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(store.sidebarEmailCampaignsExpanded ? 90 : 0))
                         .frame(width: 12)
 
                     Image(systemName: "envelope.badge")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.blue)
+                        .font(.system(size: DesignSystem.TreeSpacing.iconSize))
+                        .foregroundColor(DesignSystem.Colors.blue)
 
                     Text("Email Campaigns")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
-                    Spacer()
+                    Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
-                    Text("\(store.emailCampaigns.count)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Text("(\(store.emailCampaigns.count))")
+                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .frame(height: DesignSystem.TreeSpacing.itemHeight)
+                .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + DesignSystem.TreeSpacing.indentPerLevel)
+                .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -132,7 +128,7 @@ struct EmailCampaignsSubsection: View {
                 if store.emailCampaigns.isEmpty {
                     Text("No campaigns")
                         .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                         .padding(.leading, 40)
                         .padding(.vertical, DesignSystem.Spacing.xxs)
                 } else {
@@ -157,29 +153,30 @@ struct MetaCampaignsSubsection: View {
                     store.sidebarMetaCampaignsExpanded.toggle()
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xxs) {
-                    Image(systemName: store.sidebarMetaCampaignsExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: DesignSystem.TreeSpacing.chevronSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(store.sidebarMetaCampaignsExpanded ? 90 : 0))
                         .frame(width: 12)
 
                     Image(systemName: "megaphone")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.pink)
+                        .font(.system(size: DesignSystem.TreeSpacing.iconSize))
+                        .foregroundColor(DesignSystem.Colors.pink)
 
                     Text("Meta Campaigns")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
-                    Spacer()
+                    Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
-                    Text("\(store.metaCampaigns.count)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Text("(\(store.metaCampaigns.count))")
+                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .frame(height: DesignSystem.TreeSpacing.itemHeight)
+                .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + DesignSystem.TreeSpacing.indentPerLevel)
+                .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -188,7 +185,7 @@ struct MetaCampaignsSubsection: View {
                 if store.metaCampaigns.isEmpty {
                     Text("No campaigns")
                         .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                         .padding(.leading, 40)
                         .padding(.vertical, DesignSystem.Spacing.xxs)
                 } else {
@@ -213,29 +210,30 @@ struct SMSCampaignsSubsection: View {
                     store.sidebarSMSCampaignsExpanded.toggle()
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xxs) {
-                    Image(systemName: store.sidebarSMSCampaignsExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: DesignSystem.TreeSpacing.chevronSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(store.sidebarSMSCampaignsExpanded ? 90 : 0))
                         .frame(width: 12)
 
                     Image(systemName: "message")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.green)
+                        .font(.system(size: DesignSystem.TreeSpacing.iconSize))
+                        .foregroundColor(DesignSystem.Colors.green)
 
                     Text("SMS Campaigns")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
-                    Spacer()
+                    Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
-                    Text("\(store.smsCampaigns.count)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Text("(\(store.smsCampaigns.count))")
+                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .frame(height: DesignSystem.TreeSpacing.itemHeight)
+                .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + DesignSystem.TreeSpacing.indentPerLevel)
+                .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -259,43 +257,43 @@ struct EmailCampaignRow: View {
         Button(action: {
             store.selectEmailCampaign(campaign)
         }) {
-            HStack(spacing: DesignSystem.Spacing.xxs) {
+            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
                 Image(systemName: "envelope")
-                    .font(.system(size: 11))
-                    .foregroundStyle(statusColor)
-                    .frame(width: 16)
+                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
+                    .foregroundColor(statusColor)
+                    .frame(width: 14)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(campaign.name)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                         .lineLimit(1)
 
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignSystem.TreeSpacing.elementSpacing) {
                         Text(campaign.status.rawValue.capitalized)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(statusColor)
+                            .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize, weight: .medium))
+                            .foregroundColor(statusColor)
 
                         if campaign.totalSent > 0 {
                             Text("•")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
 
                             Text("\(campaign.totalSent) sent")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                     }
                 }
 
-                Spacer()
+                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
             }
-            .padding(.leading, 40)
-            .padding(.trailing, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .frame(height: DesignSystem.TreeSpacing.itemHeight)
+            .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + DesignSystem.TreeSpacing.indentPerLevel * 2)
+            .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
             .background(
                 store.selectedEmailCampaign?.id == campaign.id ?
-                    Color.accentColor.opacity(0.15) : Color.clear
+                    DesignSystem.Colors.selectionActive : Color.clear
             )
             .contentShape(Rectangle())
         }
@@ -304,13 +302,13 @@ struct EmailCampaignRow: View {
 
     var statusColor: Color {
         switch campaign.status {
-        case .draft: return .gray
-        case .scheduled: return .orange
-        case .sending: return .blue
-        case .sent: return .green
-        case .paused: return .yellow
-        case .cancelled: return .red
-        case .testing: return .purple
+        case .draft: return DesignSystem.Colors.textTertiary
+        case .scheduled: return DesignSystem.Colors.orange
+        case .sending: return DesignSystem.Colors.blue
+        case .sent: return DesignSystem.Colors.green
+        case .paused: return DesignSystem.Colors.yellow
+        case .cancelled: return DesignSystem.Colors.red
+        case .testing: return DesignSystem.Colors.purple
         }
     }
 }
@@ -323,45 +321,45 @@ struct MetaCampaignRow: View {
         Button(action: {
             store.selectMetaCampaign(campaign)
         }) {
-            HStack(spacing: DesignSystem.Spacing.xxs) {
+            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
                 Image(systemName: "megaphone.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.pink)
-                    .frame(width: 16)
+                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
+                    .foregroundColor(DesignSystem.Colors.pink)
+                    .frame(width: 14)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(campaign.name)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                         .lineLimit(1)
 
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignSystem.TreeSpacing.elementSpacing) {
                         if let status = campaign.status {
                             Text(status)
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize, weight: .medium))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
 
                         if campaign.impressions > 0 {
                             Text("•")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
 
                             Text("\(campaign.impressions) imp")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                     }
                 }
 
-                Spacer()
+                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
             }
-            .padding(.leading, 40)
-            .padding(.trailing, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .frame(height: DesignSystem.TreeSpacing.itemHeight)
+            .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + DesignSystem.TreeSpacing.indentPerLevel * 2)
+            .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
             .background(
                 store.selectedMetaCampaign?.id == campaign.id ?
-                    Color.accentColor.opacity(0.15) : Color.clear
+                    DesignSystem.Colors.selectionActive : Color.clear
             )
             .contentShape(Rectangle())
         }
@@ -377,20 +375,20 @@ struct MetaIntegrationRow: View {
         Button(action: {
             store.selectMetaIntegration(integration)
         }) {
-            HStack(spacing: DesignSystem.Spacing.xxs) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Image(systemName: "link.badge.plus")
                     .font(.system(size: 12))
-                    .foregroundStyle(statusColor)
+                    .foregroundColor(statusColor)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(integration.businessName ?? "Meta Integration")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                         .lineLimit(1)
 
                     Text(integration.status.rawValue.capitalized)
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(statusColor)
+                        .foregroundColor(statusColor)
                 }
 
                 Spacer()
@@ -399,7 +397,7 @@ struct MetaIntegrationRow: View {
             .padding(.vertical, DesignSystem.Spacing.xxs)
             .background(
                 store.selectedMetaIntegration?.id == integration.id ?
-                    Color.accentColor.opacity(0.15) : Color.clear
+                    DesignSystem.Colors.selectionActive : Color.clear
             )
             .contentShape(Rectangle())
         }
@@ -408,10 +406,10 @@ struct MetaIntegrationRow: View {
 
     var statusColor: Color {
         switch integration.status {
-        case .active: return .green
-        case .disconnected: return .gray
-        case .expired: return .orange
-        case .error: return .red
+        case .active: return DesignSystem.Colors.green
+        case .disconnected: return DesignSystem.Colors.textTertiary
+        case .expired: return DesignSystem.Colors.orange
+        case .error: return DesignSystem.Colors.red
         }
     }
 }
@@ -425,40 +423,40 @@ struct SMSCampaignRow: View {
             // SMS campaigns feature - coming soon
             print("SMS Campaign selected: \(campaign.name)")
         }) {
-            HStack(spacing: DesignSystem.Spacing.xxs) {
+            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
                 Image(systemName: "message.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.green)
-                    .frame(width: 16)
+                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
+                    .foregroundColor(DesignSystem.Colors.green)
+                    .frame(width: 14)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(campaign.name)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                         .lineLimit(1)
 
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignSystem.TreeSpacing.elementSpacing) {
                         Text(campaign.status.rawValue.capitalized)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
 
                         if campaign.totalSent > 0 {
                             Text("•")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
 
                             Text("\(campaign.totalSent) sent")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                     }
                 }
 
-                Spacer()
+                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
             }
-            .padding(.leading, 40)
-            .padding(.trailing, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .frame(height: DesignSystem.TreeSpacing.itemHeight)
+            .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + DesignSystem.TreeSpacing.indentPerLevel * 2)
+            .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

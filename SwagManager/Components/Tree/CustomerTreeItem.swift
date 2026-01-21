@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Customer Tree Item
 // Component for displaying customer in sidebar tree
@@ -11,57 +12,52 @@ struct CustomerTreeItem: View {
     let onSelect: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                // Status/verification icon
-                Image(systemName: customer.statusIcon)
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(customer.statusColor))
-                    .frame(width: 16)
+        HStack(spacing: 8) {
+            Image(systemName: customer.statusIcon)
+                .font(.system(size: 13))
+                .foregroundColor(Color(customer.statusColor))
+                .frame(width: 16)
 
-                // Customer name
-                Text(customer.displayName)
-                    .font(.system(size: 13))
-                    .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
-                    .lineLimit(1)
+            Text(customer.displayName)
+                .font(.system(size: 13))
+                .foregroundColor(isSelected ? .primary : .secondary)
+                .lineLimit(1)
 
-                Spacer()
+            Spacer(minLength: 4)
 
-                // Loyalty tier indicator
-                if let tier = customer.loyaltyTier {
-                    HStack(spacing: 2) {
-                        Image(systemName: customer.loyaltyTierIcon)
-                            .font(.system(size: 10))
-                            .foregroundColor(Color(customer.loyaltyTierColor))
-
-                        Text(tier.prefix(1).uppercased())
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(Color(customer.loyaltyTierColor))
-                    }
+            if let tier = customer.loyaltyTier {
+                Text(tier.prefix(1).uppercased())
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(customer.loyaltyTierColor))
                     .opacity(0.7)
-                }
-
-                // Total spent
-                if let spent = customer.totalSpent, spent > 0 {
-                    Text(customer.formattedTotalSpent)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
-                }
             }
-            .padding(.leading, CGFloat(indentLevel) * DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xs)
-            .padding(.horizontal, DesignSystem.Spacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? DesignSystem.Colors.surfaceSecondary.opacity(0.3) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? DesignSystem.Colors.border : Color.clear, lineWidth: 1)
-            )
+
+            if let spent = customer.totalSpent, spent > 0 {
+                Text(customer.formattedTotalSpent)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.leading, 16 + CGFloat(indentLevel) * 16)
+        .padding(.trailing, 16)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+        )
         .contentShape(Rectangle())
+        .onTapGesture {
+            onSelect()
+        }
+        .onDrag {
+            print("🚀 Starting drag for customer: \(customer.displayName) (\(customer.id))")
+            let dragString = DragItemType.encode(.customer, uuid: customer.id)
+            print("🔑 Drag data: \(dragString)")
+
+            let provider = NSItemProvider(object: dragString as NSString)
+            print("✅ NSItemProvider created successfully")
+            return provider
+        }
     }
 }
 

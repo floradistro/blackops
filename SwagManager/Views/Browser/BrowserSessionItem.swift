@@ -142,30 +142,34 @@ struct BrowserSessionsSectionHeader: View {
         Button {
             withAnimation(DesignSystem.Animation.spring) { isExpanded.toggle() }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .animation(DesignSystem.Animation.fast, value: isExpanded)
-                    .frame(width: 12)
+                    .frame(width: 16)
+
+                Image(systemName: "safari.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(DesignSystem.Colors.cyan)
 
                 Text("BROWSER SESSIONS")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                     .tracking(0.5)
+
+                Spacer()
 
                 LoadingCountBadge(
                     count: count,
                     isLoading: isLoading
                 )
 
-                Spacer()
-
                 Button(action: onNewSession) {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(DesignSystem.Colors.textSecondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                         .frame(width: 20, height: 20)
                         .background(
                             Circle()
@@ -176,8 +180,8 @@ struct BrowserSessionsSectionHeader: View {
                 .buttonStyle(.plain)
                 .help("New browser session")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, DesignSystem.Spacing.sm)
+            .padding(.vertical, DesignSystem.Spacing.xxs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

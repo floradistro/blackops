@@ -97,47 +97,47 @@ struct MetaCampaignDetailPanel: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 12) {
-                StatCard(
+                GlassStatCard(
                     title: "Impressions",
                     value: formatNumber(campaign.impressions),
                     icon: "eye",
-                    color: .blue
+                    color: DesignSystem.Colors.blue
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Reach",
                     value: formatNumber(campaign.reach),
                     icon: "person.2",
-                    color: .purple
+                    color: DesignSystem.Colors.purple
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Clicks",
                     value: formatNumber(campaign.clicks),
-                    subtitle: String(format: "%.2f%% CTR", campaign.clickRate),
                     icon: "hand.tap",
-                    color: .orange
+                    subtitle: String(format: "%.2f%% CTR", campaign.clickRate),
+                    color: DesignSystem.Colors.orange
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Spend",
                     value: formatCurrency(campaign.spend),
                     icon: "dollarsign.circle",
-                    color: .green
+                    color: DesignSystem.Colors.green
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "CPC",
                     value: formatCurrency(campaign.cpc ?? 0),
                     icon: "chart.line.uptrend.xyaxis",
-                    color: .indigo
+                    color: DesignSystem.Colors.cyan
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "CPM",
                     value: formatCurrency(campaign.cpm ?? 0),
                     icon: "chart.bar",
-                    color: .cyan
+                    color: DesignSystem.Colors.cyan
                 )
             }
         }

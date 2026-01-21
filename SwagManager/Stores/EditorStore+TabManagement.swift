@@ -1,9 +1,8 @@
 import SwiftUI
 
 // MARK: - EditorStore Tab Management Extension
-// Extracted from EditorView.swift following Apple engineering standards
-// Contains: Safari/Xcode-style tab management and routing logic
-// File size: ~165 lines (under Apple's 300 line "excellent" threshold)
+// Refactored to eliminate repetitive switch statements
+// Uses protocol-based state activation pattern
 
 extension EditorStore {
     // MARK: - Tab Management
@@ -12,418 +11,51 @@ extension EditorStore {
         if !openTabs.contains(where: { $0.id == item.id }) {
             openTabs.append(item)
         }
-        activeTab = item
+        switchToTab(item)
     }
 
     func closeTab(_ item: OpenTabItem) {
         openTabs.removeAll { $0.id == item.id }
+
         if activeTab?.id == item.id {
             activeTab = openTabs.last
-            // Update selection based on active tab
             if let tab = activeTab {
-                switch tab {
-                case .creation(let c):
-                    selectedCreation = c
-                    editedCode = c.reactCode
-                    selectedProduct = nil
-                    selectedConversation = nil
-                case .product(let p):
-                    selectedProduct = p
-                    selectedCreation = nil
-                    selectedConversation = nil
-                    editedCode = nil
-                case .conversation(let c):
-                    selectedConversation = c
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedCategory = nil
-                    editedCode = nil
-                case .category(let c):
-                    selectedCategory = c
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    editedCode = nil
-                case .browserSession(let s):
-                    selectedBrowserSession = s
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    editedCode = nil
-                case .order(let o):
-                    selectedOrder = o
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedLocation = nil
-                    editedCode = nil
-                case .location(let l):
-                    selectedLocation = l
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    editedCode = nil
-                case .queue(let l):
-                    selectedQueue = l
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    selectedLocation = nil
-                    editedCode = nil
-                case .cart:
-                    // Cart doesn't set any selection state
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    selectedLocation = nil
-                    selectedQueue = nil
-                    editedCode = nil
-                case .customer(let c):
-                    selectedCustomer = c
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    selectedLocation = nil
-                    selectedQueue = nil
-                    editedCode = nil
-                case .mcpServer(let m):
-                    selectedMCPServer = m
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    selectedLocation = nil
-                    selectedQueue = nil
-                    selectedCustomer = nil
-                    selectedEmail = nil
-                    editedCode = nil
-                case .email(let e):
-                    selectedEmail = e
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    selectedLocation = nil
-                    selectedQueue = nil
-                    selectedCustomer = nil
-                    editedCode = nil
-                case .emailCampaign, .metaCampaign, .metaIntegration:
-                    // Campaign tabs don't have dedicated state
-                    selectedCreation = nil
-                    selectedProduct = nil
-                    selectedConversation = nil
-                    selectedCategory = nil
-                    selectedBrowserSession = nil
-                    selectedOrder = nil
-                    selectedLocation = nil
-                    selectedQueue = nil
-                    selectedCustomer = nil
-                    selectedMCPServer = nil
-                    selectedEmail = nil
-                    editedCode = nil
-                }
+                switchToTab(tab)
             } else {
-                selectedCreation = nil
-                selectedProduct = nil
-                selectedConversation = nil
-                selectedCategory = nil
-                selectedBrowserSession = nil
-                selectedOrder = nil
-                selectedLocation = nil
-                editedCode = nil
+                clearAllSelections()
             }
         }
     }
 
     func switchToTab(_ item: OpenTabItem) {
+        clearAllSelections()
         activeTab = item
-        switch item {
-        case .creation(let c):
-            selectedCreation = c
-            editedCode = c.reactCode
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-        case .product(let p):
-            selectedProduct = p
-            selectedCreation = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            editedCode = nil
-        case .conversation(let c):
-            selectedConversation = c
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            editedCode = nil
-        case .category(let c):
-            selectedCategory = c
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedBrowserSession = nil
-            editedCode = nil
-        case .browserSession(let s):
-            selectedBrowserSession = s
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            editedCode = nil
-        case .order(let o):
-            selectedOrder = o
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedLocation = nil
-            editedCode = nil
-        case .location(let l):
-            selectedLocation = l
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            editedCode = nil
-        case .queue(let l):
-            selectedQueue = l
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            editedCode = nil
-        case .cart:
-            // Cart doesn't set any selection state
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            editedCode = nil
-        case .customer(let c):
-            selectedCustomer = c
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            editedCode = nil
-        case .mcpServer(let m):
-            selectedMCPServer = m
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            selectedCustomer = nil
-            selectedEmail = nil
-            editedCode = nil
-        case .email(let e):
-            selectedEmail = e
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            selectedCustomer = nil
-            selectedMCPServer = nil
-            editedCode = nil
-        case .emailCampaign, .metaCampaign, .metaIntegration:
-            // Campaign tabs don't have dedicated state
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            selectedCustomer = nil
-            selectedMCPServer = nil
-            selectedEmail = nil
-            editedCode = nil
-        }
+        item.activateState(in: self)
     }
 
     func closeOtherTabs(except tab: OpenTabItem) {
         openTabs = openTabs.filter { $0.id == tab.id }
-        activeTab = tab
-        switch tab {
-        case .creation(let c):
-            selectedCreation = c
-            editedCode = c.reactCode
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-        case .product(let p):
-            selectedProduct = p
-            selectedCreation = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            editedCode = nil
-        case .conversation(let c):
-            selectedConversation = c
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            editedCode = nil
-        case .category(let c):
-            selectedCategory = c
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedBrowserSession = nil
-            editedCode = nil
-        case .browserSession(let s):
-            selectedBrowserSession = s
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            editedCode = nil
-        case .order(let o):
-            selectedOrder = o
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedLocation = nil
-            editedCode = nil
-        case .location(let l):
-            selectedLocation = l
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            editedCode = nil
-        case .queue(let l):
-            selectedQueue = l
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            editedCode = nil
-        case .cart:
-            // Cart doesn't set any selection state
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            editedCode = nil
-        case .customer(let c):
-            selectedCustomer = c
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            editedCode = nil
-        case .mcpServer(let m):
-            selectedMCPServer = m
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            selectedCustomer = nil
-            selectedEmail = nil
-            editedCode = nil
-        case .email(let e):
-            selectedEmail = e
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            selectedCustomer = nil
-            selectedMCPServer = nil
-            editedCode = nil
-        case .emailCampaign, .metaCampaign, .metaIntegration:
-            // Campaign tabs don't have dedicated state
-            selectedCreation = nil
-            selectedProduct = nil
-            selectedConversation = nil
-            selectedCategory = nil
-            selectedBrowserSession = nil
-            selectedOrder = nil
-            selectedLocation = nil
-            selectedQueue = nil
-            selectedCustomer = nil
-            selectedMCPServer = nil
-            selectedEmail = nil
-            editedCode = nil
+        switchToTab(tab)
+    }
+
+    func closeTabsToRight(of tab: OpenTabItem) {
+        guard let index = openTabs.firstIndex(where: { $0.id == tab.id }) else { return }
+        openTabs = Array(openTabs.prefix(through: index))
+
+        if let active = activeTab, !openTabs.contains(where: { $0.id == active.id }) {
+            switchToTab(tab)
         }
     }
 
     func closeAllTabs() {
         openTabs.removeAll()
         activeTab = nil
+        clearAllSelections()
+    }
+
+    // MARK: - Clear All Selections
+
+    private func clearAllSelections() {
         selectedCreation = nil
         selectedProduct = nil
         selectedConversation = nil
@@ -432,16 +64,56 @@ extension EditorStore {
         selectedOrder = nil
         selectedLocation = nil
         selectedQueue = nil
+        selectedCustomer = nil
+        selectedMCPServer = nil
+        selectedEmail = nil
         editedCode = nil
     }
+}
 
-    func closeTabsToRight(of tab: OpenTabItem) {
-        guard let index = openTabs.firstIndex(where: { $0.id == tab.id }) else { return }
-        openTabs = Array(openTabs.prefix(through: index))
-        // If active tab was closed, switch to the reference tab
-        if let active = activeTab, !openTabs.contains(where: { $0.id == active.id }) {
-            switchToTab(tab)
+// MARK: - Tab State Activation
+
+extension OpenTabItem {
+    @MainActor
+    func activateState(in store: EditorStore) {
+        switch self {
+        case .creation(let c):
+            store.selectedCreation = c
+            store.editedCode = c.reactCode
+
+        case .product(let p):
+            store.selectedProduct = p
+
+        case .conversation(let c):
+            store.selectedConversation = c
+
+        case .category(let c):
+            store.selectedCategory = c
+
+        case .browserSession(let s):
+            store.selectedBrowserSession = s
+
+        case .order(let o):
+            store.selectedOrder = o
+
+        case .location(let l):
+            store.selectedLocation = l
+
+        case .queue(let l):
+            store.selectedQueue = l
+
+        case .customer(let c):
+            store.selectedCustomer = c
+
+        case .mcpServer(let m):
+            store.selectedMCPServer = m
+
+        case .email(let e):
+            store.selectedEmail = e
+
+        case .cart, .emailCampaign, .metaCampaign, .metaIntegration, .agentBuilder:
+            // These tabs don't have dedicated state
+            break
         }
     }
-
 }

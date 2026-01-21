@@ -13,36 +13,72 @@ struct CartPanel: View {
     @State private var selectedCategory: Category?
     @State private var selectedProduct: Product?
     @State private var showCheckout = false
+    @State private var popoverAnchor: CGRect = .zero
 
     var body: some View {
-        ZStack {
-            // Main content - product browser
-            VStack(spacing: 0) {
-                // Header with search
-                headerBar
+        ZStack(alignment: .top) {
+            // Background
+            Color.black.ignoresSafeArea()
 
-                Divider()
+            // Product grid (edge-to-edge)
+            productBrowser
 
-                // Product grid
-                productBrowser
-            }
-            .background(Color(NSColor.controlBackgroundColor))
+            // Floating glass header (overlaid on top)
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    // Floating glass search bar
+                    LiquidGlassSearchBar(
+                        "Search products, SKU...",
+                        text: $searchText
+                    )
 
-            // Floating cart at bottom (Apple/Whale pattern)
-            FloatingCartDock(
-                cartStore: cartStore,
-                customerName: customerDisplayName,
-                onCheckout: {
-                    showCheckout = true
-                },
-                onClose: {
-                    if let activeTab = store.activeTab {
-                        store.closeTab(activeTab)
+                    Spacer(minLength: 0)
+                }
+
+                // Category pills
+                if !categoriesWithStock.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            CategoryPill(name: "All", isSelected: selectedCategory == nil) {
+                                selectedCategory = nil
+                            }
+
+                            ForEach(categoriesWithStock, id: \.id) { category in
+                                CategoryPill(name: category.name, isSelected: selectedCategory?.id == category.id) {
+                                    selectedCategory = category
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 4)
                     }
                 }
-            )
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+
+            // Floating cart at bottom
+            VStack {
+                Spacer()
+
+                HStack {
+                    Spacer()
+                    FloatingCartDock(
+                        cartStore: cartStore,
+                        customerName: customerDisplayName,
+                        onCheckout: {
+                            showCheckout = true
+                        },
+                        onClose: {
+                            if let activeTab = store.activeTab {
+                                store.closeTab(activeTab)
+                            }
+                        }
+                    )
+                    Spacer()
+                }
+            }
         }
-        .background(Color.black)
         .task {
             await cartStore.loadCart(
                 storeId: store.selectedStore?.id ?? UUID(),
@@ -64,103 +100,73 @@ struct CartPanel: View {
             )
         }
         .sheet(item: $selectedProduct) { product in
-            QuickAddSheet(
+            TierSelectorSheet(
                 product: product,
                 pricingSchemas: store.pricingSchemas,
-                onAdd: { quantity, tier in
+                onSelectTier: { tier in
                     Task {
-                        await addToCart(product: product, quantity: quantity, tier: tier)
+                        await addToCart(product: product, quantity: 1, tier: tier)
                     }
                 }
             )
         }
     }
 
-    // MARK: - Header
-
-    private var headerBar: some View {
-        HStack(spacing: 12) {
-            // Search
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 14))
-
-                TextField("Search products...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 14))
-
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.tertiary)
-                            .font(.system(size: 13))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.windowBackgroundColor))
-            .cornerRadius(8)
-
-            // Category picker (compact)
-            Menu {
-                Button("All Categories") {
-                    selectedCategory = nil
-                }
-
-                Divider()
-
-                ForEach(store.categories) { category in
-                    Button(category.name) {
-                        selectedCategory = category
-                    }
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "folder")
-                        .font(.system(size: 13))
-                    Text(selectedCategory?.name ?? "All")
-                        .font(.system(size: 13))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(NSColor.windowBackgroundColor))
-                .cornerRadius(8)
-            }
-            .menuStyle(.borderlessButton)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(NSColor.controlBackgroundColor))
-    }
 
     // MARK: - Product Browser
 
     private var productBrowser: some View {
-        ScrollView {
-            if filteredProducts.isEmpty {
-                emptyState
-            } else {
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4),
-                    spacing: 12
-                ) {
-                    ForEach(filteredProducts) { product in
-                        ProductTile(product: product) {
-                            selectedProduct = product
+        GeometryReader { geometry in
+            let cols = calculateColumns(width: geometry.size.width)
+            let width = geometry.size.width / CGFloat(cols)
+
+            ScrollView(showsIndicators: false) {
+                if filteredProducts.isEmpty {
+                    emptyState
+                        .padding(.top, 140)
+                        .frame(width: geometry.size.width)
+                } else {
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.fixed(width), spacing: 0), count: cols),
+                        spacing: 0
+                    ) {
+                        ForEach(Array(filteredProducts.enumerated()), id: \.element.id) { index, product in
+                            ProductGridCard(
+                                product: product,
+                                showRightLine: (index + 1) % cols != 0,
+                                showBottomLine: index < filteredProducts.count - cols
+                            ) {
+                                selectedProduct = product
+                            }
                         }
                     }
+                    .padding(.top, 120) // Space for floating header
+                    .padding(.bottom, 140) // Space for floating cart
                 }
-                .padding(16)
             }
         }
+    }
+
+    private func calculateColumns(width: CGFloat) -> Int {
+        let minCardWidth: CGFloat = 160
+        let maxCardWidth: CGFloat = 220
+        let idealCardWidth: CGFloat = 180
+
+        // Calculate how many cards fit at ideal width
+        let idealCols = Int(width / idealCardWidth)
+
+        // Ensure we have at least 3 columns, max 8
+        let cols = max(3, min(8, idealCols))
+
+        // Check if cards would be too small or too large
+        let actualWidth = width / CGFloat(cols)
+        if actualWidth < minCardWidth && cols > 3 {
+            return cols - 1
+        } else if actualWidth > maxCardWidth && cols < 8 {
+            return cols + 1
+        }
+
+        return cols
     }
 
     private var emptyState: some View {
@@ -176,12 +182,27 @@ struct CartPanel: View {
         .padding()
     }
 
+    /// Categories that have at least one in-stock product at this location
+    private var categoriesWithStock: [Category] {
+        let productsByCategory = Dictionary(grouping: locationProducts) { $0.primaryCategoryId }
+        return store.categories.filter { category in
+            productsByCategory[category.id]?.contains { isProductInStock($0) } ?? false
+        }
+    }
+
+    /// Products available at this specific location
+    /// TODO: Add location-based filtering when product-location relationship is established
+    private var locationProducts: [Product] {
+        // For now, show all products
+        // In the future, filter by: product.locationIds?.contains(queueEntry.locationId) ?? false
+        store.products
+    }
+
+    /// Final filtered products (by location, stock, category, search)
     private var filteredProducts: [Product] {
-        store.products.filter { product in
+        locationProducts.filter { product in
             // In stock filter
-            guard let status = product.stockStatus else { return false }
-            let inStock = status.lowercased() == "in_stock" || status.lowercased() == "instock"
-            guard inStock else { return false }
+            guard isProductInStock(product) else { return false }
 
             // Category filter
             if let category = selectedCategory {
@@ -197,6 +218,11 @@ struct CartPanel: View {
 
             return true
         }
+    }
+
+    private func isProductInStock(_ product: Product) -> Bool {
+        guard let status = product.stockStatus else { return false }
+        return status.lowercased() == "in_stock" || status.lowercased() == "instock"
     }
 
     // MARK: - Helpers
@@ -216,9 +242,11 @@ struct CartPanel: View {
 
     private func addToCart(product: Product, quantity: Int, tier: PricingTier?) async {
         NSLog("[CartPanel] addToCart - product: \(product.name), quantity: \(quantity), tier: \(tier?.label ?? "nil")")
+        NSLog("[CartPanel] - tier.defaultPrice: \(tier.map { String(describing: $0.defaultPrice) } ?? "nil"), tier.quantity: \(tier.map { String($0.quantity) } ?? "nil")")
         await cartStore.addProduct(
             productId: product.id,
             quantity: quantity,
+            unitPrice: tier?.defaultPrice,
             tierLabel: tier?.label,
             tierQuantity: tier?.quantity,
             variantId: nil
@@ -226,301 +254,12 @@ struct CartPanel: View {
     }
 }
 
-// MARK: - Product Tile (Compact)
+// MARK: - Legacy Product Tile (DEPRECATED - Use GlassProductCard)
+// Kept for backward compatibility, will be removed in future version
 
-struct ProductTile: View {
-    let product: Product
-    let onTap: () -> Void
+// FloatingCartDock moved to separate file (FloatingCartDock.swift)
 
-    var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 0) {
-                // Image
-                if let imageURL = product.featuredImage, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        placeholderView
-                    }
-                    .frame(height: 140)
-                    .clipped()
-                } else {
-                    placeholderView.frame(height: 140)
-                }
-
-                // Info
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(product.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .lineLimit(2)
-                        .foregroundStyle(.primary)
-
-                    if let price = product.wholesalePrice {
-                        Text(formatCurrency(price))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .background(Color(NSColor.windowBackgroundColor))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var placeholderView: some View {
-        ZStack {
-            Rectangle().fill(Color(NSColor.controlBackgroundColor))
-            Image(systemName: "leaf")
-                .font(.system(size: 32))
-                .foregroundStyle(.secondary.opacity(0.3))
-        }
-    }
-
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
-    }
-}
-
-// MARK: - Floating Cart Dock (Whale pattern)
-
-struct FloatingCartDock: View {
-    @ObservedObject var cartStore: CartStore
-    let customerName: String
-    let onCheckout: () -> Void
-    let onClose: () -> Void
-
-    var body: some View {
-        VStack {
-            Spacer()
-
-            // Customer tab
-            HStack(spacing: 8) {
-                Spacer()
-
-                HStack(spacing: 8) {
-                    // Customer initials
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Text(customerInitials)
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
-
-                    Text(customerName)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white)
-
-                    if let cart = cartStore.cart, !cart.isEmpty {
-                        Text("\(cart.itemCount)")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-
-                    Button {
-                        onClose()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
-            }
-            .padding(.horizontal, 16)
-
-            // Cart pill
-            if let cart = cartStore.cart, !cart.isEmpty {
-                HStack(spacing: 12) {
-                    // Items summary
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(cart.itemCount) items")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-
-                        Text(formatCurrency(cart.totals.total))
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-
-                    Spacer()
-
-                    // Checkout button
-                    Button {
-                        onCheckout()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "creditcard")
-                            Text("Checkout")
-                            Image(systemName: "arrow.right")
-                        }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(Color.accentColor, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(16)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal, 16)
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .move(edge: .bottom)),
-                    removal: .opacity
-                ))
-            }
-        }
-        .padding(.bottom, 16)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: cartStore.cart?.isEmpty)
-    }
-
-    private var customerInitials: String {
-        let parts = customerName.split(separator: " ")
-        if parts.count >= 2 {
-            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
-        }
-        return String(customerName.prefix(2)).uppercased()
-    }
-
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
-    }
-}
-
-// MARK: - Quick Add Sheet (Simple, native)
-
-struct QuickAddSheet: View {
-    let product: Product
-    let pricingSchemas: [PricingSchema]
-    let onAdd: (Int, PricingTier?) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedTier: PricingTier?
-    @State private var quantity: Int = 1
-
-    private var tiers: [PricingTier] {
-        NSLog("[QuickAddSheet] Loading tiers for product: %@", product.name)
-        NSLog("[QuickAddSheet] pricingSchemas count: %d", pricingSchemas.count)
-        NSLog("[QuickAddSheet] product.pricingSchemaId: %@", product.pricingSchemaId?.uuidString ?? "nil")
-
-        guard let schemaId = product.pricingSchemaId else {
-            NSLog("[QuickAddSheet] ❌ No pricingSchemaId for product")
-            return []
-        }
-
-        guard let schema = pricingSchemas.first(where: { $0.id == schemaId }) else {
-            NSLog("[QuickAddSheet] ❌ No matching schema found for id: %@", schemaId.uuidString)
-            return []
-        }
-
-        let sortedTiers = schema.tiers.sorted { ($0.sortOrder ?? 0) < ($1.sortOrder ?? 0) }
-        NSLog("[QuickAddSheet] ✅ Found %d tiers", sortedTiers.count)
-        return sortedTiers
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(product.name)
-                        .font(.headline)
-                    Text(formatCurrency(currentPrice))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button("Cancel") { dismiss() }
-            }
-            .padding()
-
-            Divider()
-
-            // Content
-            Form {
-                if !tiers.isEmpty {
-                    Picker("Size", selection: $selectedTier) {
-                        ForEach(tiers, id: \.id) { tier in
-                            HStack {
-                                Text(tier.displayLabel)
-                                Spacer()
-                                if let price = tier.defaultPrice {
-                                    Text(formatCurrency(price))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .tag(tier as PricingTier?)
-                        }
-                    }
-                }
-
-                Stepper("Quantity: \(quantity)", value: $quantity, in: 1...999)
-
-                Section {
-                    LabeledContent("Total") {
-                        Text(formatCurrency(currentPrice * Decimal(quantity)))
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-            .formStyle(.grouped)
-
-            Divider()
-
-            // Footer
-            HStack {
-                Spacer()
-                Button {
-                    onAdd(quantity, selectedTier)
-                    dismiss()
-                } label: {
-                    Text("Add to Cart")
-                        .fontWeight(.semibold)
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding()
-        }
-        .frame(width: 400, height: tiers.isEmpty ? 280 : 450)
-        .onAppear {
-            selectedTier = tiers.first
-        }
-    }
-
-    private var currentPrice: Decimal {
-        selectedTier?.defaultPrice ?? product.wholesalePrice ?? 0
-    }
-
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
-    }
-}
+// QuickAddSheet removed - now using TierSelectorSheet with liquid glass design
 
 // MARK: - Cart Store
 
@@ -593,9 +332,9 @@ class CartStore: ObservableObject {
         }
     }
 
-    func addProduct(productId: UUID, quantity: Int = 1, tierLabel: String?, tierQuantity: Double?, variantId: UUID?) async {
+    func addProduct(productId: UUID, quantity: Int = 1, unitPrice: Decimal?, tierLabel: String?, tierQuantity: Double?, variantId: UUID?) async {
         NSLog("[CartStore] addProduct called - cartId: \(cart?.id.uuidString ?? "nil"), productId: \(productId.uuidString)")
-        NSLog("[CartStore] - quantity: \(quantity), tierLabel: \(tierLabel ?? "nil"), tierQuantity: \(tierQuantity.map { String($0) } ?? "nil")")
+        NSLog("[CartStore] - quantity: \(quantity), unitPrice: \(unitPrice.map { String(describing: $0) } ?? "nil"), tierLabel: \(tierLabel ?? "nil"), tierQuantity: \(tierQuantity.map { String($0) } ?? "nil")")
 
         guard let cartId = cart?.id else {
             NSLog("[CartStore] ❌ ERROR: No cart ID available")
@@ -607,6 +346,7 @@ class CartStore: ObservableObject {
                 cartId: cartId,
                 productId: productId,
                 quantity: quantity,
+                unitPrice: unitPrice,
                 tierLabel: tierLabel,
                 tierQuantity: tierQuantity,
                 variantId: variantId
@@ -616,5 +356,100 @@ class CartStore: ObservableObject {
             self.error = error.localizedDescription
             NSLog("[CartStore] ❌ Failed to add product: \(error)")
         }
+    }
+}
+
+// MARK: - Product Grid Card (iOS-style, edge-to-edge)
+
+struct ProductGridCard: View {
+    let product: Product
+    var showRightLine: Bool = true
+    var showBottomLine: Bool = true
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 0) {
+                // Product image - fixed aspect ratio 1:1
+                ZStack {
+                    if let imageUrl = product.featuredImage, let url = URL(string: imageUrl) {
+                        CachedAsyncImage(url: url)
+                            .aspectRatio(1, contentMode: .fill)
+                            .overlay(Color.black.opacity(0.15))
+                    } else {
+                        Color.black.opacity(0.3)
+                            .aspectRatio(1, contentMode: .fill)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .foregroundStyle(.white.opacity(0.15))
+                                    .font(.system(size: 32))
+                            )
+                    }
+                }
+
+                // Product info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.name)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    Text(product.sku ?? " ")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                .padding(10)
+                .background(Color.black.opacity(0.7))
+            }
+            .overlay(alignment: .trailing) {
+                if showRightLine {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 0.5)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if showBottomLine {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(height: 0.5)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(GridCardPressStyle())
+    }
+}
+
+// MARK: - Grid Card Press Style
+
+struct GridCardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Legacy Glass Product Card (kept for compatibility)
+
+struct GlassProductCard: View {
+    let product: Product
+    let size: CardSize
+    let showPrice: Bool
+    let showStock: Bool
+    let action: () -> Void
+
+    enum CardSize {
+        case compact
+        case normal
+    }
+
+    var body: some View {
+        ProductGridCard(product: product, onTap: action)
     }
 }

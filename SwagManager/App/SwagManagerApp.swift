@@ -8,12 +8,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         print("✅ App activation policy set to .regular")
 
-        // Configure URLCache for optimized image loading
-        let memoryCapacity = 100 * 1024 * 1024  // 100 MB memory cache
-        let diskCapacity = 500 * 1024 * 1024    // 500 MB disk cache
+        // Configure URLCache for persistent image caching (survives app restart)
+        // Apple's approach: aggressive disk caching for images
+        let memoryCapacity = 100 * 1024 * 1024   // 100 MB memory
+        let diskCapacity = 1024 * 1024 * 1024    // 1 GB disk (persistent)
         let cache = URLCache(memoryCapacity: memoryCapacity, diskCapacity: diskCapacity)
         URLCache.shared = cache
         print("✅ URLCache configured: \(memoryCapacity/1024/1024)MB memory, \(diskCapacity/1024/1024)MB disk")
+        print("✅ Images will persist across app launches")
     }
 }
 
@@ -30,6 +32,7 @@ struct SwagManagerApp: App {
                 .environmentObject(appState)
                 .frame(minWidth: 900, minHeight: 600)
         }
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Store...") {
@@ -66,6 +69,74 @@ struct SwagManagerApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("ShowSearch"), object: nil)
                 }
                 .keyboardShortcut("f", modifiers: .command)
+            }
+
+            // Tab commands
+            CommandGroup(replacing: .windowArrangement) {
+                Button("Close Tab") {
+                    NotificationCenter.default.post(name: NSNotification.Name("CloseTab"), object: nil)
+                }
+                .keyboardShortcut("w", modifiers: .command)
+
+                Divider()
+
+                Button("Previous Tab") {
+                    NotificationCenter.default.post(name: NSNotification.Name("PreviousTab"), object: nil)
+                }
+                .keyboardShortcut(KeyEquivalent.leftArrow, modifiers: [.command, .option])
+
+                Button("Next Tab") {
+                    NotificationCenter.default.post(name: NSNotification.Name("NextTab"), object: nil)
+                }
+                .keyboardShortcut(KeyEquivalent.rightArrow, modifiers: [.command, .option])
+
+                Divider()
+
+                // Cmd+1-9 for tab selection
+                Button("Show Tab 1") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab1"), object: nil)
+                }
+                .keyboardShortcut("1", modifiers: .command)
+
+                Button("Show Tab 2") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab2"), object: nil)
+                }
+                .keyboardShortcut("2", modifiers: .command)
+
+                Button("Show Tab 3") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab3"), object: nil)
+                }
+                .keyboardShortcut("3", modifiers: .command)
+
+                Button("Show Tab 4") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab4"), object: nil)
+                }
+                .keyboardShortcut("4", modifiers: .command)
+
+                Button("Show Tab 5") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab5"), object: nil)
+                }
+                .keyboardShortcut("5", modifiers: .command)
+
+                Button("Show Tab 6") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab6"), object: nil)
+                }
+                .keyboardShortcut("6", modifiers: .command)
+
+                Button("Show Tab 7") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab7"), object: nil)
+                }
+                .keyboardShortcut("7", modifiers: .command)
+
+                Button("Show Tab 8") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab8"), object: nil)
+                }
+                .keyboardShortcut("8", modifiers: .command)
+
+                Button("Show Last Tab") {
+                    NotificationCenter.default.post(name: NSNotification.Name("SelectTab9"), object: nil)
+                }
+                .keyboardShortcut("9", modifiers: .command)
             }
 
             // Browser commands

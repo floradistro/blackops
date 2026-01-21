@@ -174,6 +174,12 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
                     Label(name, systemImage: "link.badge.plus")
                         .font(.system(size: 13, weight: .medium))
                 }
+
+            case .agentBuilder:
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label("Agent Builder", systemImage: "brain")
+                        .font(.system(size: 13, weight: .medium))
+                }
             }
         } else if let browserSession = store.selectedBrowserSession {
             let tabManager = BrowserTabManager.forSession(browserSession.id)
@@ -248,6 +254,7 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
             case .emailCampaign: return "Email Campaign"
             case .metaCampaign: return "Meta Campaign"
             case .metaIntegration: return "Meta Integration"
+            case .agentBuilder: return "Agent Builder"
             }
         } else if store.selectedBrowserSession != nil {
             return "Browser"

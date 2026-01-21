@@ -15,46 +15,39 @@ struct OrderTreeItem: View {
         Button {
             onSelect()
         } label: {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                if indentLevel > 0 {
-                    Spacer().frame(width: CGFloat(indentLevel * 16))
-                }
-
+            HStack(spacing: 8) {
                 Image(systemName: order.orderTypeIcon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 13))
                     .foregroundStyle(order.statusColor)
                     .frame(width: 16)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(order.displayTitle)
-                        .font(DesignSystem.Typography.caption2)
-                        .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 13))
+                        .foregroundStyle(isActive ? .primary : .secondary)
                         .lineLimit(1)
 
                     Text(order.displayTotal)
-                        .font(.system(size: 9))
-                        .foregroundStyle(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
 
-                // Status indicator
                 Circle()
                     .fill(order.statusColor)
                     .frame(width: 6, height: 6)
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
+            .padding(.leading, 16 + CGFloat(indentLevel) * 16)
+            .padding(.trailing, 16)
+            .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                    .fill(isActive ? DesignSystem.Colors.selectionActive :
-                          isSelected ? DesignSystem.Colors.selection : Color.clear)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
             )
-            .animation(DesignSystem.Animation.fast, value: isActive)
-            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TreeItemButtonStyle())
+        .buttonStyle(.plain)
     }
 }
 
@@ -70,45 +63,43 @@ struct LocationTreeItem: View {
         Button {
             onSelect()
         } label: {
-            HStack(spacing: DesignSystem.Spacing.sm) {
+            HStack(spacing: 8) {
                 Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 10))
+                    .font(.system(size: 13))
                     .foregroundStyle(.purple)
                     .frame(width: 16)
 
                 Text(location.name)
-                    .font(DesignSystem.Typography.caption2)
-                    .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 13))
+                    .foregroundStyle(isActive ? .primary : .secondary)
                     .lineLimit(1)
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 if orderCount > 0 {
                     Text("\(orderCount)")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(DesignSystem.Colors.textTertiary)
-                        .padding(.horizontal, DesignSystem.Spacing.xs)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(DesignSystem.Colors.surfaceElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
 
-                // Active indicator
                 if location.isActive == true {
                     Circle()
                         .fill(.green)
                         .frame(width: 6, height: 6)
                 }
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                    .fill(isActive ? DesignSystem.Colors.selectionActive : Color.clear)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
             )
-            .animation(DesignSystem.Animation.fast, value: isActive)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TreeItemButtonStyle())
+        .buttonStyle(.plain)
     }
 }

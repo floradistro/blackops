@@ -19,13 +19,15 @@ struct SidebarLocationsSection: View {
 
     var body: some View {
         TreeSectionHeader(
-            title: "LOCATIONS & ORDERS",
+            title: "Locations",
+            icon: "mappin.and.ellipse",
+            iconColor: DesignSystem.Colors.orange,
             isExpanded: $store.sidebarLocationsExpanded,
             count: store.orders.count,
             isLoading: store.isLoadingOrders || store.isLoadingLocations,
             realtimeConnected: store.ordersRealtimeConnected
         )
-        .padding(.top, 2)
+        .padding(.top, DesignSystem.TreeSpacing.sectionPaddingTop)
 
         if store.sidebarLocationsExpanded {
             VStack(spacing: 0) {

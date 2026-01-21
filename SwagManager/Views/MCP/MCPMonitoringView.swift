@@ -148,32 +148,33 @@ struct MCPMonitoringView: View {
             GridItem(.flexible()),
             GridItem(.flexible())
         ], spacing: DesignSystem.Spacing.md) {
-            MCPStatCard(
+            GlassStatCard(
                 title: "Total Executions",
                 value: "\(monitor.stats.totalExecutions)",
                 icon: "play.circle.fill",
-                color: .blue
+                color: DesignSystem.Colors.blue
             )
 
-            MCPStatCard(
+            GlassStatCard(
                 title: "Success Rate",
                 value: "\(String(format: "%.1f", monitor.stats.successRate))%",
                 icon: "checkmark.circle.fill",
-                color: .green
+                trend: .up("\(String(format: "%.1f", monitor.stats.successRate))%"),
+                color: DesignSystem.Colors.green
             )
 
-            MCPStatCard(
+            GlassStatCard(
                 title: "Avg Response Time",
                 value: "\(String(format: "%.0f", monitor.stats.avgResponseTime))ms",
                 icon: "clock.fill",
-                color: .orange
+                color: DesignSystem.Colors.orange
             )
 
-            MCPStatCard(
+            GlassStatCard(
                 title: "Active Servers",
                 value: "\(monitor.stats.activeServers)",
                 icon: "server.rack",
-                color: .purple
+                color: DesignSystem.Colors.purple
             )
         }
     }
@@ -231,32 +232,8 @@ struct MCPMonitoringView: View {
 
 // MARK: - MCP Stat Card
 
-struct MCPStatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DesignSystem.Spacing.md)
-        .background(VisualEffectBackground(material: .sidebar))
-        .cornerRadius(6)
-    }
-}
+// MARK: - Legacy MCPStatCard (DEPRECATED - Use GlassStatCard)
+// Kept for backward compatibility, will be removed in future version
 
 // MARK: - Category Stats Row
 
@@ -275,7 +252,7 @@ struct CategoryStatsRow: View {
                     .cornerRadius(4)
 
                 Rectangle()
-                    .fill(Color.blue)
+                    .fill(DesignSystem.Colors.blue)
                     .frame(width: stat.percentage * 300, height: 20)
                     .cornerRadius(4)
             }
@@ -363,5 +340,73 @@ struct ErrorRow: View {
                 .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
         )
         .cornerRadius(4)
+    }
+}
+
+// MARK: - Glass Stat Card
+
+struct GlassStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    var subtitle: String?
+    var trend: Trend?
+    let color: Color
+
+    enum Trend {
+        case up(String)
+        case down(String)
+
+        var text: String {
+            switch self {
+            case .up(let value), .down(let value):
+                return value
+            }
+        }
+
+        var isPositive: Bool {
+            if case .up = self { return true }
+            return false
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                    .font(.system(size: 16))
+                Spacer()
+            }
+
+            Text(value)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.primary)
+
+            if let subtitle = subtitle {
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+
+                if let trend = trend {
+                    Text(trend.text)
+                        .font(.system(size: 11))
+                        .foregroundStyle(trend.isPositive ? DesignSystem.Colors.green : DesignSystem.Colors.red)
+                }
+            }
+        }
+        .padding(DesignSystem.Spacing.md)
+        .background(VisualEffectBackground(material: .sidebar))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(color.opacity(0.2), lineWidth: 1)
+        )
+        .cornerRadius(8)
     }
 }

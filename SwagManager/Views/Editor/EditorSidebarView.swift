@@ -34,8 +34,30 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar
-            SidebarSearchBar(searchText: $searchText, isSearchFocused: $isSearchFocused)
+            // Clean header - matching sheet design
+            HStack(spacing: 8) {
+                // Search bar
+                SidebarSearchBar(searchText: $searchText, isSearchFocused: $isSearchFocused)
+
+                // Collapse All button
+                Button(action: {
+                    store.collapseAllSections()
+                }) {
+                    Image(systemName: "sidebar.squares.left")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Collapse All Sections (⌘⇧C)")
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(DesignSystem.Colors.surfaceSecondary)
+
+            Divider()
 
             // Content tree
             if store.selectedStore == nil && store.stores.isEmpty {
@@ -46,7 +68,7 @@ struct SidebarPanel: View {
                 sidebarContent
             }
         }
-        .background(VisualEffectBackground(material: .sidebar))
+        .background(DesignSystem.Colors.surfaceSecondary)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowSearch"))) { _ in
             isSearchFocused = true
         }
@@ -102,40 +124,81 @@ struct SidebarPanel: View {
     @ViewBuilder
     private var sidebarContent: some View {
         ScrollView(.vertical, showsIndicators: true) {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
-                SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.top, DesignSystem.Spacing.xxs)
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                // WORKSPACE - High Priority, Real-time Operations
+                Section {
+                    if !store.workspaceGroupCollapsed {
+                        SidebarQueuesSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarCreationsSection(
-                    store: store,
-                    expandedCollectionIds: $expandedCollectionIds,
-                    filteredOrphanCreations: filteredOrphanCreations,
-                    filteredCreationsForCollection: filteredCreationsForCollection
-                )
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                        SidebarLocationsSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                    }
+                } header: {
+                    SectionGroupHeader(
+                        title: SidebarGroup.workspace.rawValue,
+                        group: .workspace,
+                        isCollapsed: $store.workspaceGroupCollapsed
+                    )
+                }
 
-                SidebarTeamChatSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                // CONTENT - Products, Creations, Communications
+                Section {
+                    if !store.contentGroupCollapsed {
+                        SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarCRMSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                        SidebarCreationsSection(
+                            store: store,
+                            expandedCollectionIds: $expandedCollectionIds,
+                            filteredOrphanCreations: filteredOrphanCreations,
+                            filteredCreationsForCollection: filteredCreationsForCollection
+                        )
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                // SidebarCustomersSection(store: store)
-                // Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                        SidebarTeamChatSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                    }
+                } header: {
+                    SectionGroupHeader(
+                        title: SidebarGroup.content.rawValue,
+                        group: .content,
+                        isCollapsed: $store.contentGroupCollapsed
+                    )
+                }
 
-                SidebarLocationsSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                // OPERATIONS - Browser Sessions
+                Section {
+                    if !store.operationsGroupCollapsed {
+                        SidebarBrowserSessionsSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                    }
+                } header: {
+                    SectionGroupHeader(
+                        title: SidebarGroup.operations.rawValue,
+                        group: .operations,
+                        isCollapsed: $store.operationsGroupCollapsed
+                    )
+                }
 
-                SidebarQueuesSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                // INFRASTRUCTURE - MCP Servers, Agent Builder, Resend
+                Section {
+                    if !store.infrastructureGroupCollapsed {
+                        SidebarAgentBuilderSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarBrowserSessionsSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+                        SidebarMCPServersSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 
-                SidebarMCPServersSection(store: store)
-                Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
-                SidebarResendSection(store: store)
+                        SidebarResendSection(store: store)
+                    }
+                } header: {
+                    SectionGroupHeader(
+                        title: SidebarGroup.infrastructure.rawValue,
+                        group: .infrastructure,
+                        isCollapsed: $store.infrastructureGroupCollapsed
+                    )
+                }
 
                 // Bottom padding to ensure content isn't cut off
                 Spacer().frame(height: 20)

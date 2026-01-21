@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Sidebar MCP Servers Section
 // Following Apple engineering standards
@@ -11,23 +12,24 @@ struct SidebarMCPServersSection: View {
         VStack(alignment: .leading, spacing: 0) {
             // Section Header
             Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(DesignSystem.Animation.spring) {
                     store.sidebarMCPServersExpanded.toggle()
                 }
             }) {
                 HStack(spacing: DesignSystem.Spacing.xs) {
-                    Image(systemName: store.sidebarMCPServersExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 12)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(store.sidebarMCPServersExpanded ? 90 : 0))
+                        .frame(width: 16)
 
                     Image(systemName: "server.rack")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.indigo)
+                        .foregroundColor(Color(red: 0.35, green: 0.38, blue: 0.95))
 
                     Text("MCP Servers")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     Spacer()
 
@@ -37,7 +39,7 @@ struct SidebarMCPServersSection: View {
                     )
                 }
                 .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xs)
+                .padding(.vertical, DesignSystem.Spacing.xxs)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -47,7 +49,7 @@ struct SidebarMCPServersSection: View {
                 if store.mcpServers.isEmpty {
                     Text("No MCP servers available")
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                         .padding(.horizontal, DesignSystem.Spacing.lg)
                         .padding(.vertical, DesignSystem.Spacing.sm)
                 } else {
@@ -68,7 +70,7 @@ struct SidebarMCPServersSection: View {
         VStack(alignment: .leading, spacing: 0) {
             // Category Header
             Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(DesignSystem.Animation.fast) {
                     if isExpanded {
                         expandedCategories.remove(category)
                     } else {
@@ -77,26 +79,27 @@ struct SidebarMCPServersSection: View {
                 }
             }) {
                 HStack(spacing: DesignSystem.Spacing.xs) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.tertiary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
                         .frame(width: 12)
 
                     Image(systemName: "folder")
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     Text(category.capitalized)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     Spacer()
 
-                    Text("\(servers.count)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.tertiary)
+                    Text("(\(servers.count))")
+                        .font(.system(size: 10))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
-                .padding(.leading, DesignSystem.Spacing.lg)
+                .padding(.leading, DesignSystem.Spacing.md)
                 .padding(.trailing, DesignSystem.Spacing.sm)
                 .padding(.vertical, DesignSystem.Spacing.xxs)
                 .contentShape(Rectangle())
@@ -114,42 +117,48 @@ struct SidebarMCPServersSection: View {
 
     @ViewBuilder
     private func mcpServerRow(_ server: MCPServer) -> some View {
-        Button(action: {
-            store.openMCPServer(server)
-        }) {
-            HStack(spacing: DesignSystem.Spacing.xs) {
-                Image(systemName: (server.isActive ?? true) ? "circle.fill" : "circle")
-                    .font(.system(size: 8))
-                    .foregroundStyle((server.isActive ?? true) ? .green : .secondary)
-                    .frame(width: 12)
+        HStack(spacing: DesignSystem.Spacing.xs) {
+            Image(systemName: (server.isActive ?? true) ? "circle.fill" : "circle")
+                .font(.system(size: 8))
+                .foregroundColor((server.isActive ?? true) ? DesignSystem.Colors.green : DesignSystem.Colors.textSecondary)
+                .frame(width: 12)
 
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle((server.isReadOnly ?? false) ? .secondary : Color.indigo)
+            Image(systemName: "bolt.fill")
+                .font(.system(size: 11))
+                .foregroundColor((server.isReadOnly ?? false) ? DesignSystem.Colors.textSecondary : Color(red: 0.35, green: 0.38, blue: 0.95))
 
-                Text(server.name)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+            Text(server.name)
+                .font(.system(size: 11))
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+                .lineLimit(1)
 
-                Spacer()
+            Spacer()
 
-                if server.isReadOnly ?? false {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                }
+            if server.isReadOnly ?? false {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9))
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
             }
-            .padding(.leading, DesignSystem.Spacing.xl + DesignSystem.Spacing.sm)
-            .padding(.trailing, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
-            .background(
-                store.selectedMCPServer?.id == server.id ?
-                    Color.accentColor.opacity(0.15) : Color.clear
-            )
-            .cornerRadius(4)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(.leading, 40)
+        .padding(.trailing, DesignSystem.Spacing.sm)
+        .padding(.vertical, DesignSystem.Spacing.xxs)
+        .background(
+            store.selectedMCPServer?.id == server.id ?
+                DesignSystem.Colors.selectionActive : Color.clear
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            store.openMCPServer(server)
+        }
+        .onDrag {
+            print("🚀 Starting drag for MCP server: \(server.name) (\(server.id))")
+            let dragString = DragItemType.encode(.mcpServer, uuid: server.id)
+            print("🔑 Drag data: \(dragString)")
+
+            let provider = NSItemProvider(object: dragString as NSString)
+            print("✅ NSItemProvider created successfully")
+            return provider
+        }
     }
 }

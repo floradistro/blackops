@@ -46,7 +46,7 @@ struct MCPDeveloperView: View {
 
             // Main content
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: DesignSystem.Spacing.xl) {
                     // Quick stats bar
                     quickStatsBar
 
@@ -61,9 +61,9 @@ struct MCPDeveloperView: View {
                         errorDebugSection
                     }
                 }
-                .padding(20)
+                .padding(DesignSystem.Spacing.xl)
             }
-            .background(Color(NSColor.windowBackgroundColor))
+            .background(DesignSystem.Colors.surfacePrimary)
         }
         .task {
             await monitor.loadStats(timeRange: timeRange.mcpRange)
@@ -93,7 +93,7 @@ struct MCPDeveloperView: View {
                         .foregroundStyle(.blue)
                 }
                 .frame(width: 36, height: 36)
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(server.name)
@@ -156,13 +156,14 @@ struct MCPDeveloperView: View {
                     .font(.system(size: 14))
             }
             .buttonStyle(.plain)
-            .padding(6)
-            .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(6)
+            .padding(DesignSystem.Spacing.xs)
+            .background(DesignSystem.Colors.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(Color(NSColor.windowBackgroundColor))
+        .padding(.horizontal, DesignSystem.Spacing.xl)
+        .padding(.vertical, DesignSystem.Spacing.md)
+        .background(DesignSystem.Colors.surfaceSecondary)
+        .background(DesignSystem.Materials.thin)
     }
 
     @ViewBuilder
@@ -195,33 +196,33 @@ struct MCPDeveloperView: View {
 
     @ViewBuilder
     private var quickStatsBar: some View {
-        HStack(spacing: 12) {
-            QuickStat(
+        HStack(spacing: DesignSystem.Spacing.md) {
+            GlassStatCard(
+                title: "Executions",
                 value: "\(monitor.stats.totalExecutions)",
-                label: "Executions",
                 icon: "play.circle.fill",
-                color: .blue
+                color: DesignSystem.Colors.blue
             )
 
-            QuickStat(
+            GlassStatCard(
+                title: "Success",
                 value: String(format: "%.0f%%", monitor.stats.successRate),
-                label: "Success",
                 icon: "checkmark.circle.fill",
-                color: .green
+                color: DesignSystem.Colors.green
             )
 
-            QuickStat(
+            GlassStatCard(
+                title: "Avg Time",
                 value: formatDuration(monitor.stats.avgResponseTime),
-                label: "Avg Time",
                 icon: "clock.fill",
-                color: .orange
+                color: DesignSystem.Colors.orange
             )
 
-            QuickStat(
+            GlassStatCard(
+                title: "Errors",
                 value: "\(monitor.errors.count)",
-                label: "Errors",
                 icon: "exclamationmark.triangle.fill",
-                color: .red
+                color: DesignSystem.Colors.error
             )
         }
     }
@@ -230,79 +231,72 @@ struct MCPDeveloperView: View {
 
     @ViewBuilder
     private var testExecutorSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Test Execution", systemImage: "play.circle")
-                    .font(.system(size: 14, weight: .semibold))
+        GlassSection(
+            title: "Test Execution",
+            icon: "play.circle"
+        ) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+                HStack {
+                    Spacer()
 
-                Spacer()
-
-                Button("Run Test") {
-                    Task {
-                        await testRunner.execute(server: server, parameters: testParameters)
+                    Button("Run Test") {
+                        Task {
+                            await testRunner.execute(server: server, parameters: testParameters)
+                        }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(testRunner.isRunning)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .disabled(testRunner.isRunning)
-            }
 
-            if let result = testRunner.lastResult {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(result.success ? "Success" : "Failed")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(result.success ? .green : .red)
+                if let result = testRunner.lastResult {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                        HStack {
+                            Text(result.success ? "Success" : "Failed")
+                                .font(DesignSystem.Typography.caption1)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(result.success ? DesignSystem.Colors.success : DesignSystem.Colors.error)
 
-                        if let duration = result.duration {
-                            Text("• \(formatDuration(duration * 1000))")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                            if let duration = result.duration {
+                                Text("• \(formatDuration(duration * 1000))")
+                                    .font(DesignSystem.Typography.caption2)
+                                    .foregroundStyle(DesignSystem.Colors.textSecondary)
+                            }
+
+                            Spacer()
+
+                            Button(action: { copyToClipboard(result.output) }) {
+                                Label("Copy", systemImage: "doc.on.doc")
+                                    .font(DesignSystem.Typography.caption2)
+                            }
+                            .buttonStyle(.plain)
                         }
 
-                        Spacer()
-
-                        Button(action: { copyToClipboard(result.output) }) {
-                            Label("Copy", systemImage: "doc.on.doc")
-                                .font(.system(size: 11))
+                        ScrollView {
+                            Text(result.output)
+                                .font(DesignSystem.Typography.monoCaption)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(DesignSystem.Spacing.md)
                         }
-                        .buttonStyle(.plain)
+                        .frame(height: 200)
+                        .background(DesignSystem.Colors.surfaceTertiary)
+                        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
                     }
-
-                    ScrollView {
-                        Text(result.output)
-                            .font(.system(size: 11, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                    }
-                    .frame(height: 200)
-                    .background(Color.black.opacity(0.05))
-                    .cornerRadius(8)
                 }
             }
         }
-        .padding(16)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
     }
 
     // MARK: - Recent Executions
 
     @ViewBuilder
     private var recentExecutionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Recent Executions", systemImage: "clock.arrow.circlepath")
-                    .font(.system(size: 14, weight: .semibold))
-
-                Spacer()
-
-                Text("\(monitor.recentExecutions.count)")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-
+        GlassSection(
+            title: "Recent Executions",
+            subtitle: "\(monitor.recentExecutions.count)",
+            icon: "clock.arrow.circlepath"
+        ) {
             if monitor.recentExecutions.isEmpty {
                 emptyStateView
             } else {
@@ -316,34 +310,32 @@ struct MCPDeveloperView: View {
                 }
             }
         }
-        .padding(16)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
     }
 
     // MARK: - Error Debug Section
 
     @ViewBuilder
     private var errorDebugSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Recent Errors", systemImage: "ladybug.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.red)
+        GlassSection(
+            title: "Recent Errors",
+            icon: "ladybug.fill"
+        ) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+                HStack {
+                    Spacer()
 
-                Spacer()
-
-                Button("Copy All") {
-                    let allErrors = monitor.errors.map { "[\($0.timestamp)] \($0.message)" }.joined(separator: "\n\n")
-                    copyToClipboard(allErrors)
+                    Button("Copy All") {
+                        let allErrors = monitor.errors.map { "[\($0.timestamp)] \($0.message)" }.joined(separator: "\n\n")
+                        copyToClipboard(allErrors)
+                    }
+                    .buttonStyle(.plain)
+                    .font(DesignSystem.Typography.caption2)
                 }
-                .buttonStyle(.plain)
-                .font(.system(size: 11))
-            }
 
-            VStack(spacing: 8) {
-                ForEach(monitor.errors.prefix(5)) { error in
-                    DeveloperErrorRow(error: error)
+                VStack(spacing: DesignSystem.Spacing.sm) {
+                    ForEach(monitor.errors.prefix(5)) { error in
+                        DeveloperErrorRow(error: error)
+                    }
                 }
             }
         }
@@ -409,35 +401,8 @@ struct MCPDeveloperView: View {
     }
 }
 
-// MARK: - Quick Stat
-
-struct QuickStat: View {
-    let value: String
-    let label: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundStyle(color)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                Text(label)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
-    }
-}
+// MARK: - Legacy QuickStat (DEPRECATED - Use GlassStatCard)
+// Removed - now using GlassStatCard from UnifiedGlassComponents.swift
 
 // MARK: - Developer Execution Row
 
@@ -570,10 +535,10 @@ struct ExecutionInspectorSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     // Request
-                    InspectorSection(title: "Request", content: execution.prettyRequest)
+                    MCPInspectorSection(title: "Request", content: execution.prettyRequest)
 
                     // Response
-                    InspectorSection(title: "Response", content: execution.prettyResponse)
+                    MCPInspectorSection(title: "Response", content: execution.prettyResponse)
                 }
                 .padding(16)
             }
@@ -582,7 +547,7 @@ struct ExecutionInspectorSheet: View {
     }
 }
 
-struct InspectorSection: View {
+struct MCPInspectorSection: View {
     let title: String
     let content: String
 

@@ -65,11 +65,13 @@ struct SidebarCustomersSection: View {
     var body: some View {
         TreeSectionHeader(
             title: "CUSTOMERS",
+            icon: "person.2.fill",
+            iconColor: DesignSystem.Colors.blue,
             isExpanded: $store.sidebarCustomersExpanded,
             count: filteredCustomers.count,
             isLoading: store.isLoadingCustomers
         )
-        .padding(.top, DesignSystem.Spacing.xxs)
+        .padding(.top, DesignSystem.TreeSpacing.sectionPaddingTop)
         .onAppear {
             if store.customers.isEmpty {
                 Task {

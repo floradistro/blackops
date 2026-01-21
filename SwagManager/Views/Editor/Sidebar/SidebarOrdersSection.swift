@@ -10,12 +10,14 @@ struct SidebarOrdersSection: View {
 
     var body: some View {
         TreeSectionHeader(
-            title: "ORDERS",
+            title: "Orders",
+            icon: "bag.fill",
+            iconColor: DesignSystem.Colors.blue,
             isExpanded: $store.sidebarOrdersExpanded,
             count: store.orders.count,
             isLoading: store.isLoadingOrders
         )
-        .padding(.top, DesignSystem.Spacing.xxs)
+        .padding(.top, DesignSystem.TreeSpacing.sectionPaddingTop)
 
         if store.sidebarOrdersExpanded {
             // Pending Orders

@@ -29,7 +29,7 @@ struct WelcomeView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4 * zoom) {
-                        Text(store.selectedStore?.storeName ?? "Swag Manager")
+                        Text(store.selectedStore?.storeName ?? "Workspace")
                             .font(.system(size: 18 * zoom, weight: .semibold))
                             .foregroundStyle(DesignSystem.Colors.textPrimary)
                         Text("Ready to build")

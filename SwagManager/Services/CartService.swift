@@ -55,10 +55,15 @@ struct CheckoutTotals: Codable, Equatable {
 }
 
 struct TaxBreakdownItem: Codable, Equatable {
-    let jurisdiction: String
+    let name: String
     let rate: Decimal
-    let taxableAmount: Decimal
-    let taxAmount: Decimal
+    let type: String
+    let rateDecimal: Decimal
+
+    enum CodingKeys: String, CodingKey {
+        case name, rate, type
+        case rateDecimal = "rate_decimal"
+    }
 }
 
 // MARK: - Cart Service
@@ -67,8 +72,12 @@ struct TaxBreakdownItem: Codable, Equatable {
 class CartService {
     private let supabase: SupabaseService
 
-    nonisolated init(supabase: SupabaseService = .shared) {
+    init(supabase: SupabaseService) {
         self.supabase = supabase
+    }
+
+    convenience init() {
+        self.init(supabase: SupabaseService.shared)
     }
 
     // MARK: - Cart Operations
@@ -215,16 +224,33 @@ class CartService {
     // MARK: - Private Helpers
 
     private func callCartFunction(payload: [String: Any]) async throws -> ServerCart {
-        let data = try JSONSerialization.data(withJSONObject: payload)
+        // Use direct HTTP call like iOS app to avoid Supabase SDK wrapping issues
+        let baseURL = SupabaseConfig.url.appendingPathComponent("functions/v1")
+        let url = baseURL.appendingPathComponent("cart")
 
-        let response: Data = try await supabase.client.functions.invoke(
-            "cart",
-            options: .init(
-                body: data
-            )
-        )
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
-        // Parse response
+        NSLog("[CartService] POST cart - request body: \(payload)")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "CartService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+
+        let responseString = String(data: data, encoding: .utf8) ?? "nil"
+        NSLog("[CartService] RESPONSE status=\(httpResponse.statusCode): \(responseString.prefix(1000))")
+
+        guard httpResponse.statusCode == 200 else {
+            throw NSError(domain: "CartService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)"])
+        }
+
+        // Parse response - iOS pattern
         struct CartResponse: Codable {
             let success: Bool
             let data: ServerCart?
@@ -233,7 +259,9 @@ class CartService {
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let cartResponse = try decoder.decode(CartResponse.self, from: response)
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        let cartResponse = try decoder.decode(CartResponse.self, from: data)
 
         guard cartResponse.success, let cart = cartResponse.data else {
             throw NSError(

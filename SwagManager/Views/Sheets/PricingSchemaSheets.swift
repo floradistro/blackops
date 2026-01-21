@@ -71,7 +71,7 @@ struct PricingSchemaEditor: View {
                                 .foregroundStyle(.tertiary)
                             Spacer()
                             Button {
-                                tiers.append(PricingTier(id: UUID().uuidString, unit: "unit", label: "New", quantity: 1, sortOrder: tiers.count, defaultPrice: 0))
+                                tiers.append(PricingTier(id: UUID().uuidString, label: "New", quantity: 1, unit: "unit", defaultPrice: 0, sortOrder: tiers.count))
                             } label: {
                                 Image(systemName: "plus")
                                     .font(.system(size: 10))
@@ -132,7 +132,7 @@ struct TierEditor: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            TextField("Label", text: Binding(get: { tier.label ?? "" }, set: { tier.label = $0 }))
+            TextField("Label", text: $tier.label)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
                 .padding(6)
@@ -140,7 +140,7 @@ struct TierEditor: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .frame(width: 80)
 
-            TextField("Price", value: Binding(get: { tier.defaultPrice ?? 0 }, set: { tier.defaultPrice = $0 }), format: .currency(code: "USD"))
+            TextField("Price", value: $tier.defaultPrice, format: .currency(code: "USD"))
                 .textFieldStyle(.plain)
                 .font(.system(size: 11, design: .monospaced))
                 .padding(6)
@@ -148,7 +148,7 @@ struct TierEditor: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .frame(width: 80)
 
-            TextField("Unit", text: Binding(get: { tier.unit ?? "" }, set: { tier.unit = $0 }))
+            TextField("Unit", text: $tier.unit)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
                 .padding(6)
@@ -228,7 +228,7 @@ struct NewPricingSchemaSheet: View {
                                 .foregroundStyle(.tertiary)
                             Spacer()
                             Button {
-                                tiers.append(PricingTier(id: UUID().uuidString, unit: "unit", label: "New", quantity: 1, sortOrder: tiers.count, defaultPrice: 0))
+                                tiers.append(PricingTier(id: UUID().uuidString, label: "New", quantity: 1, unit: "unit", defaultPrice: 0, sortOrder: tiers.count))
                             } label: {
                                 Image(systemName: "plus")
                                     .font(.system(size: 10))

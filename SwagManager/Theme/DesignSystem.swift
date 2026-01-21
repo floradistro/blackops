@@ -50,6 +50,12 @@ public struct DesignSystem {
         // Button text
         public static let button = Font.system(size: 15, weight: .semibold)
         public static let buttonSmall = Font.system(size: 13, weight: .semibold)
+
+        // Sidebar-specific typography
+        public static let sidebarGroupHeader = Font.system(size: 11, weight: .semibold)
+        public static let sidebarSectionLabel = Font.system(size: 13, weight: .medium)
+        public static let sidebarItem = Font.system(size: 13, weight: .regular)
+        public static let sidebarItemCount = Font.system(size: 11, weight: .regular)
     }
 
     // MARK: - Colors (Semantic, Dark Mode Optimized)
@@ -129,6 +135,35 @@ public struct DesignSystem {
         public static let medium: CGFloat = 16
         public static let large: CGFloat = 20
         public static let xlarge: CGFloat = 24
+    }
+
+    // MARK: - Sidebar Tree Spacing (macOS native consistency)
+    public enum TreeSpacing {
+        // Vertical spacing
+        public static let itemHeight: CGFloat = 26          // Consistent row height
+        public static let itemPaddingVertical: CGFloat = 5  // Top/bottom padding (26 - 16 line = 10 / 2)
+        public static let itemPaddingHorizontal: CGFloat = 8 // Left/right padding
+
+        // Horizontal spacing
+        public static let iconSpacing: CGFloat = 6          // Space between icon and text
+        public static let elementSpacing: CGFloat = 4       // Space between elements
+
+        // Indentation
+        public static let indentPerLevel: CGFloat = 14      // Indent for each tree level
+
+        // Icon sizes
+        public static let chevronSize: CGFloat = 8          // Disclosure chevron
+        public static let iconSize: CGFloat = 10            // Standard tree icon
+        public static let statusIconSize: CGFloat = 6       // Status indicator dot
+
+        // Font sizes
+        public static let primaryTextSize: CGFloat = 11     // Main item text
+        public static let secondaryTextSize: CGFloat = 9    // Secondary/meta text
+        public static let sectionHeaderSize: CGFloat = 11   // Section headers
+
+        // Section spacing
+        public static let sectionPaddingTop: CGFloat = 2    // Between sections
+        public static let sectionPaddingVertical: CGFloat = 4 // Section header padding
     }
 }
 

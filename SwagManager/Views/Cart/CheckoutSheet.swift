@@ -1,13 +1,19 @@
+//
+//  CheckoutSheet.swift
+//  SwagManager (macOS)
+//
+//  Checkout sheet with liquid glass design - ported from iOS Whale app
+//  Simplified for macOS with essential payment flow
+//
+
 import SwiftUI
 
-// MARK: - Checkout Sheet
-// Payment processing for Mac
-// Simplified for desktop use (cash, invoice primarily)
-
 struct CheckoutSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
     let cart: ServerCart
     let queueEntry: QueueEntry
-    @ObservedObject var store: EditorStore
+    let store: EditorStore
     let onComplete: () -> Void
 
     @State private var paymentMethod: PaymentMethod = .cash
@@ -71,7 +77,7 @@ struct CheckoutSheet: View {
             // Process button
             processButton
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 460, height: 560)
     }
 
     // MARK: - Header
@@ -254,21 +260,34 @@ struct CheckoutSheet: View {
     // MARK: - Process Button
 
     private var processButton: some View {
-        Button {
-            Task {
-                await processPayment()
+        SlideToPayButton(
+            text: actionButtonText,
+            icon: actionButtonIcon,
+            isEnabled: canProcess,
+            onComplete: {
+                Task {
+                    await processPayment()
+                }
             }
-        } label: {
-            HStack {
-                Image(systemName: paymentMethod == .invoice ? "paperplane" : "dollarsign.circle")
-                Text(paymentMethod == .invoice ? "Send Invoice" : "Process Payment")
-                Image(systemName: "arrow.right")
-            }
-            .frame(maxWidth: .infinity)
+        )
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
+    }
+
+    private var actionButtonText: String {
+        switch paymentMethod {
+        case .card: return "Slide to Pay \(formatCurrency(cart.totals.total))"
+        case .cash: return "Slide to Complete"
+        case .invoice: return "Slide to Send Invoice"
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(!canProcess)
-        .padding()
+    }
+
+    private var actionButtonIcon: String {
+        switch paymentMethod {
+        case .card: return "creditcard"
+        case .cash: return "dollarsign.circle"
+        case .invoice: return "paperplane"
+        }
     }
 
     private var canProcess: Bool {
@@ -303,7 +322,7 @@ struct CheckoutSheet: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 460, height: 560)
     }
 
     // MARK: - Success View
@@ -346,7 +365,7 @@ struct CheckoutSheet: View {
             .buttonStyle(.borderedProminent)
             .padding(.top)
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 460, height: 560)
     }
 
     // MARK: - Payment Processing

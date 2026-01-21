@@ -17,33 +17,34 @@ struct CollectionTreeItem: View {
         Button {
             withAnimation(DesignSystem.Animation.spring) { onToggle() }
         } label: {
-            HStack(spacing: DesignSystem.Spacing.sm) {
+            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: DesignSystem.TreeSpacing.chevronSize, weight: .bold))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .animation(DesignSystem.Animation.fast, value: isExpanded)
                     .frame(width: 10)
 
                 Image(systemName: "folder.fill")
-                    .font(.system(size: 11))
+                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
                     .foregroundStyle(DesignSystem.Colors.warning)
+                    .frame(width: 14)
 
                 Text(collection.name)
-                    .font(DesignSystem.Typography.caption2)
+                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                     .lineLimit(1)
 
-                Spacer()
+                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
                 if itemCount > 0 {
                     Text("\(itemCount)")
-                        .font(.system(size: 9))
+                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
                         .foregroundStyle(DesignSystem.Colors.textTertiary)
                 }
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
+            .frame(height: DesignSystem.TreeSpacing.itemHeight)
+            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())

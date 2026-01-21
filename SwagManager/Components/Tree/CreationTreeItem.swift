@@ -15,22 +15,18 @@ struct CreationTreeItem: View {
         Button {
             onSelect()
         } label: {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                if indentLevel > 0 {
-                    Spacer().frame(width: CGFloat(indentLevel * 16))
-                }
-
+            HStack(spacing: 8) {
                 Image(systemName: creation.creationType.icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 13))
                     .foregroundStyle(creation.creationType.color)
                     .frame(width: 16)
 
                 Text(creation.name)
-                    .font(DesignSystem.Typography.caption2)
-                    .foregroundStyle(isActive ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 13))
+                    .foregroundStyle(isActive ? .primary : .secondary)
                     .lineLimit(1)
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 if let status = creation.status {
                     Circle()
@@ -38,17 +34,15 @@ struct CreationTreeItem: View {
                         .frame(width: 6, height: 6)
                 }
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
+            .padding(.leading, 16 + CGFloat(indentLevel) * 16)
+            .padding(.trailing, 16)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                    .fill(isActive ? DesignSystem.Colors.selectionActive :
-                          isSelected ? DesignSystem.Colors.selection : Color.clear)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
             )
-            .animation(DesignSystem.Animation.fast, value: isActive)
-            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TreeItemButtonStyle())
+        .buttonStyle(.plain)
     }
 }

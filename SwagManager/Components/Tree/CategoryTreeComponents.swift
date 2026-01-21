@@ -50,35 +50,34 @@ struct CategoryHierarchyView: View {
                 }
                 store.selectCategory(category)
             } label: {
-                HStack(spacing: DesignSystem.Spacing.xxs) {
+                HStack(spacing: 8) {
                     // Chevron
                     if hasChildren {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 9))
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.tertiary)
-                            .frame(width: 10)
+                            .frame(width: 16)
                     } else {
-                        Spacer().frame(width: 10)
+                        Spacer().frame(width: 16)
                     }
 
                     Text(category.name)
-                        .font(.system(size: 11))
+                        .font(.system(size: 13))
                         .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     if totalCount > 0 {
                         Text("\(totalCount)")
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
-                            .padding(.trailing, DesignSystem.Spacing.xxs)
                     }
                 }
-                .padding(.leading, DesignSystem.Spacing.sm + CGFloat(indentLevel) * 12)
-                .padding(.trailing, DesignSystem.Spacing.xxs)
-                .padding(.vertical, 3)
+                .padding(.leading, 16 + CGFloat(indentLevel) * 16)
+                .padding(.trailing, 16)
+                .padding(.vertical, 6)
                 .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.Radius.sm)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
                 )
                 .contentShape(Rectangle())
@@ -104,6 +103,7 @@ struct CategoryHierarchyView: View {
                         indentLevel: indentLevel + 2,
                         onSelect: { store.selectProduct(product) }
                     )
+                    .environmentObject(store)
                     .contextMenu {
                         Button("Delete", role: .destructive) {
                             Task { await store.deleteProduct(product) }
@@ -125,33 +125,32 @@ struct CategoryTreeItem: View {
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(spacing: DesignSystem.Spacing.xxs) {
+        HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: 9))
+                .font(.system(size: DesignSystem.TreeSpacing.chevronSize))
                 .foregroundStyle(.tertiary)
-                .frame(width: 12)
+                .frame(width: 10)
 
             Image(systemName: category.icon ?? (isExpanded ? "folder.fill" : "folder"))
-                .font(.system(size: 9))
+                .font(.system(size: DesignSystem.TreeSpacing.iconSize))
                 .foregroundStyle(.green)
                 .frame(width: 14)
 
             Text(category.name)
-                .font(.system(size: 11))
+                .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
                 .lineLimit(1)
 
-            Spacer()
+            Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
             if itemCount > 0 {
                 Text("\(itemCount)")
-                    .font(.system(size: 9))
+                    .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
                     .foregroundStyle(.tertiary)
-                    .padding(.trailing, DesignSystem.Spacing.xxs)
             }
         }
-        .padding(.leading, DesignSystem.Spacing.sm + CGFloat(indentLevel) * 16)
-        .padding(.trailing, DesignSystem.Spacing.xxs)
-        .padding(.vertical, 3)
+        .frame(height: DesignSystem.TreeSpacing.itemHeight)
+        .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + CGFloat(indentLevel) * DesignSystem.TreeSpacing.indentPerLevel)
+        .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
         .contentShape(Rectangle())
         .onTapGesture { onToggle() }
     }

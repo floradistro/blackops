@@ -172,12 +172,12 @@ struct PricingSchema: Codable, Identifiable, Hashable {
 // MARK: - Pricing Tier
 
 struct PricingTier: Codable, Hashable {
-    var id: String?
-    var unit: String?
-    var label: String?
-    var quantity: Double?
+    var id: String
+    var label: String
+    var quantity: Double
+    var unit: String
+    var defaultPrice: Decimal
     var sortOrder: Int?
-    var defaultPrice: Decimal?
 
     enum CodingKeys: String, CodingKey {
         case id, unit, label, quantity
@@ -185,16 +185,75 @@ struct PricingTier: Codable, Hashable {
         case defaultPrice = "default_price"
     }
 
+    // Memberwise init for programmatic creation
+    init(id: String, label: String, quantity: Double, unit: String, defaultPrice: Decimal, sortOrder: Int?) {
+        self.id = id
+        self.label = label
+        self.quantity = quantity
+        self.unit = unit
+        self.defaultPrice = defaultPrice
+        self.sortOrder = sortOrder
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // ID - default to UUID if missing
+        id = (try? container.decode(String.self, forKey: .id)) ?? UUID().uuidString
+
+        // Label - default to empty if missing
+        label = (try? container.decode(String.self, forKey: .label)) ?? ""
+
+        // Quantity can be Double, Int, or String
+        if let double = try? container.decode(Double.self, forKey: .quantity) {
+            quantity = double
+        } else if let int = try? container.decode(Int.self, forKey: .quantity) {
+            quantity = Double(int)
+        } else if let str = try? container.decode(String.self, forKey: .quantity), let double = Double(str) {
+            quantity = double
+        } else {
+            quantity = 0
+        }
+
+        // Unit - default to empty if missing
+        unit = (try? container.decode(String.self, forKey: .unit)) ?? ""
+
+        // Price can be Decimal, Double, Int, or String
+        if let decimal = try? container.decode(Decimal.self, forKey: .defaultPrice) {
+            defaultPrice = decimal
+        } else if let double = try? container.decode(Double.self, forKey: .defaultPrice) {
+            defaultPrice = Decimal(double)
+        } else if let int = try? container.decode(Int.self, forKey: .defaultPrice) {
+            defaultPrice = Decimal(int)
+        } else if let str = try? container.decode(String.self, forKey: .defaultPrice), let decimal = Decimal(string: str) {
+            defaultPrice = decimal
+        } else {
+            NSLog("[PricingTier] ⚠️ No valid price found for tier '\(label)', defaulting to 0")
+            defaultPrice = 0
+        }
+
+        sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(label, forKey: .label)
+        try container.encode(quantity, forKey: .quantity)
+        try container.encode(unit, forKey: .unit)
+        try container.encode(defaultPrice, forKey: .defaultPrice)
+        try container.encodeIfPresent(sortOrder, forKey: .sortOrder)
+    }
+
     var tierId: String {
-        id ?? label ?? "tier"
+        id
     }
 
     var displayLabel: String {
-        label ?? id ?? "Tier"
+        label
     }
 
     var formattedPrice: String {
-        guard let price = defaultPrice else { return "-" }
-        return String(format: "$%.2f", NSDecimalNumber(decimal: price).doubleValue)
+        String(format: "$%.2f", NSDecimalNumber(decimal: defaultPrice).doubleValue)
     }
 }

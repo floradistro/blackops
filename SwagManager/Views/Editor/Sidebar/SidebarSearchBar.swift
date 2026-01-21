@@ -9,37 +9,32 @@ struct SidebarSearchBar: View {
     @FocusState.Binding var isSearchFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                Image(systemName: "magnifyingglass")
-                    .font(DesignSystem.Typography.caption2)
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+        HStack(spacing: DesignSystem.Spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11))
+                .foregroundStyle(DesignSystem.Colors.textTertiary)
 
-                TextField("Search", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
-                    .focused($isSearchFocused)
+            TextField("Search", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
+                .focused($isSearchFocused)
 
-                if !searchText.isEmpty {
-                    Button {
-                        withAnimation(DesignSystem.Animation.fast) { searchText = "" }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(DesignSystem.Typography.caption2)
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .transition(.scale.combined(with: .opacity))
+            if !searchText.isEmpty {
+                Button {
+                    withAnimation(DesignSystem.Animation.fast) { searchText = "" }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(DesignSystem.Colors.textTertiary)
                 }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, 5)
-            .background(DesignSystem.Colors.surfaceSecondary)
-
-            Rectangle()
-                .fill(DesignSystem.Colors.border)
-                .frame(height: 1)
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(DesignSystem.Colors.surfaceSecondary.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }

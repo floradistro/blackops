@@ -12,7 +12,9 @@ struct SidebarCreationsSection: View {
 
     var body: some View {
         TreeSectionHeader(
-            title: "CREATIONS",
+            title: "Creations",
+            icon: "sparkles",
+            iconColor: DesignSystem.Colors.yellow,
             isExpanded: $store.sidebarCreationsExpanded,
             count: store.creations.count
         )
@@ -91,7 +93,7 @@ struct SidebarCreationsSection: View {
                     VStack(spacing: DesignSystem.Spacing.xxs) {
                         Text("No creations yet")
                             .font(DesignSystem.Typography.caption1)
-                            .foregroundStyle(.tertiary)
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
                         Button {
                             store.showNewCreationSheet = true
                         } label: {
@@ -99,7 +101,7 @@ struct SidebarCreationsSection: View {
                                 .font(DesignSystem.Typography.caption1)
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(.blue)
+                        .foregroundColor(DesignSystem.Colors.blue)
                     }
                     Spacer()
                 }

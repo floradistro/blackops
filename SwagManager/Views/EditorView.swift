@@ -18,6 +18,15 @@ struct EditorView: View {
     @State private var showNewMCPServerSheet = false
     @State private var showMCPMonitoringSheet = false
 
+    // MARK: - Computed Properties
+
+    private var isBrowserView: Bool {
+        if case .browserSession = store.activeTab {
+            return true
+        }
+        return store.selectedBrowserSession != nil
+    }
+
     // MARK: - Main Content View
 
     @ViewBuilder
@@ -49,7 +58,7 @@ struct EditorView: View {
             case .product(let product):
                 ProductEditorPanel(product: product, store: store)
 
-            case .conversation(let conversation):
+            case .conversation:
                 TeamChatView(store: store)
 
             case .category(let category):
@@ -93,6 +102,10 @@ struct EditorView: View {
 
             case .metaIntegration(let integration):
                 MetaIntegrationDetailPanel(integration: integration, store: store)
+
+            case .agentBuilder:
+                AgentBuilderView(editorStore: store)
+                    .id("agentbuilder")
             }
         } else if let browserSession = store.selectedBrowserSession {
             SafariBrowserWindow(sessionId: browserSession.id)
@@ -138,16 +151,19 @@ struct EditorView: View {
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
                 .toolbarBackground(.hidden, for: .windowToolbar)
         } detail: {
-            ZStack {
-                VisualEffectBackground(material: .underWindowBackground)
-                    .ignoresSafeArea()
+            VStack(spacing: 0) {
+                // Main content
+                ZStack {
+                    VisualEffectBackground(material: .underWindowBackground)
+                        .ignoresSafeArea()
 
-                mainContentView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    mainContentView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    FloatingContextBar(store: store)
+                    ToolbarTabStrip(store: store)
                 }
 
                 if case .browserSession = store.activeTab {
@@ -156,7 +172,6 @@ struct EditorView: View {
                     UnifiedToolbarContent(store: store)
                 }
             }
-            .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
     }
@@ -164,74 +179,15 @@ struct EditorView: View {
     var body: some View {
         navigationContent
             .animation(DesignSystem.Animation.spring, value: sidebarCollapsed)
-        .onChange(of: sidebarCollapsed) { _, collapsed in
-            columnVisibility = collapsed ? .detailOnly : .all
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleSidebar"))) { _ in
-            withAnimation(DesignSystem.Animation.spring) {
-                sidebarCollapsed.toggle()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SaveDocument"))) { _ in
-            if store.hasUnsavedChanges {
-                Task { await store.saveCurrentCreation() }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowStoreSelector"))) { _ in
-            showStoreSelectorSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewStore"))) { _ in
-            store.showNewStoreSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserNewTab"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
-                if case .browserSession(let s) = tab { return s } else { return nil }
-            } : nil) {
-                BrowserTabManager.forSession(session.id).newTab()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserReload"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
-                if case .browserSession(let s) = tab { return s } else { return nil }
-            } : nil) {
-                BrowserTabManager.forSession(session.id).activeTab?.refresh()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserBack"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
-                if case .browserSession(let s) = tab { return s } else { return nil }
-            } : nil) {
-                BrowserTabManager.forSession(session.id).activeTab?.goBack()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserForward"))) { _ in
-            if let session = store.selectedBrowserSession ?? (store.activeTab?.isBrowserSession == true ? store.activeTab.flatMap { tab in
-                if case .browserSession(let s) = tab { return s } else { return nil }
-            } : nil) {
-                BrowserTabManager.forSession(session.id).activeTab?.goForward()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMCPServers"))) { _ in
-            store.sidebarMCPServersExpanded = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMCPServers"))) { _ in
-            Task {
-                await store.loadMCPServers()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMCPDocs"))) { _ in
-            // Open MCP documentation URL
-            if let url = URL(string: "https://modelcontextprotocol.io/docs") {
-                NSWorkspace.shared.open(url)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewMCPServer"))) { _ in
-            showNewMCPServerSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MonitorMCPServers"))) { _ in
-            showMCPMonitoringSheet = true
-        }
-        .task {
+            .notificationHandlers(
+                store: store,
+                sidebarCollapsed: $sidebarCollapsed,
+                columnVisibility: $columnVisibility,
+                showStoreSelectorSheet: $showStoreSelectorSheet,
+                showNewMCPServerSheet: $showNewMCPServerSheet,
+                showMCPMonitoringSheet: $showMCPMonitoringSheet
+            )
+            .task {
             await store.loadCreations()
             // RLS handles filtering - just load stores
             await store.loadStores()
@@ -298,6 +254,7 @@ class EditorStore: ObservableObject {
 
     // MARK: - Chat/Conversations State
     @Published var locations: [Location] = []
+    @Published var selectedLocationIds: Set<UUID> = []
     @Published var conversations: [Conversation] = []
     @Published var selectedConversation: Conversation?
     @Published var isLoadingConversations = false
@@ -332,6 +289,7 @@ class EditorStore: ObservableObject {
     // MARK: - Customers State
     @Published var customers: [Customer] = []
     @Published var selectedCustomer: Customer?
+    @Published var selectedCustomerIds: Set<UUID> = []
     @Published var sidebarCustomersExpanded = false
     @Published var customerSearchQuery: String = ""
     @Published var customerStats: CustomerStats?
@@ -340,8 +298,12 @@ class EditorStore: ObservableObject {
     // MARK: - MCP Servers State
     @Published var mcpServers: [MCPServer] = []
     @Published var selectedMCPServer: MCPServer?
+    @Published var selectedMCPServerIds: Set<UUID> = []
     @Published var sidebarMCPServersExpanded = false
     @Published var isLoadingMCPServers = false
+
+    // MARK: - Agent Builder State
+    var agentBuilderStore: AgentBuilderStore?
 
     // MARK: - Emails State (Resend)
     @Published var emails: [ResendEmail] = []
@@ -380,6 +342,12 @@ class EditorStore: ObservableObject {
     @Published var sidebarCatalogExpanded = false
     @Published var sidebarChatExpanded = false
 
+    // MARK: - Section Group Collapse State
+    @Published var workspaceGroupCollapsed = false
+    @Published var contentGroupCollapsed = false
+    @Published var operationsGroupCollapsed = false
+    @Published var infrastructureGroupCollapsed = true // Start collapsed by default
+
     // Sheet states
     @Published var showNewCreationSheet = false
     @Published var showNewCollectionSheet = false
@@ -410,4 +378,187 @@ class EditorStore: ObservableObject {
     // - EditorStore+BrowserSessions.swift: Browser session management
 }
 
+// MARK: - Notification Handlers ViewModifier
+// Groups all notification receivers into a single, efficient modifier
 
+struct NotificationHandlersModifier: ViewModifier {
+    @ObservedObject var store: EditorStore
+    @Binding var sidebarCollapsed: Bool
+    @Binding var columnVisibility: NavigationSplitViewVisibility
+    @Binding var showStoreSelectorSheet: Bool
+    @Binding var showNewMCPServerSheet: Bool
+    @Binding var showMCPMonitoringSheet: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: sidebarCollapsed) { _, collapsed in
+                columnVisibility = collapsed ? .detailOnly : .all
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ToggleSidebar"))) { _ in
+                handleToggleSidebar()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SaveDocument"))) { _ in
+                handleSaveDocument()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowStoreSelector"))) { _ in
+                showStoreSelectorSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewStore"))) { _ in
+                store.showNewStoreSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserNewTab"))) { _ in
+                handleBrowserCommand { session in
+                    BrowserTabManager.forSession(session.id).newTab()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserReload"))) { _ in
+                handleBrowserCommand { session in
+                    BrowserTabManager.forSession(session.id).activeTab?.refresh()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserBack"))) { _ in
+                handleBrowserCommand { session in
+                    BrowserTabManager.forSession(session.id).activeTab?.goBack()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BrowserForward"))) { _ in
+                handleBrowserCommand { session in
+                    BrowserTabManager.forSession(session.id).activeTab?.goForward()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMCPServers"))) { _ in
+                store.sidebarMCPServersExpanded = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMCPServers"))) { _ in
+                Task { await store.loadMCPServers() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMCPDocs"))) { _ in
+                if let url = URL(string: "https://modelcontextprotocol.io/docs") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewMCPServer"))) { _ in
+                showNewMCPServerSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MonitorMCPServers"))) { _ in
+                showMCPMonitoringSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CloseTab"))) { _ in
+                handleCloseTab()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PreviousTab"))) { _ in
+                handlePreviousTab()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NextTab"))) { _ in
+                handleNextTab()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab1"))) { _ in
+                selectTab(at: 0)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab2"))) { _ in
+                selectTab(at: 1)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab3"))) { _ in
+                selectTab(at: 2)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab4"))) { _ in
+                selectTab(at: 3)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab5"))) { _ in
+                selectTab(at: 4)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab6"))) { _ in
+                selectTab(at: 5)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab7"))) { _ in
+                selectTab(at: 6)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab8"))) { _ in
+                selectTab(at: 7)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectTab9"))) { _ in
+                selectLastTab()
+            }
+    }
+
+    private func handleToggleSidebar() {
+        withAnimation(DesignSystem.Animation.spring) {
+            sidebarCollapsed.toggle()
+        }
+    }
+
+    private func handleSaveDocument() {
+        if store.hasUnsavedChanges {
+            Task { await store.saveCurrentCreation() }
+        }
+    }
+
+    private func handleBrowserCommand(_ action: (BrowserSession) -> Void) {
+        if let session = getCurrentBrowserSession() {
+            action(session)
+        }
+    }
+
+    private func getCurrentBrowserSession() -> BrowserSession? {
+        if let session = store.selectedBrowserSession {
+            return session
+        }
+        if let activeTab = store.activeTab {
+            if case .browserSession(let session) = activeTab {
+                return session
+            }
+        }
+        return nil
+    }
+
+    private func handleCloseTab() {
+        if let activeTab = store.activeTab {
+            store.closeTab(activeTab)
+        }
+    }
+
+    private func handlePreviousTab() {
+        guard let activeTab = store.activeTab,
+              let index = store.openTabs.firstIndex(where: { $0.id == activeTab.id }),
+              index > 0 else { return }
+        store.switchToTab(store.openTabs[index - 1])
+    }
+
+    private func handleNextTab() {
+        guard let activeTab = store.activeTab,
+              let index = store.openTabs.firstIndex(where: { $0.id == activeTab.id }),
+              index < store.openTabs.count - 1 else { return }
+        store.switchToTab(store.openTabs[index + 1])
+    }
+
+    private func selectTab(at index: Int) {
+        guard index < store.openTabs.count else { return }
+        store.switchToTab(store.openTabs[index])
+    }
+
+    private func selectLastTab() {
+        if !store.openTabs.isEmpty {
+            store.switchToTab(store.openTabs[store.openTabs.count - 1])
+        }
+    }
+}
+
+extension View {
+    func notificationHandlers(
+        store: EditorStore,
+        sidebarCollapsed: Binding<Bool>,
+        columnVisibility: Binding<NavigationSplitViewVisibility>,
+        showStoreSelectorSheet: Binding<Bool>,
+        showNewMCPServerSheet: Binding<Bool>,
+        showMCPMonitoringSheet: Binding<Bool>
+    ) -> some View {
+        self.modifier(NotificationHandlersModifier(
+            store: store,
+            sidebarCollapsed: sidebarCollapsed,
+            columnVisibility: columnVisibility,
+            showStoreSelectorSheet: showStoreSelectorSheet,
+            showNewMCPServerSheet: showNewMCPServerSheet,
+            showMCPMonitoringSheet: showMCPMonitoringSheet
+        ))
+    }
+}

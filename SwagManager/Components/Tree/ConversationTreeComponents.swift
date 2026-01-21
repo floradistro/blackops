@@ -14,27 +14,27 @@ struct ConversationRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.Spacing.sm) {
+            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
                 Text("#")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: DesignSystem.TreeSpacing.iconSize, weight: .semibold))
                     .foregroundStyle(.tertiary)
-                    .frame(width: 10)
+                    .frame(width: 14)
 
                 Text(conversation.displayTitle)
-                    .font(DesignSystem.Typography.caption2)
+                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
                     .foregroundStyle(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
                     .lineLimit(1)
 
-                Spacer()
+                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
                 if let count = conversation.messageCount, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 9))
+                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
                         .foregroundStyle(.tertiary)
                 }
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
+            .frame(height: DesignSystem.TreeSpacing.itemHeight)
+            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
             .background(
                 RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
                     .fill(isSelected ? DesignSystem.Colors.selectionActive : Color.clear)

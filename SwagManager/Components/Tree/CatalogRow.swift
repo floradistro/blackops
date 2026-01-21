@@ -12,29 +12,28 @@ struct CatalogRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.Spacing.xxs) {
+            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 9))
+                    .font(.system(size: DesignSystem.TreeSpacing.chevronSize))
                     .foregroundStyle(.tertiary)
                     .frame(width: 10)
 
                 Text(catalog.name)
-                    .font(.system(size: 11))
+                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
                     .lineLimit(1)
 
-                Spacer()
+                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
 
                 if let count = itemCount, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 9))
+                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
                         .foregroundStyle(.tertiary)
                 }
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .frame(height: DesignSystem.TreeSpacing.itemHeight)
+            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
-        .padding(.horizontal, DesignSystem.Spacing.sm)
     }
 }

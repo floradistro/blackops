@@ -11,7 +11,9 @@ struct SidebarQueuesSection: View {
 
     var body: some View {
         TreeSectionHeader(
-            title: "QUEUES",
+            title: "Queues",
+            icon: "line.3.horizontal",
+            iconColor: DesignSystem.Colors.green,
             isExpanded: $store.sidebarQueuesExpanded,
             count: store.locations.count
         )
@@ -42,7 +44,7 @@ struct SidebarQueuesSection: View {
                     VStack(spacing: DesignSystem.Spacing.xxs) {
                         Text("No locations")
                             .font(DesignSystem.Typography.caption1)
-                            .foregroundStyle(.tertiary)
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
                     }
                     Spacer()
                 }

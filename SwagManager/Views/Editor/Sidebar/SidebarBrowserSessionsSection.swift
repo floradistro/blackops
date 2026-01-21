@@ -23,17 +23,17 @@ struct SidebarBrowserSessionsSection: View {
             if store.selectedStore == nil {
                 Text("Select a store")
                     .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(.tertiary)
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
                     .padding(.horizontal, DesignSystem.Spacing.md)
                     .padding(.vertical, DesignSystem.Spacing.sm)
             } else if store.browserSessions.isEmpty {
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                     Text("No browser sessions")
                         .font(DesignSystem.Typography.caption1)
-                        .foregroundStyle(.tertiary)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                     Text("Sessions will appear here when AI browses the web")
                         .font(DesignSystem.Typography.caption2)
-                        .foregroundStyle(.quaternary)
+                        .foregroundColor(DesignSystem.Colors.textQuaternary)
                 }
                 .padding(.horizontal, DesignSystem.Spacing.md)
                 .padding(.vertical, DesignSystem.Spacing.sm)

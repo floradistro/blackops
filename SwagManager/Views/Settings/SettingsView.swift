@@ -104,14 +104,9 @@ struct AboutView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(Color.accentColor)
 
-            VStack(spacing: 4) {
-                Text("Swag Manager")
-                    .font(.title.bold())
-
-                Text("Version 1.0.0")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            Text("Version 1.0.0")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
             Text("Manage your creations and collections with a native macOS experience.")
                 .font(.body)

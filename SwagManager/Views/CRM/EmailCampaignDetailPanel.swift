@@ -6,9 +6,36 @@ struct EmailCampaignDetailPanel: View {
     @State private var isRefreshing = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
+        GlassPanel(
+            title: campaign.name,
+            showHeader: true,
+            headerActions: {
+                AnyView(
+                    HStack(spacing: DesignSystem.Spacing.sm) {
+                        CampaignStatusBadge(status: campaign.status)
+
+                        Button(action: {
+                            Task {
+                                isRefreshing = true
+                                await store.refreshEmailCampaign(campaign)
+                                isRefreshing = false
+                            }
+                        }) {
+                            if isRefreshing {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: DesignSystem.IconSize.medium))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                )
+            }
+        ) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xl) {
+                // Subject header
                 headerSection
 
                 // Stats
@@ -22,123 +49,85 @@ struct EmailCampaignDetailPanel: View {
                     performanceSection
                 }
             }
-            .padding()
-        }
-        .background(Color(NSColor.windowBackgroundColor))
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button(action: {
-                    Task {
-                        isRefreshing = true
-                        await store.refreshEmailCampaign(campaign)
-                        isRefreshing = false
-                    }
-                }) {
-                    if isRefreshing {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-            }
         }
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "envelope.badge")
-                    .font(.title)
-                    .foregroundStyle(.blue)
-
-                VStack(alignment: .leading) {
-                    Text(campaign.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    Text(campaign.subject)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                CampaignStatusBadge(status: campaign.status)
-            }
+        GlassSection(
+            title: "Campaign Subject",
+            subtitle: campaign.subject,
+            icon: "envelope.badge"
+        ) {
+            EmptyView()
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
     }
 
     private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             Text("Statistics")
-                .font(.headline)
+                .font(DesignSystem.Typography.headline)
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
 
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible()),
                 GridItem(.flexible())
-            ], spacing: 12) {
-                StatCard(
+            ], spacing: DesignSystem.Spacing.md) {
+                GlassStatCard(
                     title: "Recipients",
                     value: "\(campaign.totalRecipients)",
                     icon: "person.2",
-                    color: .blue
+                    color: DesignSystem.Colors.blue
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Sent",
                     value: "\(campaign.totalSent)",
                     icon: "paperplane",
-                    color: .green
+                    color: DesignSystem.Colors.green
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Delivered",
                     value: "\(campaign.totalDelivered)",
                     icon: "checkmark.circle",
-                    color: .green
+                    color: DesignSystem.Colors.green
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Opened",
                     value: "\(campaign.totalOpened)",
-                    subtitle: String(format: "%.1f%%", campaign.openRate),
                     icon: "envelope.open",
-                    color: .orange
+                    subtitle: String(format: "%.1f%%", campaign.openRate),
+                    trend: .up(String(format: "%.1f%%", campaign.openRate)),
+                    color: DesignSystem.Colors.orange
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Clicked",
                     value: "\(campaign.totalClicked)",
-                    subtitle: String(format: "%.1f%%", campaign.clickRate),
                     icon: "hand.tap",
-                    color: .purple
+                    subtitle: String(format: "%.1f%%", campaign.clickRate),
+                    trend: .up(String(format: "%.1f%%", campaign.clickRate)),
+                    color: DesignSystem.Colors.purple
                 )
 
-                StatCard(
+                GlassStatCard(
                     title: "Bounced",
                     value: "\(campaign.totalBounced)",
                     icon: "exclamationmark.triangle",
-                    color: .red
+                    color: DesignSystem.Colors.error
                 )
             }
         }
     }
 
     private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Campaign Details")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 8) {
-                CampaignDetailRow(label: "Subject", value: campaign.subject)
-
+        GlassSection(
+            title: "Campaign Details",
+            icon: "info.circle"
+        ) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
                 if let previewText = campaign.previewText {
                     CampaignDetailRow(label: "Preview Text", value: previewText)
                 }
@@ -161,43 +150,33 @@ struct EmailCampaignDetailPanel: View {
                     )
                 }
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
         }
     }
 
     private var performanceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Performance")
-                .font(.headline)
-
-            VStack(spacing: 8) {
+        GlassSection(
+            title: "Performance Metrics",
+            icon: "chart.bar"
+        ) {
+            VStack(spacing: DesignSystem.Spacing.sm) {
                 PerformanceBar(
                     label: "Delivery Rate",
                     value: campaign.deliveryRate,
-                    color: .green
+                    color: DesignSystem.Colors.green
                 )
 
                 PerformanceBar(
                     label: "Open Rate",
                     value: campaign.openRate,
-                    color: .orange
+                    color: DesignSystem.Colors.orange
                 )
 
                 PerformanceBar(
                     label: "Click Rate",
                     value: campaign.clickRate,
-                    color: .purple
+                    color: DesignSystem.Colors.purple
                 )
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
         }
     }
 }
@@ -231,42 +210,8 @@ struct CampaignStatusBadge: View {
     }
 }
 
-struct StatCard: View {
-    let title: String
-    let value: String
-    var subtitle: String? = nil
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Spacer()
-            }
-
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-
-            if let subtitle = subtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-    }
-}
+// MARK: - Legacy StatCard (DEPRECATED - Use GlassStatCard)
+// Kept for backward compatibility, will be removed in future version
 
 struct CampaignDetailRow: View {
     let label: String
@@ -275,12 +220,13 @@ struct CampaignDetailRow: View {
     var body: some View {
         HStack(alignment: .top) {
             Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(DesignSystem.Typography.caption1)
+                .foregroundStyle(DesignSystem.Colors.textSecondary)
                 .frame(width: 120, alignment: .leading)
 
             Text(value)
-                .font(.subheadline)
+                .font(DesignSystem.Typography.body)
+                .foregroundStyle(DesignSystem.Colors.textPrimary)
 
             Spacer()
         }
@@ -293,22 +239,24 @@ struct PerformanceBar: View {
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
             HStack {
                 Text(label)
-                    .font(.subheadline)
+                    .font(DesignSystem.Typography.body)
+                    .foregroundStyle(DesignSystem.Colors.textPrimary)
                 Spacer()
                 Text(String(format: "%.1f%%", value))
-                    .font(.subheadline)
+                    .font(DesignSystem.Typography.body)
                     .fontWeight(.semibold)
+                    .foregroundStyle(color)
             }
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.2))
+                    RoundedRectangle(cornerRadius: DesignSystem.Radius.xs)
+                        .fill(DesignSystem.Colors.surfaceSecondary)
 
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: DesignSystem.Radius.xs)
                         .fill(color)
                         .frame(width: geometry.size.width * (value / 100))
                 }

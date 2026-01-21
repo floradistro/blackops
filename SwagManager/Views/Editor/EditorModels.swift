@@ -51,6 +51,7 @@ enum OpenTabItem: Identifiable, Hashable {
     case emailCampaign(EmailCampaign)
     case metaCampaign(MetaCampaign)
     case metaIntegration(MetaIntegration)
+    case agentBuilder
 
     var id: String {
         switch self {
@@ -69,6 +70,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .emailCampaign(let c): return "emailcampaign-\(c.id)"
         case .metaCampaign(let c): return "metacampaign-\(c.id)"
         case .metaIntegration(let m): return "metaintegration-\(m.id)"
+        case .agentBuilder: return "agentbuilder"
         }
     }
 
@@ -93,6 +95,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .emailCampaign(let c): return c.name
         case .metaCampaign(let c): return c.name
         case .metaIntegration(let m): return m.businessName ?? "Meta Integration"
+        case .agentBuilder: return "Agent Builder"
         }
     }
 
@@ -122,6 +125,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .emailCampaign: return "envelope.badge"
         case .metaCampaign: return "megaphone"
         case .metaIntegration: return "link.badge.plus"
+        case .agentBuilder: return "brain.head.profile"
         }
     }
 
@@ -142,6 +146,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .emailCampaign: return .blue
         case .metaCampaign: return .pink
         case .metaIntegration: return .indigo
+        case .agentBuilder: return .purple
         }
     }
 
@@ -166,13 +171,14 @@ enum OpenTabItem: Identifiable, Hashable {
         case .order: return "⬡"
         case .location: return "⌘"
         case .queue: return "⚡"
-        case .cart: return "🛒"
+        case .cart: return "◐"
         case .customer(let c): return c.terminalIcon
         case .mcpServer: return "⚙"
         case .email: return "✉"
-        case .emailCampaign: return "📧"
-        case .metaCampaign: return "📢"
-        case .metaIntegration: return "🔗"
+        case .emailCampaign: return "◉"
+        case .metaCampaign: return "◆"
+        case .metaIntegration: return "◇"
+        case .agentBuilder: return "◪"
         }
     }
 
@@ -194,6 +200,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .emailCampaign: return .blue
         case .metaCampaign: return .pink
         case .metaIntegration: return .indigo
+        case .agentBuilder: return .purple
         }
     }
 

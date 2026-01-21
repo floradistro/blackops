@@ -20,19 +20,36 @@ extension EditorStore {
 
             // Load pricing schemas for instant tier selection (Apple pattern: pre-load all data)
             do {
-                let catalogIdString = selectedCatalog?.id.uuidString ?? ""
-                NSLog("[EditorStore] Loading pricing schemas for catalog: \(catalogIdString.isEmpty ? "none" : catalogIdString)")
+                NSLog("[EditorStore] Loading ALL pricing schemas (unrestricted)")
+
+                // Load ALL active pricing schemas - no store/catalog filter
+                // Products reference schemas by pricing_schema_id, so we need all schemas available
                 let response = try await supabase.client
                     .from("pricing_schemas")
                     .select("*")
-                    .eq("catalog_id", value: catalogIdString)
+                    .eq("is_active", value: true)
                     .execute()
 
-                let schemas = try JSONDecoder().decode([PricingSchema].self, from: response.data)
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+                // Debug: Log raw JSON
+                if let jsonString = String(data: response.data, encoding: .utf8) {
+                    NSLog("[EditorStore] 🔍 Raw pricing schemas JSON (first 500 chars): %@", String(jsonString.prefix(500)))
+                }
+
+                let schemas = try decoder.decode([PricingSchema].self, from: response.data)
                 pricingSchemas = schemas
+
                 NSLog("[EditorStore] ✅ Loaded %d pricing schemas", pricingSchemas.count)
                 for schema in schemas {
-                    NSLog("[EditorStore] - Schema: \(schema.name ?? "unnamed") (\(schema.id)), tiers: \(schema.tiers.count)")
+                    NSLog("[EditorStore]    - %@ (%@) with %d tiers", schema.name, schema.id.uuidString, schema.tiers.count)
+                    if schema.tiers.count > 0 {
+                        let firstTier = schema.tiers[0]
+                        NSLog("[EditorStore]      First tier: id=%@, label=%@, price=%@, quantity=%@, unit=%@",
+                              firstTier.id, firstTier.label, String(describing: firstTier.defaultPrice),
+                              String(firstTier.quantity), firstTier.unit)
+                    }
                 }
             } catch {
                 NSLog("[EditorStore] ❌ Could not load pricing schemas: %@", String(describing: error))
