@@ -35,6 +35,9 @@ struct TierSelectorSheet: View {
         // Use embedded pricing schema from product (loaded via PostgREST join)
         if let schema = product.pricingSchema {
             NSLog("[TierSelector] ✅ Found \(schema.tiers.count) tiers for product '\(product.name)' in embedded schema '\(schema.name)'")
+            for tier in schema.tiers {
+                NSLog("[TierSelector]    - Tier: id=\(tier.id), label=\(tier.label), qty=\(tier.quantity), unit=\(tier.unit), price=\(tier.defaultPrice)")
+            }
             return schema.tiers
         }
 
@@ -51,15 +54,18 @@ struct TierSelectorSheet: View {
         }
 
         NSLog("[TierSelector] ✅ Found \(schema.tiers.count) tiers for product '\(product.name)' in schema '\(schema.name)'")
+        for tier in schema.tiers {
+            NSLog("[TierSelector]    - Tier: id=\(tier.id), label=\(tier.label), qty=\(tier.quantity), unit=\(tier.unit), price=\(tier.defaultPrice)")
+        }
         return schema.tiers
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header - compact
             HStack {
                 Text(product.name)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
 
                 Spacer()
@@ -68,27 +74,27 @@ struct TierSelectorSheet: View {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
+                        .font(.system(size: 16))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(20)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(Color(NSColor.windowBackgroundColor))
 
             Divider()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: 8) {
                     // SKU row
                     if let sku = product.sku {
                         HStack {
                             Text(sku)
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
                                 .foregroundStyle(.secondary)
                             Spacer()
                         }
-                        .padding(.horizontal, 4)
                     }
 
                     // Variants (if any)
@@ -99,12 +105,11 @@ struct TierSelectorSheet: View {
                     // Tiers
                     tiersSection
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
             }
         }
-        .frame(width: 420, height: currentTiers.isEmpty ? 280 : min(600, CGFloat(currentTiers.count) * 70 + 200))
+        .frame(width: 340, height: currentTiers.isEmpty ? 180 : min(400, CGFloat(currentTiers.count) * 48 + 120))
         .onAppear {
             NSLog("[TierSelector] Sheet opened for product: \(product.name), tiers: \(currentTiers.count)")
         }
@@ -158,19 +163,19 @@ struct TierSelectorSheet: View {
     // MARK: - Tiers Section
 
     private var tiersSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 6) {
             if currentTiers.isEmpty {
                 // No tiers message
-                VStack(spacing: 12) {
+                VStack(spacing: 8) {
                     Image(systemName: "tag.slash")
-                        .font(.system(size: 32))
+                        .font(.system(size: 24))
                         .foregroundStyle(.secondary)
                     Text("No pricing tiers available")
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+                .padding(.vertical, 30)
             } else {
                 ForEach(currentTiers, id: \.id) { tier in
                     tierButton(tier)
@@ -190,35 +195,35 @@ struct TierSelectorSheet: View {
             dismiss()
         } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(tier.displayLabel)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.primary)
 
                     Text("\(formatQuantity(tier.quantity)) \(tier.unit)")
-                        .font(.system(size: 12))
+                        .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
                 Text(formatCurrency(tier.defaultPrice))
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
-            .frame(minHeight: 56)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(minHeight: 42)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 8)
                     .fill(Color(NSColor.controlBackgroundColor))
             )
-            .contentShape(RoundedRectangle(cornerRadius: 14))
+            .contentShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
     }
 
