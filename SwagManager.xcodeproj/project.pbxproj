@@ -41,6 +41,7 @@
 		3185A5875781E098DD6B6705 /* FloatingCartDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFB2ECAC80C6AFD0D69E74FB /* FloatingCartDock.swift */; };
 		3291F415CE4059980D757E4A /* Customer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6099626F9ED26D3F2FECA3 /* Customer.swift */; };
 		35F0A5FBC59A48AD333315C3 /* EditorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0498EF3964A2DA9B3C640B /* EditorModels.swift */; };
+		37572BCC34D1DD6C9D9B12BB /* PaymentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3652BB4CA22A77EFC07AC14A /* PaymentService.swift */; };
 		3BF63D08F0C9297CBB0F0650 /* MetaIntegrationDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB51E15DC125099B2A4A678 /* MetaIntegrationDetailPanel.swift */; };
 		3CD129A2EE1D1FC024C46E33 /* NewCatalogSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4640AD9A5BCE118AB6A926DD /* NewCatalogSheet.swift */; };
 		3DA1303680876A08876D58E6 /* SidebarMCPServersSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52AB40E02240A2302DABD94F /* SidebarMCPServersSection.swift */; };
@@ -159,6 +160,8 @@
 		D3CD51E01ABFC86844BA4797 /* ConversationTreeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 665D9F4AF3E2F177931D0AD8 /* ConversationTreeComponents.swift */; };
 		D3E5C4F5B7A8901234567890 /* ChatStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F6D5G6C8B9012345678901 /* ChatStore.swift */; };
 		D44B8AC5654D01FFDBB62B67 /* CampaignService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB5AAC8CC725B2066E83642 /* CampaignService.swift */; };
+		D5BCBDDB63F483512BF3C47A /* PaymentTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E3A32E4AD753FFBDE19EA6 /* PaymentTypes.swift */; };
+		D821E5D1B9C6823F201C662D /* Register.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB9903877369AD9B4E922F3 /* Register.swift */; };
 		D8A4DA2D9326FB8C2524631E /* EditorStore+CategoryHierarchy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0593AC952EEA0C69C0B00A9B /* EditorStore+CategoryHierarchy.swift */; };
 		DBDE6A556F23FB6AC8DB61DA /* EmailCategorySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1762D1EB98D85ED3D194398A /* EmailCategorySection.swift */; };
 		DBDE6EF29DFDA9A356588C69 /* CheckoutSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4881BD50FE1E1CF266450582 /* CheckoutSheet.swift */; };
@@ -191,6 +194,7 @@
 		06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductEditorComponents.swift; sourceTree = "<group>"; };
 		0729951BC8B3F29E28E00480 /* InteractiveBrowserView+DarkMode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "InteractiveBrowserView+DarkMode.swift"; sourceTree = "<group>"; };
 		08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReactRenderTemplate.swift; sourceTree = "<group>"; };
+		0DB9903877369AD9B4E922F3 /* Register.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Register.swift; path = SwagManager/Models/Register.swift; sourceTree = "<group>"; };
 		0E5061F1D58EAD698860FCC6 /* MCPTestRunner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MCPTestRunner.swift; path = SwagManager/Services/MCPTestRunner.swift; sourceTree = "<group>"; };
 		1384502F94A273E8E462DCA3 /* MCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MCPServer.swift; path = SwagManager/Models/MCPServer.swift; sourceTree = "<group>"; };
 		13AC7CCBC4DCC5B56C08CD8E /* EditorStore+Zoom.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+Zoom.swift"; sourceTree = "<group>"; };
@@ -214,6 +218,7 @@
 		34808BB4D9A35032F816EA13 /* SidebarTeamChatSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SidebarTeamChatSection.swift; sourceTree = "<group>"; };
 		348CBCD875E56962FA2A3C48 /* AgentBuilderStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentBuilderStore.swift; sourceTree = "<group>"; };
 		357376A8CCE0CA537DE2B436 /* ChatMessageRendering.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatMessageRendering.swift; sourceTree = "<group>"; };
+		3652BB4CA22A77EFC07AC14A /* PaymentService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PaymentService.swift; path = SwagManager/Services/PaymentService.swift; sourceTree = "<group>"; };
 		3900932E64BF678E6CB4C6DE /* MarkdownTextBlocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MarkdownTextBlocks.swift; sourceTree = "<group>"; };
 		3905F5C7211C00F2AB8B259D /* StoreLocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoreLocationService.swift; sourceTree = "<group>"; };
 		3923728FA5FA7581B5F98084 /* ModalComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModalComponents.swift; sourceTree = "<group>"; };
@@ -241,6 +246,7 @@
 		52AB40E02240A2302DABD94F /* SidebarMCPServersSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SidebarMCPServersSection.swift; path = SwagManager/Views/Editor/Sidebar/SidebarMCPServersSection.swift; sourceTree = "<group>"; };
 		53001E0C4E31CDD88B2AF992 /* BrowserComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowserComponents.swift; sourceTree = "<group>"; };
 		546BF7FBBDD38266C4684C19 /* CategoryTreeComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryTreeComponents.swift; sourceTree = "<group>"; };
+		55E3A32E4AD753FFBDE19EA6 /* PaymentTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PaymentTypes.swift; path = SwagManager/Services/PaymentTypes.swift; sourceTree = "<group>"; };
 		5CB51E15DC125099B2A4A678 /* MetaIntegrationDetailPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetaIntegrationDetailPanel.swift; sourceTree = "<group>"; };
 		5CE80B8C2BF851411703F0B9 /* FormFieldComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FormFieldComponents.swift; sourceTree = "<group>"; };
 		653599816CD077BEC43CC8F1 /* OrderService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = OrderService.swift; path = SwagManager/Services/OrderService.swift; sourceTree = "<group>"; };
@@ -575,6 +581,9 @@
 				E679485E9F62BF1F1D0496D5 /* EmailCategory.swift */,
 				1762D1EB98D85ED3D194398A /* EmailCategorySection.swift */,
 				33B302DF2F20A9A600364A85 /* Recovered References */,
+				3652BB4CA22A77EFC07AC14A /* PaymentService.swift */,
+				55E3A32E4AD753FFBDE19EA6 /* PaymentTypes.swift */,
+				0DB9903877369AD9B4E922F3 /* Register.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1042,6 +1051,9 @@
 				73055C1858D780350EDD3603 /* TierSelectorSheet.swift in Sources */,
 				F13AE774B13750C4B118092F /* SlideToPayButton.swift in Sources */,
 				3185A5875781E098DD6B6705 /* FloatingCartDock.swift in Sources */,
+				37572BCC34D1DD6C9D9B12BB /* PaymentService.swift in Sources */,
+				D5BCBDDB63F483512BF3C47A /* PaymentTypes.swift in Sources */,
+				D821E5D1B9C6823F201C662D /* Register.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

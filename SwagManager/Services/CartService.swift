@@ -4,9 +4,9 @@ import Foundation
 // Ported from POS - thin wrapper around /cart Edge Function
 // All calculations done server-side, client just renders state
 
-// MARK: - Models
+// MARK: - Models (copied from iOS app for backend compatibility)
 
-struct ServerCart: Codable, Identifiable, Equatable {
+struct ServerCart: Codable, Identifiable {
     let id: UUID
     let storeId: UUID
     let locationId: UUID
@@ -14,33 +14,106 @@ struct ServerCart: Codable, Identifiable, Equatable {
     let status: String
     let items: [ServerCartItem]
     let totals: CheckoutTotals
-    let createdAt: Date?
-    let updatedAt: Date?
 
-    var isEmpty: Bool { items.isEmpty }
-    var itemCount: Int { items.reduce(0) { $0 + $1.quantity } }
+    // Computed from totals - these don't exist at root in the database response
+    var subtotal: Decimal { totals.subtotal }
+    var discountAmount: Decimal { totals.discountAmount }
+    var taxRate: Decimal { totals.taxRate }
+    var taxAmount: Decimal { totals.taxAmount }
+    var total: Decimal { totals.total }
+    var itemCount: Int { totals.itemCount }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case storeId = "store_id"
+        case locationId = "location_id"
+        case customerId = "customer_id"
+        case status
+        case items
+        case totals
+    }
 }
 
-struct ServerCartItem: Codable, Identifiable, Equatable {
+struct ServerCartItem: Codable, Identifiable {
     let id: UUID
-    let cartId: UUID
     let productId: UUID
     let productName: String
     let sku: String?
     let unitPrice: Decimal
     let quantity: Int
     let tierLabel: String?
-    let tierQuantity: Double?
+    let tierQuantity: Double
     let variantId: UUID?
     let variantName: String?
     let lineTotal: Decimal
-    let discountAmount: Decimal?
+    let discountAmount: Decimal
     let manualDiscountType: String?
     let manualDiscountValue: Decimal?
-    let inventoryId: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case productId = "product_id"
+        case productName = "product_name"
+        case sku
+        case unitPrice = "unit_price"
+        case quantity
+        case tierLabel = "tier_label"
+        case tierQuantity = "tier_quantity"
+        case variantId = "variant_id"
+        case variantName = "variant_name"
+        case lineTotal = "line_total"
+        case discountAmount = "discount_amount"
+        case manualDiscountType = "manual_discount_type"
+        case manualDiscountValue = "manual_discount_value"
+    }
+
+    var displayName: String {
+        if let variantName = variantName {
+            return "\(productName) (\(variantName))"
+        }
+        return productName
+    }
+
+    var hasDiscount: Bool {
+        manualDiscountType != nil && (manualDiscountValue ?? 0) > 0
+    }
 }
 
-struct CheckoutTotals: Codable, Equatable {
+struct TaxBreakdownItem: Codable {
+    let name: String?
+    let rate: Decimal?
+    let amount: Decimal?
+
+    // Handle different key formats from database
+    enum CodingKeys: String, CodingKey {
+        case name
+        case rate
+        case amount
+        case taxName = "tax_name"
+        case taxRate = "tax_rate"
+        case taxAmount = "tax_amount"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Try both formats
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+            ?? container.decodeIfPresent(String.self, forKey: .taxName)
+        rate = try container.decodeIfPresent(Decimal.self, forKey: .rate)
+            ?? container.decodeIfPresent(Decimal.self, forKey: .taxRate)
+        amount = try container.decodeIfPresent(Decimal.self, forKey: .amount)
+            ?? container.decodeIfPresent(Decimal.self, forKey: .taxAmount)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(rate, forKey: .rate)
+        try container.encodeIfPresent(amount, forKey: .amount)
+    }
+}
+
+struct CheckoutTotals: Codable {
     let subtotal: Decimal
     let discountAmount: Decimal
     let taxableAmount: Decimal
@@ -52,17 +125,19 @@ struct CheckoutTotals: Codable, Equatable {
     let cashSuggestions: [Decimal]?
     let errors: [String]
     let isValid: Bool
-}
-
-struct TaxBreakdownItem: Codable, Equatable {
-    let name: String
-    let rate: Decimal
-    let type: String
-    let rateDecimal: Decimal
 
     enum CodingKeys: String, CodingKey {
-        case name, rate, type
-        case rateDecimal = "rate_decimal"
+        case subtotal
+        case discountAmount = "discount_amount"
+        case taxableAmount = "taxable_amount"
+        case taxRate = "tax_rate"
+        case taxAmount = "tax_amount"
+        case taxBreakdown = "tax_breakdown"
+        case total
+        case itemCount = "item_count"
+        case cashSuggestions = "cash_suggestions"
+        case errors
+        case isValid = "is_valid"
     }
 }
 
@@ -255,12 +330,38 @@ class CartService {
             let success: Bool
             let data: ServerCart?
             let error: String?
+
+            // Custom decoder to handle backend returning partial data (just totals) when no cart exists
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                success = try container.decode(Bool.self, forKey: .success)
+                error = try container.decodeIfPresent(String.self, forKey: .error)
+
+                // Try to decode data, but check if it has required fields first
+                if container.contains(.data) {
+                    // Peek at the data to see if it has an 'id' field (indicates a real cart)
+                    let dataContainer = try? container.nestedContainer(keyedBy: DataKeys.self, forKey: .data)
+                    if dataContainer?.contains(.id) == true {
+                        data = try container.decode(ServerCart.self, forKey: .data)
+                    } else {
+                        // Backend returned partial data (just totals) - treat as no cart
+                        data = nil
+                    }
+                } else {
+                    data = nil
+                }
+            }
+
+            enum CodingKeys: String, CodingKey {
+                case success, data, error
+            }
+
+            enum DataKeys: String, CodingKey {
+                case id
+            }
         }
 
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-
         let cartResponse = try decoder.decode(CartResponse.self, from: data)
 
         guard cartResponse.success, let cart = cartResponse.data else {

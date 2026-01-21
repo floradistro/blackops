@@ -14,6 +14,18 @@ struct CartPanel: View {
     @State private var selectedProduct: Product?
     @State private var showCheckout = false
     @State private var popoverAnchor: CGRect = .zero
+    @State private var selectedRegisterId: UUID? = nil
+    @State private var availableRegisters: [Register] = []
+
+    // Create SessionInfo for payment tracking
+    private var sessionInfo: SessionInfo {
+        SessionInfo(
+            storeId: store.selectedStore?.id ?? UUID(),
+            locationId: queueEntry.locationId,
+            registerId: selectedRegisterId,
+            userId: nil // TODO: Add user auth
+        )
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -94,8 +106,17 @@ struct CartPanel: View {
                 cart: cartStore.cart!,
                 queueEntry: queueEntry,
                 store: store,
+                sessionInfo: sessionInfo,
                 onComplete: {
                     showCheckout = false
+                    // Reload cart after successful payment
+                    Task {
+                        await cartStore.loadCart(
+                            storeId: store.selectedStore?.id ?? UUID(),
+                            locationId: queueEntry.locationId,
+                            customerId: queueEntry.customerId
+                        )
+                    }
                 }
             )
         }

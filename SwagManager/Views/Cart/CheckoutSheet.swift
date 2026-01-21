@@ -3,7 +3,7 @@
 //  SwagManager (macOS)
 //
 //  Checkout sheet with liquid glass design - ported from iOS Whale app
-//  Simplified for macOS with essential payment flow
+//  Properly tracks location/register to prevent lost orders
 //
 
 import SwiftUI
@@ -14,6 +14,7 @@ struct CheckoutSheet: View {
     let cart: ServerCart
     let queueEntry: QueueEntry
     let store: EditorStore
+    let sessionInfo: SessionInfo
     let onComplete: () -> Void
 
     @State private var paymentMethod: PaymentMethod = .cash
@@ -22,21 +23,28 @@ struct CheckoutSheet: View {
     @State private var invoiceDueDate = Date().addingTimeInterval(7 * 24 * 60 * 60) // 7 days
     @State private var isProcessing = false
     @State private var showSuccess = false
-    @State private var completedOrder: String?
-
-    enum PaymentMethod: String, CaseIterable {
-        case card = "Card"
-        case cash = "Cash"
-        case invoice = "Invoice"
-    }
+    @State private var completedOrder: SaleCompletion?
+    @State private var errorMessage: String?
+    @State private var showError = false
 
     var body: some View {
-        if showSuccess {
-            successView
-        } else if isProcessing {
-            processingView
-        } else {
-            checkoutContent
+        Group {
+            if showSuccess {
+                successView
+            } else if isProcessing {
+                processingView
+            } else {
+                checkoutContent
+            }
+        }
+        .alert("Payment Error", isPresented: $showError) {
+            Button("OK") {
+                isProcessing = false
+            }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+            }
         }
     }
 
@@ -64,6 +72,8 @@ struct CheckoutSheet: View {
                         cardSection
                     case .invoice:
                         invoiceSection
+                    default:
+                        EmptyView()
                     }
 
                     // Order summary
@@ -279,6 +289,7 @@ struct CheckoutSheet: View {
         case .card: return "Slide to Pay \(formatCurrency(cart.totals.total))"
         case .cash: return "Slide to Complete"
         case .invoice: return "Slide to Send Invoice"
+        default: return "Complete Payment"
         }
     }
 
@@ -287,6 +298,7 @@ struct CheckoutSheet: View {
         case .card: return "creditcard"
         case .cash: return "dollarsign.circle"
         case .invoice: return "paperplane"
+        default: return "checkmark"
         }
     }
 
@@ -299,6 +311,8 @@ struct CheckoutSheet: View {
             return false // Not supported on desktop yet
         case .invoice:
             return !invoiceEmail.isEmpty && invoiceEmail.contains("@")
+        default:
+            return false
         }
     }
 
@@ -337,8 +351,8 @@ struct CheckoutSheet: View {
                 .font(.title)
                 .fontWeight(.bold)
 
-            if let orderNumber = completedOrder {
-                Text("Order #\(orderNumber)")
+            if let completion = completedOrder {
+                Text("Order #\(completion.orderNumber)")
                     .font(.headline)
                     .foregroundStyle(.secondary)
             }
@@ -359,6 +373,19 @@ struct CheckoutSheet: View {
                 }
             }
 
+            VStack(spacing: 8) {
+                Text("Location: \(store.selectedStore?.storeName ?? "Unknown")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let registerId = sessionInfo.registerId {
+                    Text("Register: \(registerId.uuidString.prefix(8))...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 4)
+
             Button("Done") {
                 onComplete()
             }
@@ -372,19 +399,74 @@ struct CheckoutSheet: View {
 
     private func processPayment() async {
         isProcessing = true
+        errorMessage = nil
 
-        // Simulate payment processing
-        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+        do {
+            switch paymentMethod {
+            case .cash:
+                guard let cashAmount = Decimal(string: cashTendered) else {
+                    errorMessage = "Invalid cash amount"
+                    showError = true
+                    isProcessing = false
+                    return
+                }
 
-        // TODO: Integrate with PaymentStore/backend
-        // For now, just show success
-        completedOrder = "ORD-\(Int.random(in: 100000...999999))"
-        isProcessing = false
-        showSuccess = true
+                guard cashAmount >= cart.totals.total else {
+                    errorMessage = "Insufficient cash: need \(formatCurrency(cart.totals.total))"
+                    showError = false
+                    isProcessing = false
+                    return
+                }
 
-        // Auto-dismiss after 3 seconds
-        try? await Task.sleep(nanoseconds: 3_000_000_000)
-        onComplete()
+                NSLog("[Checkout] Processing cash payment - location: \(sessionInfo.locationId), register: \(sessionInfo.registerId?.uuidString ?? "nil")")
+
+                let completion = try await PaymentService.shared.processCashPayment(
+                    sessionInfo: sessionInfo,
+                    cart: cart,
+                    cashTendered: cashAmount,
+                    customerName: queueEntry.customerFirstName.map { "\($0) \(queueEntry.customerLastName ?? "")" }
+                )
+
+                completedOrder = completion
+                isProcessing = false
+                showSuccess = true
+
+            case .card:
+                errorMessage = "Card payments require terminal integration (not available on desktop)"
+                showError = true
+                isProcessing = false
+
+            case .invoice:
+                guard !invoiceEmail.isEmpty, invoiceEmail.contains("@") else {
+                    errorMessage = "Valid email required for invoice"
+                    showError = true
+                    isProcessing = false
+                    return
+                }
+
+                let completion = try await PaymentService.shared.processInvoicePayment(
+                    sessionInfo: sessionInfo,
+                    cart: cart,
+                    customerEmail: invoiceEmail,
+                    customerName: queueEntry.customerFirstName.map { "\($0) \(queueEntry.customerLastName ?? "")" },
+                    dueDate: invoiceDueDate
+                )
+
+                completedOrder = completion
+                isProcessing = false
+                showSuccess = true
+
+            case .split:
+                errorMessage = "Split payments not yet supported on desktop"
+                showError = true
+                isProcessing = false
+            }
+        } catch {
+            NSLog("[Checkout] ❌ Payment failed: \(error)")
+            errorMessage = error.localizedDescription
+            showError = true
+            isProcessing = false
+        }
     }
 
     // MARK: - Formatters
