@@ -17,6 +17,28 @@ extension EditorStore {
         do {
             categories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: selectedCatalog?.id)
             products = try await supabase.fetchProducts(storeId: currentStoreId)
+
+            // Load pricing schemas for instant tier selection (Apple pattern: pre-load all data)
+            do {
+                let catalogIdString = selectedCatalog?.id.uuidString ?? ""
+                NSLog("[EditorStore] Loading pricing schemas for catalog: \(catalogIdString.isEmpty ? "none" : catalogIdString)")
+                let response = try await supabase.client
+                    .from("pricing_schemas")
+                    .select("*")
+                    .eq("catalog_id", value: catalogIdString)
+                    .execute()
+
+                let schemas = try JSONDecoder().decode([PricingSchema].self, from: response.data)
+                pricingSchemas = schemas
+                NSLog("[EditorStore] ✅ Loaded %d pricing schemas", pricingSchemas.count)
+                for schema in schemas {
+                    NSLog("[EditorStore] - Schema: \(schema.name ?? "unnamed") (\(schema.id)), tiers: \(schema.tiers.count)")
+                }
+            } catch {
+                NSLog("[EditorStore] ❌ Could not load pricing schemas: %@", String(describing: error))
+                pricingSchemas = []
+            }
+
             NSLog("[EditorStore] Loaded %d categories, %d products for store %@, catalog %@", categories.count, products.count, selectedStore?.storeName ?? "default", selectedCatalog?.name ?? "all")
         } catch {
             NSLog("[EditorStore] Error loading catalog data: %@", String(describing: error))
