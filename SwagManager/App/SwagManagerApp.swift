@@ -32,7 +32,7 @@ struct SwagManagerApp: App {
                 .environmentObject(appState)
                 .frame(minWidth: 900, minHeight: 600)
         }
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Store...") {

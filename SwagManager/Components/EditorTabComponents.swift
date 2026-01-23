@@ -10,27 +10,35 @@ struct MinimalTabBar: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                ForEach(store.openTabs) { tab in
-                    MinimalTab(
-                        tab: tab,
-                        isActive: store.activeTab?.id == tab.id,
-                        hasUnsavedChanges: tabHasUnsavedChanges(tab),
-                        onSelect: { store.switchToTab(tab) },
-                        onClose: { store.closeTab(tab) },
-                        onCloseOthers: { store.closeOtherTabs(except: tab) },
-                        onCloseAll: { store.closeAllTabs() }
-                    )
+        HStack(spacing: 0) {
+            // Traffic light spacer (70pt for macOS window buttons)
+            Color.clear
+                .frame(width: 70)
+
+            // Tabs
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(store.openTabs) { tab in
+                        MinimalTab(
+                            tab: tab,
+                            isActive: store.activeTab?.id == tab.id,
+                            hasUnsavedChanges: tabHasUnsavedChanges(tab),
+                            onSelect: { store.switchToTab(tab) },
+                            onClose: { store.closeTab(tab) },
+                            onCloseOthers: { store.closeOtherTabs(except: tab) },
+                            onCloseAll: { store.closeAllTabs() }
+                        )
+                    }
                 }
-                Spacer(minLength: 0)
             }
+
+            Spacer(minLength: 0)
         }
-        .frame(height: 24)
-        .background(Color.primary.opacity(0.02))
+        .frame(height: 36)
+        .background(Color(nsColor: .windowBackgroundColor))
         .overlay(
             Rectangle()
-                .fill(Color.primary.opacity(0.06))
+                .fill(Color.primary.opacity(0.08))
                 .frame(height: 1),
             alignment: .bottom
         )

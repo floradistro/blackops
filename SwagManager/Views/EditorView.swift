@@ -155,20 +155,35 @@ struct EditorView: View {
         }
     }
 
-    // MARK: - Main Navigation View (unzoomed)
+    // MARK: - Main Navigation View (chromeless)
 
     @ViewBuilder
     private var navigationContent: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
-        } detail: {
+        HStack(spacing: 0) {
+            // Sidebar
+            if columnVisibility != .detailOnly {
+                SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
+                    .frame(width: 240)
+
+                // Sidebar border
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 1)
+            }
+
+            // Main content
             VStack(spacing: 0) {
-                // Minimal tab bar - VS Code style
-                if !isOnWelcomeScreen && !store.openTabs.isEmpty {
+                // Tab bar with traffic light space
+                if !store.openTabs.isEmpty {
                     MinimalTabBar(store: store)
+                } else if !isOnWelcomeScreen {
+                    // Empty draggable area for traffic lights
+                    Color.clear
+                        .frame(height: 36)
+                        .background(Color(nsColor: .windowBackgroundColor))
                 }
 
+                // Content
                 ZStack {
                     VisualEffectBackground(material: .underWindowBackground)
                         .ignoresSafeArea()
@@ -178,7 +193,7 @@ struct EditorView: View {
                 }
             }
         }
-        .navigationSplitViewStyle(.balanced)
+        .ignoresSafeArea()
     }
 
     var body: some View {
@@ -491,8 +506,8 @@ struct NotificationHandlersModifier: ViewModifier {
     }
 
     private func handleToggleSidebar() {
-        withAnimation(DesignSystem.Animation.spring) {
-            sidebarCollapsed.toggle()
+        withAnimation(.easeOut(duration: 0.2)) {
+            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
         }
     }
 
