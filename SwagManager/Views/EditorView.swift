@@ -163,27 +163,21 @@ struct EditorView: View {
             SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
         } detail: {
-            ZStack {
-                VisualEffectBackground(material: .underWindowBackground)
-                    .ignoresSafeArea()
-
-                mainContentView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            // Note: Don't hide toolbar completely as it hides traffic lights too
-            .toolbar {
-                if !isOnWelcomeScreen {
-                    ToolbarItem(placement: .principal) {
-                        ToolbarTabStrip(store: store)
-                    }
+            VStack(spacing: 0) {
+                // Minimal tab bar - VS Code style
+                if !isOnWelcomeScreen && !store.openTabs.isEmpty {
+                    MinimalTabBar(store: store)
                 }
 
-                if case .browserSession = store.activeTab {
-                    UnifiedToolbarContent(store: store)
-                } else if store.selectedBrowserSession != nil {
-                    UnifiedToolbarContent(store: store)
+                ZStack {
+                    VisualEffectBackground(material: .underWindowBackground)
+                        .ignoresSafeArea()
+
+                    mainContentView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         }
         .navigationSplitViewStyle(.balanced)
     }

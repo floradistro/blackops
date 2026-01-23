@@ -4,7 +4,125 @@ import SwiftUI
 // Extracted from EditorView.swift to reduce file size and improve organization
 // These components handle the tab UI for the editor
 
-// MARK: - Toolbar Tab Strip
+// MARK: - Minimal Tab Bar (VS Code / Terminal style)
+
+struct MinimalTabBar: View {
+    @ObservedObject var store: EditorStore
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Tabs
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(store.openTabs) { tab in
+                        MinimalTab(
+                            tab: tab,
+                            isActive: store.activeTab?.id == tab.id,
+                            hasUnsavedChanges: tabHasUnsavedChanges(tab),
+                            onSelect: { store.switchToTab(tab) },
+                            onClose: { store.closeTab(tab) },
+                            onCloseOthers: { store.closeOtherTabs(except: tab) },
+                            onCloseAll: { store.closeAllTabs() }
+                        )
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: 28)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.5))
+        .overlay(
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(height: 1),
+            alignment: .bottom
+        )
+    }
+
+    private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
+        if case .creation(let c) = tab, c.id == store.selectedCreation?.id {
+            return store.hasUnsavedChanges
+        }
+        return false
+    }
+}
+
+// MARK: - Minimal Tab
+
+struct MinimalTab: View {
+    let tab: OpenTabItem
+    let isActive: Bool
+    let hasUnsavedChanges: Bool
+    let onSelect: () -> Void
+    let onClose: () -> Void
+    var onCloseOthers: (() -> Void)? = nil
+    var onCloseAll: (() -> Void)? = nil
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button {
+            onSelect()
+        } label: {
+            HStack(spacing: 4) {
+                // Dot for unsaved or close on hover
+                ZStack {
+                    if hasUnsavedChanges && !isHovering {
+                        Circle()
+                            .fill(Color.primary.opacity(0.5))
+                            .frame(width: 5, height: 5)
+                    } else if isHovering {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(Color.primary.opacity(0.5))
+                            .onTapGesture {
+                                onClose()
+                            }
+                    }
+                }
+                .frame(width: 12, height: 12)
+
+                // Icon
+                Image(systemName: tab.icon)
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.8 : 0.4))
+
+                // Title
+                Text(tab.name)
+                    .font(.system(size: 11, weight: isActive ? .medium : .regular))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.9 : 0.5))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                isActive
+                    ? Color.primary.opacity(0.06)
+                    : (isHovering ? Color.primary.opacity(0.03) : Color.clear)
+            )
+            .overlay(
+                Rectangle()
+                    .fill(Color.primary.opacity(0.1))
+                    .frame(width: 1),
+                alignment: .trailing
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .contextMenu {
+            Button("Close") { onClose() }
+            if let closeOthers = onCloseOthers {
+                Button("Close Others") { closeOthers() }
+            }
+            if let closeAll = onCloseAll {
+                Button("Close All") { closeAll() }
+            }
+        }
+    }
+}
+
+// MARK: - Toolbar Tab Strip (Legacy)
 
 struct ToolbarTabStrip: View {
     @ObservedObject var store: EditorStore
