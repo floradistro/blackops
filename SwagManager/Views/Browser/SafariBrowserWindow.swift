@@ -24,12 +24,10 @@ struct SafariBrowserWindow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Thin top border for visual separation
-            Rectangle()
-                .fill(DesignSystem.Colors.border)
-                .frame(height: 1)
+            // Browser toolbar
+            BrowserToolbar(sessionId: sessionId)
 
-            // Active tab content (controls are now in unified header)
+            // Active tab content
             if let activeTab = tabManager.activeTab {
                 BrowserTabView(tab: activeTab)
                     .id(activeTab.id)
@@ -40,9 +38,8 @@ struct SafariBrowserWindow: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(VisualEffectBackground(material: .underWindowBackground))
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
-            // Create initial tab
             if tabManager.tabs.isEmpty {
                 tabManager.newTab()
             }

@@ -28,36 +28,66 @@ struct AgentConfigPanel: View {
     }
 
     var body: some View {
-        HSplitView {
-            // Main content - scrollable config
-            mainContent
-                .frame(minWidth: 400)
+        VStack(spacing: 0) {
+            // Inline toolbar
+            agentToolbar
 
-            // Right inspector - agent info & actions
-            inspectorPane
-                .frame(minWidth: 260, idealWidth: inspectorWidth, maxWidth: 380)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                if hasChanges {
-                    Button {
-                        Task { await saveAgent() }
-                    } label: {
-                        Label("Save", systemImage: "square.and.arrow.down")
-                    }
-                    .disabled(name.isEmpty || isSaving)
-                }
+            HSplitView {
+                // Main content - scrollable config
+                mainContent
+                    .frame(minWidth: 400)
 
-                Button {
-                    // Test agent action
-                } label: {
-                    Label("Test", systemImage: "play.circle")
-                }
+                // Right inspector - agent info & actions
+                inspectorPane
+                    .frame(minWidth: 260, idealWidth: inspectorWidth, maxWidth: 380)
             }
         }
         .onAppear {
             loadAgentData()
         }
+    }
+
+    // MARK: - Toolbar
+
+    private var agentToolbar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
+
+            Text(name.isEmpty ? "New Agent" : name)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.7))
+
+            if hasChanges {
+                Circle()
+                    .fill(Color.primary.opacity(0.4))
+                    .frame(width: 5, height: 5)
+            }
+
+            Spacer()
+
+            if hasChanges {
+                ToolbarButton(icon: "arrow.uturn.backward", action: { loadAgentData() })
+            }
+
+            ToolbarButton(
+                icon: "square.and.arrow.down",
+                action: { Task { await saveAgent() } },
+                disabled: name.isEmpty || isSaving
+            )
+
+            ToolbarButton(icon: "play.circle", action: { /* Test agent */ })
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.02))
+        .overlay(
+            Rectangle()
+                .fill(Color.primary.opacity(0.06))
+                .frame(height: 1),
+            alignment: .bottom
+        )
     }
 
     // MARK: - Main Content

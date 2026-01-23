@@ -19,38 +19,23 @@ struct AgentBuilderView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            HSplitView {
-                // Left: Agent Canvas (main content)
-                canvasPane
-                    .frame(minWidth: 400)
+        VStack(spacing: 0) {
+            // Inline toolbar
+            builderToolbar
 
-                // Right: Inspector
-                inspectorPane
-                    .frame(minWidth: 240, idealWidth: inspectorWidth, maxWidth: 350)
+            GeometryReader { geometry in
+                HSplitView {
+                    // Left: Agent Canvas (main content)
+                    canvasPane
+                        .frame(minWidth: 400)
+
+                    // Right: Inspector
+                    inspectorPane
+                        .frame(minWidth: 240, idealWidth: inspectorWidth, maxWidth: 350)
+                }
             }
         }
         .environmentObject(editorStore)
-        .navigationTitle(builderStore.currentAgent?.name ?? "Agent Builder")
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                Button {
-                    showingTestSheet = true
-                } label: {
-                    Label("Test Agent", systemImage: "play.circle")
-                }
-                .disabled(builderStore.currentAgent == nil)
-
-                Button {
-                    Task {
-                        await builderStore.saveAgent()
-                    }
-                } label: {
-                    Label("Save", systemImage: "square.and.arrow.down")
-                }
-                .disabled(builderStore.currentAgent == nil)
-            }
-        }
         .sheet(isPresented: $showingTestSheet) {
             if let agent = builderStore.currentAgent {
                 AgentTestSheet(agent: agent)
@@ -59,13 +44,48 @@ struct AgentBuilderView: View {
         .onAppear {
             Task {
                 await builderStore.loadResources(editorStore: editorStore)
-
-                // Auto-create agent immediately if none exists
                 if builderStore.currentAgent == nil {
                     builderStore.createNewAgent()
                 }
             }
         }
+    }
+
+    // MARK: - Toolbar
+
+    private var builderToolbar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
+
+            Text(builderStore.currentAgent?.name ?? "Agent Builder")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.7))
+
+            Spacer()
+
+            ToolbarButton(
+                icon: "play.circle",
+                action: { showingTestSheet = true },
+                disabled: builderStore.currentAgent == nil
+            )
+
+            ToolbarButton(
+                icon: "square.and.arrow.down",
+                action: { Task { await builderStore.saveAgent() } },
+                disabled: builderStore.currentAgent == nil
+            )
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.02))
+        .overlay(
+            Rectangle()
+                .fill(Color.primary.opacity(0.06))
+                .frame(height: 1),
+            alignment: .bottom
+        )
     }
 
 

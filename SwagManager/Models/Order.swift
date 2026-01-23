@@ -4,18 +4,167 @@ import SwiftUI
 // MARK: - Order Model
 // Following Apple engineering standards
 // Maps to the orders table in Supabase
+//
+// ARCHITECTURE NOTE (2026-01-22):
+// Migrated to Oracle+Apple architecture:
+// - order_type/delivery_type replaced by channel + fulfillments.type
+// - pickup_location_id moved to fulfillments.delivery_location_id
+// - tracking info moved to fulfillments table
+// - Full event sourcing via order_events table
+
+// MARK: - Order Channel (NEW)
+
+public enum OrderChannel: String, Codable, CaseIterable {
+    case online
+    case retail
+
+    var label: String {
+        switch self {
+        case .online: return "Online"
+        case .retail: return "In-Store"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .online: return "globe"
+        case .retail: return "storefront"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .online: return .blue
+        case .retail: return .green
+        }
+    }
+}
+
+// MARK: - Fulfillment Type (NEW)
+
+public enum FulfillmentType: String, Codable, CaseIterable {
+    case ship
+    case pickup
+    case immediate
+
+    var label: String {
+        switch self {
+        case .ship: return "Shipping"
+        case .pickup: return "Pickup"
+        case .immediate: return "Walk-in"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .ship: return "shippingbox"
+        case .pickup: return "bag"
+        case .immediate: return "figure.walk"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .ship: return .indigo
+        case .pickup: return .cyan
+        case .immediate: return .green
+        }
+    }
+}
+
+// MARK: - Fulfillment Status (NEW)
+
+public enum FulfillmentStatusEnum: String, Codable, CaseIterable {
+    case pending
+    case allocated
+    case picked
+    case packed
+    case shipped
+    case delivered
+    case cancelled
+
+    var label: String {
+        switch self {
+        case .pending: return "Pending"
+        case .allocated: return "Allocated"
+        case .picked: return "Picked"
+        case .packed: return "Packed"
+        case .shipped: return "Shipped"
+        case .delivered: return "Delivered"
+        case .cancelled: return "Cancelled"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .pending: return .orange
+        case .allocated, .picked: return .blue
+        case .packed: return .cyan
+        case .shipped: return .indigo
+        case .delivered: return .green
+        case .cancelled: return .red
+        }
+    }
+}
+
+// MARK: - Fulfillment (NEW)
+
+public struct OrderFulfillment: Codable, Identifiable, Hashable {
+    public let id: UUID
+    var orderId: UUID
+    var type: FulfillmentType
+    var status: FulfillmentStatusEnum
+    var deliveryLocationId: UUID?
+    var deliveryAddress: [String: AnyCodableValue]?
+    var carrier: String?
+    var trackingNumber: String?
+    var trackingUrl: String?
+    var shippingCost: Decimal?
+    var createdAt: Date?
+    var shippedAt: Date?
+    var deliveredAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case orderId = "order_id"
+        case type, status
+        case deliveryLocationId = "delivery_location_id"
+        case deliveryAddress = "delivery_address"
+        case carrier
+        case trackingNumber = "tracking_number"
+        case trackingUrl = "tracking_url"
+        case shippingCost = "shipping_cost"
+        case createdAt = "created_at"
+        case shippedAt = "shipped_at"
+        case deliveredAt = "delivered_at"
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    public static func == (lhs: OrderFulfillment, rhs: OrderFulfillment) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    var isComplete: Bool {
+        status == .delivered || status == .shipped
+    }
+}
+
+// MARK: - Order
 
 public struct Order: Codable, Identifiable, Hashable {
     public let id: UUID
     var orderNumber: String
     var customerId: UUID?
-    var headlessCustomerId: UUID?  // For customers without platform accounts
+    var headlessCustomerId: UUID?
     var storeId: UUID?
     var locationId: UUID?
     var status: String?
     var paymentStatus: String?
     var fulfillmentStatus: String?
-    var orderType: String?
+    var channel: OrderChannel  // NEW - replaces orderType
     var subtotal: Decimal
     var taxAmount: Decimal?
     var shippingAmount: Decimal?
@@ -26,12 +175,11 @@ public struct Order: Codable, Identifiable, Hashable {
     var staffNotes: String?
     var paymentMethod: String?
     var paymentMethodTitle: String?
-    var deliveryType: String?
-    var pickupLocationId: UUID?
     var shippingName: String?
     var shippingCity: String?
     var shippingState: String?
     var trackingNumber: String?
+    var trackingUrl: String?
     var orderDate: Date?
     var paidDate: Date?
     var completedAt: Date?
@@ -49,6 +197,9 @@ public struct Order: Codable, Identifiable, Hashable {
     var shippedAt: Date?
     var deliveredAt: Date?
 
+    // Joined fulfillments (NEW)
+    var fulfillments: [OrderFulfillment]?
+
     enum CodingKeys: String, CodingKey {
         case id
         case orderNumber = "order_number"
@@ -59,7 +210,7 @@ public struct Order: Codable, Identifiable, Hashable {
         case status
         case paymentStatus = "payment_status"
         case fulfillmentStatus = "fulfillment_status"
-        case orderType = "order_type"
+        case channel
         case subtotal
         case taxAmount = "tax_amount"
         case shippingAmount = "shipping_amount"
@@ -70,12 +221,11 @@ public struct Order: Codable, Identifiable, Hashable {
         case staffNotes = "staff_notes"
         case paymentMethod = "payment_method"
         case paymentMethodTitle = "payment_method_title"
-        case deliveryType = "delivery_type"
-        case pickupLocationId = "pickup_location_id"
         case shippingName = "shipping_name"
         case shippingCity = "shipping_city"
         case shippingState = "shipping_state"
         case trackingNumber = "tracking_number"
+        case trackingUrl = "tracking_url"
         case orderDate = "order_date"
         case paidDate = "paid_date"
         case completedAt = "completed_at"
@@ -90,6 +240,7 @@ public struct Order: Codable, Identifiable, Hashable {
         case preparedAt = "prepared_at"
         case shippedAt = "shipped_at"
         case deliveredAt = "delivered_at"
+        case fulfillments
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -102,12 +253,26 @@ public struct Order: Codable, Identifiable, Hashable {
 
     // MARK: - Computed Properties
 
+    /// Primary fulfillment (first one)
+    var primaryFulfillment: OrderFulfillment? {
+        fulfillments?.first
+    }
+
+    /// Fulfillment type from primary fulfillment
+    var fulfillmentType: FulfillmentType {
+        primaryFulfillment?.type ?? .immediate
+    }
+
+    /// Delivery location ID from fulfillment
+    var deliveryLocationId: UUID? {
+        primaryFulfillment?.deliveryLocationId
+    }
+
     var displayTitle: String {
-        // Always show customer name as main title (user requirement)
         if let name = shippingName, !name.isEmpty, name != "Walk-In" {
             return name
         }
-        return "#\(orderNumber)"  // Fallback to order number only if no customer name
+        return "#\(orderNumber)"
     }
 
     var displayTotal: String {
@@ -170,26 +335,31 @@ public struct Order: Codable, Identifiable, Hashable {
         }
     }
 
-    var orderTypeIcon: String {
-        switch orderType?.lowercased() {
-        case "walk_in": return "figure.walk"
-        case "pickup": return "bag"
-        case "delivery": return "car"
-        case "shipping": return "shippingbox"
-        case "direct": return "arrow.right.circle"
-        default: return "cart"
+    /// Display icon based on fulfillment type
+    var displayIcon: String {
+        fulfillmentType.icon
+    }
+
+    /// Display label based on channel and fulfillment type
+    var displayTypeLabel: String {
+        if channel == .online {
+            return fulfillmentType == .ship ? "Online - Shipping" : "Online - Pickup"
+        } else {
+            return fulfillmentType.label
         }
     }
 
-    var orderTypeLabel: String {
-        switch orderType?.lowercased() {
-        case "walk_in": return "Walk-in"
-        case "pickup": return "Pickup"
-        case "delivery": return "Delivery"
-        case "shipping": return "Shipping"
-        case "direct": return "Direct"
-        default: return orderType ?? "Order"
-        }
+    /// Tracking number from fulfillment (or legacy field)
+    var fulfillmentTrackingNumber: String? {
+        primaryFulfillment?.trackingNumber ?? trackingNumber
+    }
+
+    var fulfillmentTrackingUrl: String? {
+        primaryFulfillment?.trackingUrl ?? trackingUrl
+    }
+
+    var fulfillmentCarrier: String? {
+        primaryFulfillment?.carrier
     }
 }
 
@@ -237,36 +407,6 @@ public enum OrderStatus: String, CaseIterable {
         case .shipped, .inTransit, .outForDelivery: return .indigo
         case .delivered, .completed: return .green
         case .cancelled: return .red
-        }
-    }
-}
-
-// MARK: - Order Type Enum
-
-public enum OrderType: String, CaseIterable {
-    case walkIn = "walk_in"
-    case pickup
-    case delivery
-    case shipping
-    case direct
-
-    var label: String {
-        switch self {
-        case .walkIn: return "Walk-in"
-        case .pickup: return "Pickup"
-        case .delivery: return "Delivery"
-        case .shipping: return "Shipping"
-        case .direct: return "Direct"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .walkIn: return "figure.walk"
-        case .pickup: return "bag"
-        case .delivery: return "car"
-        case .shipping: return "shippingbox"
-        case .direct: return "arrow.right.circle"
         }
     }
 }
@@ -439,7 +579,7 @@ public struct OrderCustomer: Codable, Identifiable, Hashable {
     }
 }
 
-// MARK: - Staff Member (for order fulfillment tracking)
+// MARK: - Staff Member
 
 public struct StaffMember: Codable, Identifiable, Hashable {
     public let id: UUID
@@ -499,7 +639,7 @@ public struct StaffMember: Codable, Identifiable, Hashable {
     }
 }
 
-// MARK: - Headless Customer (customers without platform accounts)
+// MARK: - Headless Customer
 
 public struct HeadlessCustomer: Codable, Identifiable, Hashable {
     public let id: UUID
@@ -584,7 +724,7 @@ public struct HeadlessCustomer: Codable, Identifiable, Hashable {
     }
 }
 
-// MARK: - Order Staff Info (aggregated staff for an order)
+// MARK: - Order Staff Info
 
 public struct OrderStaffInfo {
     public var createdBy: StaffMember?
@@ -604,7 +744,7 @@ public struct OrderStaffInfo {
     }
 }
 
-// MARK: - Order With Details (for full order view)
+// MARK: - Order With Details
 
 public struct OrderWithDetails {
     public let order: Order
@@ -623,5 +763,43 @@ public struct OrderWithDetails {
         self.headlessCustomer = headlessCustomer
         self.location = location
         self.staff = staff
+    }
+}
+
+// MARK: - AnyCodableValue Helper
+
+public enum AnyCodableValue: Codable, Hashable {
+    case string(String)
+    case int(Int)
+    case double(Double)
+    case bool(Bool)
+    case null
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let bool = try? container.decode(Bool.self) {
+            self = .bool(bool)
+        } else if let int = try? container.decode(Int.self) {
+            self = .int(int)
+        } else if let double = try? container.decode(Double.self) {
+            self = .double(double)
+        } else if let string = try? container.decode(String.self) {
+            self = .string(string)
+        } else {
+            self = .null
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let v): try container.encode(v)
+        case .int(let v): try container.encode(v)
+        case .double(let v): try container.encode(v)
+        case .bool(let v): try container.encode(v)
+        case .null: try container.encodeNil()
+        }
     }
 }
