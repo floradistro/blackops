@@ -37,7 +37,6 @@ struct AgentConfigPanel: View {
             inspectorPane
                 .frame(minWidth: 260, idealWidth: inspectorWidth, maxWidth: 380)
         }
-        .navigationTitle(name.isEmpty ? "New Agent" : name)
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
                 if hasChanges {
