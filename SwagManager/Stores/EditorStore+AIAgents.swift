@@ -69,14 +69,30 @@ extension EditorStore {
 
     func selectAIAgent(_ agent: AIAgent) {
         selectedAIAgent = agent
-        editingAgent = agent
-        showAgentConfigSheet = true
+        openTab(.aiAgent(agent))
     }
 
     // MARK: - Create New Agent
 
     func createNewAgent() {
-        editingAgent = nil  // nil means new agent
-        showAgentConfigSheet = true
+        // Create a new empty agent and open it
+        let newAgent = AIAgent(
+            id: UUID(),
+            storeId: selectedStore?.id,
+            name: "New Agent",
+            description: nil,
+            systemPrompt: "You are a helpful AI assistant.",
+            model: "claude-sonnet-4-20250514",
+            maxTokens: 32000,
+            maxToolCalls: 200,
+            icon: "sparkles",
+            accentColor: "blue",
+            isActive: true,
+            version: 1,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        selectedAIAgent = newAgent
+        openTab(.aiAgent(newAgent))
     }
 }

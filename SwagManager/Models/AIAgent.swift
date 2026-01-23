@@ -19,6 +19,39 @@ struct AIAgent: Codable, Identifiable, Hashable {
     let createdAt: Date?
     let updatedAt: Date?
 
+    // Memberwise initializer
+    init(
+        id: UUID,
+        storeId: UUID?,
+        name: String?,
+        description: String?,
+        systemPrompt: String?,
+        model: String?,
+        maxTokens: Int?,
+        maxToolCalls: Int?,
+        icon: String?,
+        accentColor: String?,
+        isActive: Bool,
+        version: Int?,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.storeId = storeId
+        self.name = name
+        self.description = description
+        self.systemPrompt = systemPrompt
+        self.model = model
+        self.maxTokens = maxTokens
+        self.maxToolCalls = maxToolCalls
+        self.icon = icon
+        self.accentColor = accentColor
+        self.isActive = isActive
+        self.version = version
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
     // Display name - use stored name or parse from prompt
     var displayName: String {
         if let name = name, !name.isEmpty {

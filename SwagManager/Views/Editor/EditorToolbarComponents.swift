@@ -180,6 +180,12 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
                     Label("Agent Builder", systemImage: "brain")
                         .font(.system(size: 13, weight: .medium))
                 }
+
+            case .aiAgent(let agent):
+                ToolbarItem(id: "context", placement: .principal) {
+                    Label(agent.displayName, systemImage: agent.displayIcon)
+                        .font(.system(size: 13, weight: .medium))
+                }
             }
         } else if let browserSession = store.selectedBrowserSession {
             let tabManager = BrowserTabManager.forSession(browserSession.id)
@@ -255,6 +261,7 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
             case .metaCampaign: return "Meta Campaign"
             case .metaIntegration: return "Meta Integration"
             case .agentBuilder: return "Agent Builder"
+            case .aiAgent(let a): return a.displayName
             }
         } else if store.selectedBrowserSession != nil {
             return "Browser"

@@ -114,6 +114,9 @@ extension OpenTabItem {
         case .cart, .emailCampaign, .metaCampaign, .metaIntegration, .agentBuilder:
             // These tabs don't have dedicated state
             break
+
+        case .aiAgent(let agent):
+            store.selectedAIAgent = agent
         }
     }
 }

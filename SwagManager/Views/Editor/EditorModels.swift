@@ -52,6 +52,7 @@ enum OpenTabItem: Identifiable, Hashable {
     case metaCampaign(MetaCampaign)
     case metaIntegration(MetaIntegration)
     case agentBuilder
+    case aiAgent(AIAgent)
 
     var id: String {
         switch self {
@@ -71,6 +72,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .metaCampaign(let c): return "metacampaign-\(c.id)"
         case .metaIntegration(let m): return "metaintegration-\(m.id)"
         case .agentBuilder: return "agentbuilder"
+        case .aiAgent(let a): return "aiagent-\(a.id)"
         }
     }
 
@@ -96,6 +98,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .metaCampaign(let c): return c.name
         case .metaIntegration(let m): return m.businessName ?? "Meta Integration"
         case .agentBuilder: return "Agent Builder"
+        case .aiAgent(let a): return a.displayName
         }
     }
 
@@ -126,6 +129,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .metaCampaign: return "megaphone"
         case .metaIntegration: return "link.badge.plus"
         case .agentBuilder: return "brain.head.profile"
+        case .aiAgent(let a): return a.displayIcon
         }
     }
 
@@ -147,6 +151,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .metaCampaign: return .pink
         case .metaIntegration: return .indigo
         case .agentBuilder: return .purple
+        case .aiAgent: return .purple
         }
     }
 
@@ -179,6 +184,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .metaCampaign: return "◆"
         case .metaIntegration: return "◇"
         case .agentBuilder: return "◪"
+        case .aiAgent: return "✦"
         }
     }
 
@@ -201,6 +207,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .metaCampaign: return .pink
         case .metaIntegration: return .indigo
         case .agentBuilder: return .purple
+        case .aiAgent: return .purple
         }
     }
 
