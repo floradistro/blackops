@@ -30,7 +30,23 @@ extension EditorStore {
 
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
-            decoder.dateDecodingStrategy = .iso8601
+            // Use flexible ISO8601 date formatter that handles timezone offsets
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                let dateString = try container.decode(String.self)
+                // Try with fractional seconds first
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                // Try without fractional seconds
+                formatter.formatOptions = [.withInternetDateTime]
+                if let date = formatter.date(from: dateString) {
+                    return date
+                }
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
+            }
 
             let agents = try decoder.decode([AIAgent].self, from: response.data)
             print("[AIAgents] Decoded \(agents.count) agents")
