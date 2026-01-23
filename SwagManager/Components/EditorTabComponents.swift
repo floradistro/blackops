@@ -10,31 +10,27 @@ struct MinimalTabBar: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Tabs
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(store.openTabs) { tab in
-                        MinimalTab(
-                            tab: tab,
-                            isActive: store.activeTab?.id == tab.id,
-                            hasUnsavedChanges: tabHasUnsavedChanges(tab),
-                            onSelect: { store.switchToTab(tab) },
-                            onClose: { store.closeTab(tab) },
-                            onCloseOthers: { store.closeOtherTabs(except: tab) },
-                            onCloseAll: { store.closeAllTabs() }
-                        )
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                ForEach(store.openTabs) { tab in
+                    MinimalTab(
+                        tab: tab,
+                        isActive: store.activeTab?.id == tab.id,
+                        hasUnsavedChanges: tabHasUnsavedChanges(tab),
+                        onSelect: { store.switchToTab(tab) },
+                        onClose: { store.closeTab(tab) },
+                        onCloseOthers: { store.closeOtherTabs(except: tab) },
+                        onCloseAll: { store.closeAllTabs() }
+                    )
                 }
+                Spacer(minLength: 0)
             }
-
-            Spacer(minLength: 0)
         }
-        .frame(height: 28)
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.5))
+        .frame(height: 24)
+        .background(Color.primary.opacity(0.02))
         .overlay(
             Rectangle()
-                .fill(Color.primary.opacity(0.08))
+                .fill(Color.primary.opacity(0.06))
                 .frame(height: 1),
             alignment: .bottom
         )
@@ -65,45 +61,39 @@ struct MinimalTab: View {
         Button {
             onSelect()
         } label: {
-            HStack(spacing: 4) {
-                // Dot for unsaved or close on hover
+            HStack(spacing: 3) {
+                // Close/unsaved indicator
                 ZStack {
                     if hasUnsavedChanges && !isHovering {
                         Circle()
-                            .fill(Color.primary.opacity(0.5))
-                            .frame(width: 5, height: 5)
+                            .fill(Color.primary.opacity(0.4))
+                            .frame(width: 4, height: 4)
                     } else if isHovering {
                         Image(systemName: "xmark")
-                            .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(Color.primary.opacity(0.5))
-                            .onTapGesture {
-                                onClose()
-                            }
+                            .font(.system(size: 6, weight: .bold))
+                            .foregroundStyle(Color.primary.opacity(0.4))
+                            .onTapGesture { onClose() }
                     }
                 }
-                .frame(width: 12, height: 12)
+                .frame(width: 10, height: 10)
 
                 // Icon
                 Image(systemName: tab.icon)
-                    .font(.system(size: 9))
-                    .foregroundStyle(Color.primary.opacity(isActive ? 0.8 : 0.4))
+                    .font(.system(size: 8))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.7 : 0.35))
 
                 // Title
                 Text(tab.name)
-                    .font(.system(size: 11, weight: isActive ? .medium : .regular))
-                    .foregroundStyle(Color.primary.opacity(isActive ? 0.9 : 0.5))
+                    .font(.system(size: 10, weight: isActive ? .medium : .regular))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.85 : 0.45))
                     .lineLimit(1)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                isActive
-                    ? Color.primary.opacity(0.06)
-                    : (isHovering ? Color.primary.opacity(0.03) : Color.clear)
-            )
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(isActive ? Color.primary.opacity(0.05) : Color.clear)
             .overlay(
                 Rectangle()
-                    .fill(Color.primary.opacity(0.1))
+                    .fill(Color.primary.opacity(0.08))
                     .frame(width: 1),
                 alignment: .trailing
             )

@@ -34,30 +34,25 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Clean header - matching sheet design
-            HStack(spacing: 8) {
-                // Search bar
+            // Ultra minimal header
+            HStack(spacing: 6) {
                 SidebarSearchBar(searchText: $searchText, isSearchFocused: $isSearchFocused)
 
-                // Collapse All button
-                Button(action: {
-                    store.collapseAllSections()
-                }) {
-                    Image(systemName: "sidebar.squares.left")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
+                Button(action: { store.collapseAllSections() }) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
                 .buttonStyle(.plain)
-                .help("Collapse All Sections (⌘⇧C)")
+                .help("Collapse All (⌘⇧C)")
                 .keyboardShortcut("c", modifiers: [.command, .shift])
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(DesignSystem.Colors.surfaceSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
 
-            Divider()
+            Rectangle()
+                .fill(Color.primary.opacity(0.06))
+                .frame(height: 1)
 
             // Content tree
             if store.selectedStore == nil && store.stores.isEmpty {
@@ -68,7 +63,7 @@ struct SidebarPanel: View {
                 sidebarContent
             }
         }
-        .background(DesignSystem.Colors.surfaceSecondary)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowSearch"))) { _ in
             isSearchFocused = true
         }
@@ -129,14 +124,11 @@ struct SidebarPanel: View {
     private var sidebarContent: some View {
         ScrollView(.vertical, showsIndicators: true) {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                // WORKSPACE - High Priority, Real-time Operations
+                // WORKSPACE
                 Section {
                     if !store.workspaceGroupCollapsed {
                         SidebarQueuesSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
                         SidebarLocationsSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
                     }
                 } header: {
                     SectionGroupHeader(
@@ -146,22 +138,17 @@ struct SidebarPanel: View {
                     )
                 }
 
-                // CONTENT - Products, Creations, Communications
+                // CONTENT
                 Section {
                     if !store.contentGroupCollapsed {
                         SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
                         SidebarCreationsSection(
                             store: store,
                             expandedCollectionIds: $expandedCollectionIds,
                             filteredOrphanCreations: filteredOrphanCreations,
                             filteredCreationsForCollection: filteredCreationsForCollection
                         )
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
                         SidebarTeamChatSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
                     }
                 } header: {
                     SectionGroupHeader(
@@ -171,11 +158,10 @@ struct SidebarPanel: View {
                     )
                 }
 
-                // OPERATIONS - Browser Sessions
+                // OPERATIONS
                 Section {
                     if !store.operationsGroupCollapsed {
                         SidebarBrowserSessionsSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
                     }
                 } header: {
                     SectionGroupHeader(
@@ -185,18 +171,12 @@ struct SidebarPanel: View {
                     )
                 }
 
-                // INFRASTRUCTURE - AI Agents, MCP Servers, Agent Builder, Resend
+                // INFRASTRUCTURE
                 Section {
                     if !store.infrastructureGroupCollapsed {
                         SidebarAgentsSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
                         SidebarAgentBuilderSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
                         SidebarMCPServersSection(store: store)
-                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
-
                         SidebarResendSection(store: store)
                     }
                 } header: {
@@ -207,10 +187,9 @@ struct SidebarPanel: View {
                     )
                 }
 
-                // Bottom padding to ensure content isn't cut off
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 12)
             }
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .padding(.vertical, 2)
         }
         .scrollContentBackground(.hidden)
         .scrollIndicators(.automatic)

@@ -177,7 +177,9 @@ struct EditorView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            .toolbar {
+                // Empty toolbar - keeps traffic lights visible
+            }
         }
         .navigationSplitViewStyle(.balanced)
     }

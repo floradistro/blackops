@@ -260,36 +260,37 @@ final class RealtimeEventBus: ObservableObject {
 
         try await channel.subscribeWithError()
 
-        // Listen to changes and broadcast events - subscribers refetch their own data
-        let task = Task { [weak self] in
-            guard let self = self else { return }
+        // Capture eventSubject to avoid capturing self in concurrent code
+        let eventSubject = self.eventSubject
 
+        // Listen to changes and broadcast events - subscribers refetch their own data
+        let task = Task {
             await withTaskGroup(of: Void.self) { group in
                 // Queue changes
-                group.addTask { [weak self] in
+                group.addTask {
                     for await _ in queueChanges {
-                        await MainActor.run { self?.eventSubject.send(.queueUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: locationId)) }
                     }
                 }
 
                 // Cart changes - broadcast location update so all carts at this location refetch
-                group.addTask { [weak self] in
+                group.addTask {
                     for await _ in cartChanges {
-                        await MainActor.run { self?.eventSubject.send(.queueUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: locationId)) }
                     }
                 }
 
                 // Cart item changes - same
-                group.addTask { [weak self] in
+                group.addTask {
                     for await _ in cartItemChanges {
-                        await MainActor.run { self?.eventSubject.send(.queueUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: locationId)) }
                     }
                 }
 
                 // Inventory changes - notify product grids to refetch
-                group.addTask { [weak self] in
+                group.addTask {
                     for await _ in inventoryChanges {
-                        await MainActor.run { self?.eventSubject.send(.inventoryUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.inventoryUpdated(locationId: locationId)) }
                     }
                 }
             }

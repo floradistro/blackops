@@ -127,32 +127,28 @@ struct SectionGroupHeader: View {
 
     var body: some View {
         Button {
-            withAnimation(DesignSystem.Animation.fast) {
+            withAnimation(.easeOut(duration: 0.15)) {
                 isCollapsed.toggle()
             }
         } label: {
-            HStack(spacing: 6) {
-                // Chevron
+            HStack(spacing: 4) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Color.primary.opacity(0.35))
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.25))
                     .rotationEffect(.degrees(isCollapsed ? 0 : 90))
-                    .frame(width: 12)
+                    .frame(width: 10)
 
-                // Title - uppercase, letter-spaced for premium feel
                 Text(title.uppercased())
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(0.8)
-                    .foregroundStyle(Color.primary.opacity(0.45))
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.primary.opacity(0.35))
 
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(Color.primary.opacity(0.02))
     }
 }
 
