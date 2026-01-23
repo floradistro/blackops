@@ -24,20 +24,15 @@ struct LoadingCountBadge: View {
     let isLoading: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
-            if isLoading {
-                // Native iOS spinner (hide count while loading)
-                ProgressView()
-                    .scaleEffect(0.6)
-                    .frame(width: 12, height: 12)
-            } else if count > 0 {
-                // Count in simple parentheses format
-                Text("(\(count))")
-                    .font(DesignSystem.Typography.sidebarItemCount)
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-            }
+        if isLoading {
+            Text("···")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.3))
+        } else if count > 0 {
+            Text("\(count)")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.3))
         }
-        .animation(.easeInOut(duration: 0.2), value: isLoading)
     }
 }
 

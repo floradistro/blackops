@@ -33,9 +33,9 @@ struct SidebarAgentsSection: View {
                     Spacer()
 
                     if store.isLoadingAgents {
-                        ProgressView()
-                            .scaleEffect(0.4)
-                            .frame(width: 12, height: 12)
+                        Text("···")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundStyle(Color.primary.opacity(0.3))
                     } else if store.aiAgents.count > 0 {
                         Text("\(store.aiAgents.count)")
                             .font(.system(size: 9, design: .monospaced))

@@ -177,7 +177,6 @@ struct EditorView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .toolbar(.hidden, for: .automatic)
         }
         .navigationSplitViewStyle(.balanced)
     }
