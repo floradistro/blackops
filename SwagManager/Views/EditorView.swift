@@ -224,6 +224,9 @@ struct EditorView: View {
             Text("MCP Monitoring")
                 .frame(minWidth: 900, minHeight: 700)
         }
+        .sheet(isPresented: $store.showAgentConfigSheet) {
+            AgentConfigSheet(store: store, agent: store.editingAgent)
+        }
         .alert("Error", isPresented: Binding(
             get: { store.error != nil },
             set: { if !$0 { store.error = nil } }
@@ -315,6 +318,8 @@ class EditorStore: ObservableObject {
     @Published var selectedAIAgent: AIAgent?
     @Published var sidebarAgentsExpanded = true
     @Published var isLoadingAgents = false
+    @Published var showAgentConfigSheet = false
+    @Published var editingAgent: AIAgent?  // nil = new agent
     var agentBuilderStore: AgentBuilderStore?
 
     // MARK: - Emails State (Resend)

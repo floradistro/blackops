@@ -35,6 +35,19 @@ struct SidebarAgentsSection: View {
                         count: store.aiAgents.count,
                         isLoading: store.isLoadingAgents
                     )
+
+                    // New agent button
+                    Button {
+                        store.createNewAgent()
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Color.primary.opacity(0.5))
+                            .frame(width: 16, height: 16)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("New Agent")
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)

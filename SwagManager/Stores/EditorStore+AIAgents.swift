@@ -65,6 +65,14 @@ extension EditorStore {
 
     func selectAIAgent(_ agent: AIAgent) {
         selectedAIAgent = agent
-        // TODO: Open agent chat or config view
+        editingAgent = agent
+        showAgentConfigSheet = true
+    }
+
+    // MARK: - Create New Agent
+
+    func createNewAgent() {
+        editingAgent = nil  // nil means new agent
+        showAgentConfigSheet = true
     }
 }
