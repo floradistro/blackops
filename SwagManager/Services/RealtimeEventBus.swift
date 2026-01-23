@@ -268,28 +268,28 @@ final class RealtimeEventBus: ObservableObject {
                 // Queue changes
                 group.addTask { [weak self] in
                     for await _ in queueChanges {
-                        self?.eventSubject.send(.queueUpdated(locationId: locationId))
+                        await MainActor.run { self?.eventSubject.send(.queueUpdated(locationId: locationId)) }
                     }
                 }
 
                 // Cart changes - broadcast location update so all carts at this location refetch
                 group.addTask { [weak self] in
                     for await _ in cartChanges {
-                        self?.eventSubject.send(.queueUpdated(locationId: locationId))
+                        await MainActor.run { self?.eventSubject.send(.queueUpdated(locationId: locationId)) }
                     }
                 }
 
                 // Cart item changes - same
                 group.addTask { [weak self] in
                     for await _ in cartItemChanges {
-                        self?.eventSubject.send(.queueUpdated(locationId: locationId))
+                        await MainActor.run { self?.eventSubject.send(.queueUpdated(locationId: locationId)) }
                     }
                 }
 
                 // Inventory changes - notify product grids to refetch
                 group.addTask { [weak self] in
                     for await _ in inventoryChanges {
-                        self?.eventSubject.send(.inventoryUpdated(locationId: locationId))
+                        await MainActor.run { self?.eventSubject.send(.inventoryUpdated(locationId: locationId)) }
                     }
                 }
             }
@@ -334,36 +334,39 @@ final class RealtimeEventBus: ObservableObject {
 
     // MARK: - Helper Methods for Parsing Supabase Changes
 
-    /// Extract UUID from JSONObject
+    /// Extract UUID from JSONObject (handles AnyJSON values)
     private func extractUUID(from jsonObject: JSONObject, key: String) -> UUID? {
-        // JSONObject is [String: Any]
-        if let stringValue = jsonObject[key] as? String {
-            return UUID(uuidString: stringValue)
+        guard let value = jsonObject[key] else { return nil }
+
+        // AnyJSON wraps values - try to extract string representation
+        let stringValue: String?
+        if case .string(let s) = value {
+            stringValue = s
+        } else {
+            // Fallback: convert to string
+            stringValue = "\(value)"
         }
 
-        if let uuidValue = jsonObject[key] as? UUID {
-            return uuidValue
+        if let str = stringValue {
+            return UUID(uuidString: str)
         }
-
         return nil
     }
 
-    /// Extract Int from JSONObject
+    /// Extract Int from JSONObject (handles AnyJSON values)
     private func extractInt(from jsonObject: JSONObject, key: String) -> Int? {
-        if let intValue = jsonObject[key] as? Int {
-            return intValue
-        }
+        guard let value = jsonObject[key] else { return nil }
 
-        if let doubleValue = jsonObject[key] as? Double {
-            return Int(doubleValue)
+        switch value {
+        case .integer(let i):
+            return i
+        case .double(let d):
+            return Int(d)
+        case .string(let s):
+            return Int(s)
+        default:
+            return nil
         }
-
-        if let stringValue = jsonObject[key] as? String,
-           let intValue = Int(stringValue) {
-            return intValue
-        }
-
-        return nil
     }
 
 }

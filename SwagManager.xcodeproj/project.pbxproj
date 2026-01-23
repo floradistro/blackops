@@ -10,6 +10,7 @@
 		AA1B2C3D4E5F678901234001 /* AIAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234002 /* AIAgent.swift */; };
 		AA1B2C3D4E5F678901234003 /* EditorStore+AIAgents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234004 /* EditorStore+AIAgents.swift */; };
 		AA1B2C3D4E5F678901234005 /* SidebarAgentsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234006 /* SidebarAgentsSection.swift */; };
+		AA1B2C3D4E5F678901234007 /* AgentConfigSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234008 /* AgentConfigSheet.swift */; };
 		016B1ADA701486EC2B715B92 /* GlassComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C641288A47B71AED2B5B2A /* GlassComponents.swift */; };
 		02E752E57BEDC920B9E6875E /* MCPTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21009677FD1663F08DF7872A /* MCPTestView.swift */; };
 		056B802DFD1A814921946476 /* EditorStore+RealtimeSubscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E997DEEA064B81D83FD7F05 /* EditorStore+RealtimeSubscriptions.swift */; };
@@ -295,6 +296,7 @@
 		A2A775487DD8300C3DA5DDA3 /* EditorStore+MCPServers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "EditorStore+MCPServers.swift"; path = "SwagManager/Stores/EditorStore+MCPServers.swift"; sourceTree = "<group>"; };
 		A7F05BE3F9E9B3EAE7B4B26E /* CategoryConfigView+Sections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CategoryConfigView+Sections.swift"; sourceTree = "<group>"; };
 		A84AA9D7AA2A1F734852B5E9 /* AgentBuilderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentBuilderView.swift; sourceTree = "<group>"; };
+		AA1B2C3D4E5F678901234008 /* AgentConfigSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentConfigSheet.swift; sourceTree = "<group>"; };
 		A9AF491E538DBE3F7B1C89C2 /* ResendEmail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ResendEmail.swift; path = SwagManager/Models/ResendEmail.swift; sourceTree = "<group>"; };
 		ABED53CF74F1BE1B7EC9EAE7 /* ChatSuggestionsPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatSuggestionsPanel.swift; sourceTree = "<group>"; };
 		AC8B6FFCF613C621FBF93F8E /* EditorStore+QueueManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "EditorStore+QueueManagement.swift"; path = "SwagManager/Stores/EditorStore+QueueManagement.swift"; sourceTree = "<group>"; };
@@ -512,6 +514,7 @@
 			isa = PBXGroup;
 			children = (
 				A84AA9D7AA2A1F734852B5E9 /* AgentBuilderView.swift */,
+				AA1B2C3D4E5F678901234008 /* AgentConfigSheet.swift */,
 				79F89B49989576818FBADDEE /* AgentTestSheet.swift */,
 				B5E42C80394F0E5AEF4BDEBD /* DraggableComponents.swift */,
 			);
@@ -1055,6 +1058,7 @@
 				BB9396136B4166BC80284B09 /* ModalComponents.swift in Sources */,
 				21A51D2DA2CCB6420E0D3B44 /* Haptics.swift in Sources */,
 				6651F2E78822642AD62CA70A /* AgentBuilderView.swift in Sources */,
+				AA1B2C3D4E5F678901234007 /* AgentConfigSheet.swift in Sources */,
 				E66016A73A23943479ED6C0D /* SidebarAgentBuilderSection.swift in Sources */,
 				228F99135E1F4AE971BF8096 /* AgentBuilderStore.swift in Sources */,
 				8846DDFBF0DBA8B8D35E3275 /* AgentTestSheet.swift in Sources */,

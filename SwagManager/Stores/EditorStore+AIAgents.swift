@@ -30,21 +30,25 @@ extension EditorStore {
 
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
-            // Use flexible ISO8601 date formatter that handles timezone offsets
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            // Use flexible date parsing for Postgres timestamps with timezone
             decoder.dateDecodingStrategy = .custom { decoder in
                 let container = try decoder.singleValueContainer()
                 let dateString = try container.decode(String.self)
-                // Try with fractional seconds first
-                if let date = formatter.date(from: dateString) {
+
+                // Try ISO8601 with fractional seconds
+                let formatterWithFraction = ISO8601DateFormatter()
+                formatterWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = formatterWithFraction.date(from: dateString) {
                     return date
                 }
-                // Try without fractional seconds
-                formatter.formatOptions = [.withInternetDateTime]
-                if let date = formatter.date(from: dateString) {
+
+                // Try ISO8601 without fractional seconds
+                let formatterNoFraction = ISO8601DateFormatter()
+                formatterNoFraction.formatOptions = [.withInternetDateTime]
+                if let date = formatterNoFraction.date(from: dateString) {
                     return date
                 }
+
                 throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
             }
 
