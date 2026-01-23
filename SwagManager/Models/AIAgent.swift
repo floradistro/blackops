@@ -10,11 +10,11 @@ struct AIAgent: Codable, Identifiable, Hashable {
     let description: String?
     let icon: String?
     let accentColor: String?
-    let systemPrompt: String
-    let model: String
-    let maxToolCalls: Int
-    let maxTokens: Int
-    let version: Int
+    let systemPrompt: String?
+    let model: String?
+    let maxToolCalls: Int?
+    let maxTokens: Int?
+    let version: Int?
     let isActive: Bool
     let createdAt: Date?
     let updatedAt: Date?
@@ -25,11 +25,12 @@ struct AIAgent: Codable, Identifiable, Hashable {
             return name
         }
         // Fallback: parse from system prompt
-        let prompt = systemPrompt.lowercased()
-        if prompt.contains("you are lisa") {
-            return "Lisa"
-        } else if prompt.contains("you are wilson") {
-            return "Wilson"
+        if let prompt = systemPrompt?.lowercased() {
+            if prompt.contains("you are lisa") {
+                return "Lisa"
+            } else if prompt.contains("you are wilson") {
+                return "Wilson"
+            }
         }
         return "AI Agent"
     }

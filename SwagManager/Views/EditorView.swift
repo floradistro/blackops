@@ -166,7 +166,7 @@ struct EditorView: View {
                 mainContentView
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .toolbar(isOnWelcomeScreen ? .hidden : .automatic, for: .windowToolbar)
+            // Note: Don't hide toolbar completely as it hides traffic lights too
             .toolbar {
                 if !isOnWelcomeScreen {
                     ToolbarItem(placement: .principal) {
@@ -182,7 +182,6 @@ struct EditorView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .toolbarBackground(.hidden, for: .windowToolbar)
     }
 
     var body: some View {
