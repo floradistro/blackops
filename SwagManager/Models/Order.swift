@@ -103,7 +103,11 @@ public struct Order: Codable, Identifiable, Hashable {
     // MARK: - Computed Properties
 
     var displayTitle: String {
-        "#\(orderNumber)"
+        // Always show customer name as main title (user requirement)
+        if let name = shippingName, !name.isEmpty, name != "Walk-In" {
+            return name
+        }
+        return "#\(orderNumber)"  // Fallback to order number only if no customer name
     }
 
     var displayTotal: String {

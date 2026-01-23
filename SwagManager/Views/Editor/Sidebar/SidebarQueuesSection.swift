@@ -196,6 +196,20 @@ private struct QueueEntryRow: View {
                     .font(.system(size: 10))
                     .lineLimit(1)
 
+                // Loyalty points badge (compact sidebar version)
+                if let points = entry.customerLoyaltyPoints {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 7, weight: .bold))
+                        Text("\(points)")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(points >= 0 ? .yellow : .red)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(.white.opacity(0.1), in: .capsule)
+                }
+
                 Spacer(minLength: 4)
 
                 // Cart info

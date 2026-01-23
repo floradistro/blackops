@@ -22,6 +22,7 @@ struct QueueEntry: Codable, Identifiable, Equatable {
     let customerFirstName: String?
     let customerLastName: String?
     let customerPhone: String?
+    let customerLoyaltyPoints: Int?
     let cartItemCount: Int
     let cartTotal: Decimal
 
@@ -35,6 +36,7 @@ struct QueueEntry: Codable, Identifiable, Equatable {
         case customerFirstName = "customer_first_name"
         case customerLastName = "customer_last_name"
         case customerPhone = "customer_phone"
+        case customerLoyaltyPoints = "customer_loyalty_points"
         case cartItemCount = "cart_item_count"
         case cartTotal = "cart_total"
     }
@@ -50,6 +52,7 @@ struct QueueEntry: Codable, Identifiable, Equatable {
         customerFirstName = try container.decodeIfPresent(String.self, forKey: .customerFirstName)
         customerLastName = try container.decodeIfPresent(String.self, forKey: .customerLastName)
         customerPhone = try container.decodeIfPresent(String.self, forKey: .customerPhone)
+        customerLoyaltyPoints = try container.decodeIfPresent(Int.self, forKey: .customerLoyaltyPoints)
         // Default to 0 if not present (new cart has no items yet)
         cartItemCount = try container.decodeIfPresent(Int.self, forKey: .cartItemCount) ?? 0
         cartTotal = try container.decodeIfPresent(Decimal.self, forKey: .cartTotal) ?? 0

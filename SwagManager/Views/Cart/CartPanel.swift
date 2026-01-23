@@ -1,4 +1,6 @@
 import SwiftUI
+import Supabase
+import Realtime
 
 // MARK: - Cart Panel (POS View)
 // Full-screen POS interface with floating cart dock (Apple/Whale pattern)
@@ -109,13 +111,23 @@ struct CartPanel: View {
                 sessionInfo: sessionInfo,
                 onComplete: {
                     showCheckout = false
-                    // Reload cart after successful payment
+                    // Clean up after successful payment (matches iOS implementation)
                     Task {
-                        await cartStore.loadCart(
-                            storeId: store.selectedStore?.id ?? UUID(),
-                            locationId: queueEntry.locationId,
-                            customerId: queueEntry.customerId
-                        )
+                        NSLog("[CartPanel] Payment complete - removing from queue and clearing cart")
+
+                        // 1. Remove customer from queue first
+                        let queueStore = LocationQueueStore.shared(for: queueEntry.locationId)
+                        await queueStore.removeFromQueue(cartId: queueEntry.cartId)
+
+                        // 2. Clear the cart (fresh_start=true to remove all items)
+                        await cartStore.clearCart()
+
+                        // 3. Close the cart panel/tab
+                        if let activeTab = store.activeTab {
+                            await MainActor.run {
+                                store.closeTab(activeTab)
+                            }
+                        }
                     }
                 }
             )
@@ -270,7 +282,8 @@ struct CartPanel: View {
             unitPrice: tier?.defaultPrice,
             tierLabel: tier?.label,
             tierQuantity: tier?.quantity,
-            variantId: nil
+            variantId: nil,
+            locationId: queueEntry.locationId
         )
     }
 }
@@ -291,6 +304,7 @@ class CartStore: ObservableObject {
     @Published var error: String?
 
     private let cartService = CartService()
+    private var cartRealtimeTask: Task<Void, Never>?
 
     func loadCart(storeId: UUID, locationId: UUID, customerId: UUID?) async {
         NSLog("[CartStore] loadCart called - storeId: \(storeId), locationId: \(locationId), customerId: \(customerId?.uuidString ?? "nil")")
@@ -305,6 +319,11 @@ class CartStore: ObservableObject {
                 freshStart: false
             )
             NSLog("[CartStore] ✅ Cart loaded successfully - cartId: \(cart?.id.uuidString ?? "nil"), items: \(cart?.itemCount ?? 0)")
+
+            // Subscribe to realtime updates for this cart
+            if let cartId = cart?.id {
+                subscribeToCart(cartId: cartId)
+            }
         } catch {
             self.error = error.localizedDescription
             NSLog("[CartStore] ❌ Failed to load cart: \(error)")
@@ -353,13 +372,45 @@ class CartStore: ObservableObject {
         }
     }
 
-    func addProduct(productId: UUID, quantity: Int = 1, unitPrice: Decimal?, tierLabel: String?, tierQuantity: Double?, variantId: UUID?) async {
+    func addProduct(productId: UUID, quantity: Int = 1, unitPrice: Decimal?, tierLabel: String?, tierQuantity: Double?, variantId: UUID?, locationId: UUID? = nil) async {
         NSLog("[CartStore] addProduct called - cartId: \(cart?.id.uuidString ?? "nil"), productId: \(productId.uuidString)")
         NSLog("[CartStore] - quantity: \(quantity), unitPrice: \(unitPrice.map { String(describing: $0) } ?? "nil"), tierLabel: \(tierLabel ?? "nil"), tierQuantity: \(tierQuantity.map { String($0) } ?? "nil")")
 
         guard let cartId = cart?.id else {
             NSLog("[CartStore] ❌ ERROR: No cart ID available")
             return
+        }
+
+        // Get inventory_id for this product at this location
+        var inventoryId: UUID? = nil
+        if let locId = locationId ?? cart?.locationId {
+            do {
+                // Simple struct just for ID query
+                struct InventoryID: Codable {
+                    let id: UUID
+                }
+
+                // Query inventory for this product at this location
+                let inventory: [InventoryID] = try await SupabaseService.shared.client
+                    .from("inventory")
+                    .select("id")
+                    .eq("product_id", value: productId.uuidString)
+                    .eq("location_id", value: locId.uuidString)
+                    .gt("available_quantity", value: 0)
+                    .order("available_quantity", ascending: false)
+                    .limit(1)
+                    .execute()
+                    .value
+
+                inventoryId = inventory.first?.id
+                if let invId = inventoryId {
+                    NSLog("[CartStore] Found inventory: \(invId.uuidString)")
+                } else {
+                    NSLog("[CartStore] ⚠️ No inventory found for product at location")
+                }
+            } catch {
+                NSLog("[CartStore] ⚠️ Failed to query inventory: \(error)")
+            }
         }
 
         do {
@@ -370,7 +421,8 @@ class CartStore: ObservableObject {
                 unitPrice: unitPrice,
                 tierLabel: tierLabel,
                 tierQuantity: tierQuantity,
-                variantId: variantId
+                variantId: variantId,
+                inventoryId: inventoryId
             )
             NSLog("[CartStore] ✅ Successfully added \(quantity)x product \(productId) to cart")
         } catch {
@@ -378,6 +430,103 @@ class CartStore: ObservableObject {
             NSLog("[CartStore] ❌ Failed to add product: \(error)")
         }
     }
+
+    // MARK: - Realtime Updates
+
+    private func subscribeToCart(cartId: UUID) {
+        // Cancel any existing subscription
+        unsubscribeFromCart()
+
+        let channelName = "cart-updates-\(cartId.uuidString.prefix(8))-\(UInt64(Date().timeIntervalSince1970 * 1000))"
+        let supabase = SupabaseService.shared.client
+
+        NSLog("[CartStore] 🔌 Creating realtime channel: \(channelName)")
+
+        // Use realtimeV2 API matching queue implementation
+        let channel = supabase.realtimeV2.channel(channelName)
+
+        // Subscribe to cart table changes (totals, discounts)
+        let cartChanges = channel.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "carts",
+            filter: "id=eq.\(cartId)"
+        )
+
+        // Subscribe to cart_items table changes (items added/removed/updated)
+        let itemChanges = channel.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "cart_items",
+            filter: "cart_id=eq.\(cartId)"
+        )
+
+        // Subscribe and listen in background task (matching queue pattern)
+        cartRealtimeTask = Task { [weak self] in
+            guard let self = self else { return }
+
+            do {
+                NSLog("[CartStore] Subscribing to channel...")
+                try await channel.subscribeWithError()
+
+                NSLog("[CartStore] ✅ Subscribed to realtime for cart \(cartId)")
+
+                // Listen for both event types concurrently
+                await withTaskGroup(of: Void.self) { group in
+                    // Listen for cart changes
+                    group.addTask { [weak self] in
+                        for await _ in cartChanges {
+                            guard !Task.isCancelled else { break }
+                            await self?.handleCartUpdate(cartId: cartId)
+                        }
+                    }
+
+                    // Listen for item changes
+                    group.addTask { [weak self] in
+                        for await _ in itemChanges {
+                            guard !Task.isCancelled else { break }
+                            await self?.handleCartUpdate(cartId: cartId)
+                        }
+                    }
+
+                    await group.waitForAll()
+                }
+
+                NSLog("[CartStore] Realtime listener loop ended")
+                await channel.unsubscribe()
+            } catch {
+                NSLog("[CartStore] ❌ Subscription error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func handleCartUpdate(cartId: UUID) async {
+        NSLog("[CartStore] 🔄 Cart update received - refetching from server")
+
+        guard let currentCart = cart else { return }
+
+        do {
+            // Refetch cart from server to get updated data
+            let updatedCart = try await cartService.getOrCreateCart(
+                storeId: currentCart.storeId,
+                locationId: currentCart.locationId,
+                customerId: currentCart.customerId,
+                freshStart: false
+            )
+
+            cart = updatedCart
+            NSLog("[CartStore] ✅ Cart updated from realtime")
+        } catch {
+            NSLog("[CartStore] ❌ Failed to refetch cart: \(error)")
+        }
+    }
+
+    private func unsubscribeFromCart() {
+        cartRealtimeTask?.cancel()
+        cartRealtimeTask = nil
+        NSLog("[CartStore] Unsubscribed from cart updates")
+    }
+
 }
 
 // MARK: - Product Grid Card (iOS-style, edge-to-edge)

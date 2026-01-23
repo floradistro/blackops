@@ -28,6 +28,7 @@ public final class OrderService {
     // MARK: - Fetch Orders
 
     func fetchOrders(storeId: UUID, status: String? = nil) async throws -> [Order] {
+        // Direct table query (works with authenticated users via RLS)
         // Paginate to get ALL orders (Supabase hard limit is 1000 per query)
         var allOrders: [Order] = []
         let batchSize = 1000

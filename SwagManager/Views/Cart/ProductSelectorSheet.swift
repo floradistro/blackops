@@ -203,14 +203,48 @@ struct ProductSelectorSheet: View {
     private func addToCart(product: Product, quantity: Int, tier: PricingTier?) async {
         guard let cartId = cartStore.cart?.id else { return }
 
+        // Get inventory_id for this product at cart's location (matches iOS pattern)
+        var inventoryId: UUID? = nil
+        if let locId = cartStore.cart?.locationId {
+            do {
+                // Simple struct just for ID query
+                struct InventoryID: Codable {
+                    let id: UUID
+                }
+
+                // Query inventory for this product at this location
+                let inventory: [InventoryID] = try await SupabaseService.shared.client
+                    .from("inventory")
+                    .select("id")
+                    .eq("product_id", value: product.id.uuidString)
+                    .eq("location_id", value: locId.uuidString)
+                    .gt("available_quantity", value: 0)
+                    .order("available_quantity", ascending: false)
+                    .limit(1)
+                    .execute()
+                    .value
+
+                inventoryId = inventory.first?.id
+                if let invId = inventoryId {
+                    NSLog("[ProductSelector] Found inventory: \(invId.uuidString)")
+                } else {
+                    NSLog("[ProductSelector] ⚠️ No inventory found for product at location")
+                }
+            } catch {
+                NSLog("[ProductSelector] ⚠️ Failed to query inventory: \(error)")
+            }
+        }
+
         do {
             cartStore.cart = try await CartService().addToCart(
                 cartId: cartId,
                 productId: product.id,
                 quantity: quantity,
+                unitPrice: tier?.defaultPrice,
                 tierLabel: tier?.label,
                 tierQuantity: tier?.quantity,
-                variantId: nil
+                variantId: nil,
+                inventoryId: inventoryId
             )
             NSLog("✅ Added \(quantity)x \(product.name) to cart")
         } catch {

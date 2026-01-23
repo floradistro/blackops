@@ -49,7 +49,6 @@
 		44416B4628A2655D0459F1E6 /* SidebarCRMSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE9A365AC1EAC8B914E2DBA /* SidebarCRMSection.swift */; };
 		45C0984460E55952145E9FA1 /* CustomerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F81612877325049A1EACE7 /* CustomerService.swift */; };
 		4633A131CEE3113939332A99 /* ExecutionDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F756DBC12A1BF79732FF97E9 /* ExecutionDetail.swift */; };
-		466ADE1C32D53A361A18EA83 /* LocationQueueStore+RealtimePro.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7738EA5A4F299A3CC39AF0A4 /* LocationQueueStore+RealtimePro.swift */; };
 		4751F45559C07A0DB4B49DB4 /* FormFieldComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE80B8C2BF851411703F0B9 /* FormFieldComponents.swift */; };
 		49D480EE888D3D55D190C74C /* EditorStore+TabManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3B2C7358DD27BA111462E7 /* EditorStore+TabManagement.swift */; };
 		4BAD996A4180D584D7794BD8 /* EmptyBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33E71AB74A18D9B756CD689 /* EmptyBrowserView.swift */; };
@@ -110,6 +109,7 @@
 		B81F6CB4F14856C1C1F794F1 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = F166BF5D3473B66683BCC2DF /* LiquidGlass.swift */; };
 		B97C1754F3DA1DA5B21B78AE /* ProductEditorComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */; };
 		B9C7BE41E5197E8C0BEF5856 /* LocationQueueService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEA9C2AF2568CB069636E24B /* LocationQueueService.swift */; };
+		RTEB0001 /* RealtimeEventBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = RTEB0002 /* RealtimeEventBus.swift */; };
 		BB9396136B4166BC80284B09 /* ModalComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3923728FA5FA7581B5F98084 /* ModalComponents.swift */; };
 		BDB60B376CB1F50B6B84C082 /* NewCategorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8EF827C40D63248427AD3F8 /* NewCategorySheet.swift */; };
 		BF001 /* SwagManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF001 /* SwagManagerApp.swift */; };
@@ -262,7 +262,6 @@
 		704C0253D88C071E7B7D5EEF /* OrderTreeItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = OrderTreeItem.swift; path = SwagManager/Components/Tree/OrderTreeItem.swift; sourceTree = "<group>"; };
 		7207D0146482971F78AFADCF /* EnhancedChatView+WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EnhancedChatView+WelcomeView.swift"; sourceTree = "<group>"; };
 		76F09114B64EC1881FD6A75D /* NewStoreSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sheets/NewStoreSheet.swift; sourceTree = "<group>"; };
-		7738EA5A4F299A3CC39AF0A4 /* LocationQueueStore+RealtimePro.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "LocationQueueStore+RealtimePro.swift"; sourceTree = "<group>"; };
 		775ED29F5E5BAA711EC05F90 /* CategoryConfigView+Header.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CategoryConfigView+Header.swift"; sourceTree = "<group>"; };
 		77B50C9AC5E02DC8D85A2522 /* ResendEmailDetailPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ResendEmailDetailPanel.swift; path = SwagManager/Views/Editor/ResendEmailDetailPanel.swift; sourceTree = "<group>"; };
 		79F89B49989576818FBADDEE /* AgentTestSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentTestSheet.swift; sourceTree = "<group>"; };
@@ -323,6 +322,7 @@
 		DD585FAAA1F66CE319446D97 /* ProductSchemaService+CategoryAssignments.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ProductSchemaService+CategoryAssignments.swift"; sourceTree = "<group>"; };
 		DE0498EF3964A2DA9B3C640B /* EditorModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EditorModels.swift; sourceTree = "<group>"; };
 		DEA9C2AF2568CB069636E24B /* LocationQueueService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocationQueueService.swift; path = SwagManager/Services/LocationQueueService.swift; sourceTree = "<group>"; };
+		RTEB0002 /* RealtimeEventBus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RealtimeEventBus.swift; path = SwagManager/Services/RealtimeEventBus.swift; sourceTree = "<group>"; };
 		E067A517274BF27C800ED3D8 /* CategoryConfigView+DataOperations.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CategoryConfigView+DataOperations.swift"; sourceTree = "<group>"; };
 		E0D997DDACBD653A34A02167 /* StatusBadge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StatusBadge.swift; path = SwagManager/Components/StatusBadge.swift; sourceTree = "<group>"; };
 		E12114CF0AAB167192CC09C9 /* MCPMonitoringView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MCPMonitoringView.swift; path = SwagManager/Views/MCP/MCPMonitoringView.swift; sourceTree = "<group>"; };
@@ -576,6 +576,7 @@
 				704C0253D88C071E7B7D5EEF /* OrderTreeItem.swift */,
 				E0D997DDACBD653A34A02167 /* StatusBadge.swift */,
 				DEA9C2AF2568CB069636E24B /* LocationQueueService.swift */,
+				RTEB0002 /* RealtimeEventBus.swift */,
 				AC8B6FFCF613C621FBF93F8E /* EditorStore+QueueManagement.swift */,
 				E16626E4BEA5C99026F8165F /* LocationQueueStore.swift */,
 				E679485E9F62BF1F1D0496D5 /* EmailCategory.swift */,
@@ -771,7 +772,6 @@
 				C2D5B3F4A6E7890123456789 /* EditorStore+ProductEditor.swift */,
 				E4F6D5G6C8B9012345678901 /* ChatStore.swift */,
 				A003B49B1D51065E42D06F76 /* EditorStore+OrdersRealtime.swift */,
-				7738EA5A4F299A3CC39AF0A4 /* LocationQueueStore+RealtimePro.swift */,
 				6A202DCE559EA3D0CD05F1F5 /* EditorStore+CampaignManagement.swift */,
 				348CBCD875E56962FA2A3C48 /* AgentBuilderStore.swift */,
 			);
@@ -1017,13 +1017,13 @@
 				B34A4FB06CD418A725310754 /* CustomerTreeItem.swift in Sources */,
 				31633C0293205FD6D5BDA791 /* StatusBadge.swift in Sources */,
 				B9C7BE41E5197E8C0BEF5856 /* LocationQueueService.swift in Sources */,
+				RTEB0001 /* RealtimeEventBus.swift in Sources */,
 				F18A8C7AEF81C8E2D6D09479 /* EditorStore+QueueManagement.swift in Sources */,
 				2F0B076C28F367AE696B3F6D /* LocationQueueStore.swift in Sources */,
 				99F7D86E9CCBDF17EA993985 /* EmailCategory.swift in Sources */,
 				DBDE6A556F23FB6AC8DB61DA /* EmailCategorySection.swift in Sources */,
 				30CCDE4C213B4A1DD8201441 /* SidebarQueuesSection.swift in Sources */,
 				4DF179D4EDBD365D8660EF6F /* EditorStore+OrdersRealtime.swift in Sources */,
-				466ADE1C32D53A361A18EA83 /* LocationQueueStore+RealtimePro.swift in Sources */,
 				1AB7818AFD6D8215FE6BC2F7 /* BuildFile in Sources */,
 				E427CE93C44D5CF850BC5549 /* CartPanel.swift in Sources */,
 				DBDE6EF29DFDA9A356588C69 /* CheckoutSheet.swift in Sources */,

@@ -14,14 +14,33 @@ final class StoreLocationService {
     // MARK: - Stores
 
     func fetchStores(limit: Int = 50) async throws -> [Store] {
-        // RLS policies automatically filter to stores the user owns or is a member of
-        // No explicit filter needed - auth token handles it
-        return try await client.from("stores")
-            .select("id, store_name, slug, email, owner_user_id, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at")
-            .order("store_name", ascending: true)
+        // SECURITY: Must query via users table to ensure user has access (matches iOS implementation)
+        // Get authenticated user ID
+        guard let session = try? await client.auth.session else {
+            NSLog("[StoreLocationService] ❌ No authenticated session - cannot fetch stores")
+            return []
+        }
+
+        let authUserId = session.user.id
+
+        // Query users table filtered by auth_user_id, join with stores table
+        struct UserStoreRow: Decodable {
+            let store_id: UUID
+            let stores: Store?
+        }
+
+        let rows: [UserStoreRow] = try await client
+            .from("users")
+            .select("store_id, stores(id, store_name, slug, email, owner_user_id, status, phone, address, city, state, zip, logo_url, banner_url, store_description, store_tagline, store_type, total_locations, created_at, updated_at)")
+            .eq("auth_user_id", value: authUserId.uuidString)
             .limit(limit)
             .execute()
             .value
+
+        // Extract stores from joined data
+        let stores = rows.compactMap { $0.stores }
+        NSLog("[StoreLocationService] ✅ Loaded \(stores.count) store(s) for authenticated user")
+        return stores.sorted { $0.storeName < $1.storeName }
     }
 
     func fetchStore(id: UUID) async throws -> Store {

@@ -29,21 +29,23 @@ actor PaymentService {
         }
 
         let payload = CreateIntentPayload(
-            storeId: sessionInfo.storeId.uuidString.lowercased(),
-            locationId: sessionInfo.locationId.uuidString.lowercased(),
-            registerId: sessionInfo.registerId?.uuidString.lowercased() ?? UUID().uuidString.lowercased(),
-            sessionId: UUID().uuidString.lowercased(), // Generate session ID
+            storeId: sessionInfo.storeId.uuidString,
+            locationId: sessionInfo.locationId.uuidString,
+            registerId: sessionInfo.registerId?.uuidString ?? UUID().uuidString,
+            sessionId: UUID().uuidString, // Generate session ID
             paymentMethod: "cash",
             amount: NSDecimalNumber(decimal: cart.totals.total).doubleValue,
             cartItems: cart.items.map { item in
                 CartItemPayload(
-                    productId: item.productId.uuidString.lowercased(),
+                    productId: item.productId.uuidString,
                     productName: item.productName,
                     productSku: item.sku,
                     quantity: item.quantity,
                     tierQty: item.tierQuantity,
                     tierName: item.tierLabel,
-                    unitPrice: NSDecimalNumber(decimal: item.unitPrice).doubleValue
+                    unitPrice: NSDecimalNumber(decimal: item.unitPrice).doubleValue,
+                    inventoryId: item.inventoryId?.uuidString,
+                    tierQuantity: item.tierQuantity
                 )
             },
             totals: TotalsPayload(
@@ -59,7 +61,7 @@ actor PaymentService {
             userId: sessionInfo.userId?.uuidString.lowercased(),
             cashTendered: NSDecimalNumber(decimal: cashTendered).doubleValue,
             changeGiven: NSDecimalNumber(decimal: change).doubleValue,
-            idempotencyKey: UUID().uuidString.lowercased()
+            idempotencyKey: UUID().uuidString
         )
 
         return try await createPaymentIntent(payload)
@@ -90,7 +92,7 @@ actor PaymentService {
         request.timeoutInterval = 30
 
         let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
+        // Don't convert to snake_case - Edge Function expects camelCase
         request.httpBody = try encoder.encode(payload)
 
         NSLog("[PaymentService] Creating payment intent - location: \(payload.locationId), register: \(payload.registerId), amount: $\(payload.amount)")
@@ -206,6 +208,8 @@ private struct CartItemPayload: Encodable {
     let tierQty: Double
     let tierName: String?
     let unitPrice: Double
+    let inventoryId: String?
+    let tierQuantity: Double
 }
 
 private struct TotalsPayload: Encodable {

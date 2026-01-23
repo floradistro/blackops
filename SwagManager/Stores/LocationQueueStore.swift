@@ -33,12 +33,12 @@ final class LocationQueueStore: ObservableObject {
 
     // MARK: - Published State
 
-    @Published var queue: [QueueEntry] = []
-    @Published var isLoading = false
-    @Published var error: String?
+    @Published private(set) var queue: [QueueEntry] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var error: String?
     @Published var selectedCartId: UUID?
-    @Published var lastUpdated: Date?
-    @Published var connectionState: ConnectionState = .disconnected
+    @Published private(set) var lastUpdated: Date?
+    @Published private(set) var connectionState: ConnectionState = .disconnected
 
     enum ConnectionState {
         case connected
@@ -55,10 +55,7 @@ final class LocationQueueStore: ObservableObject {
     let locationId: UUID
     private var refreshTask: Task<Void, Never>?
     private var pollingTask: Task<Void, Never>?
-    internal var realtimeChannel: RealtimeChannelV2?
-    internal var realtimeTask: Task<Void, Never>?
-    internal var isSubscribed = false
-    internal let supabase: SupabaseClient
+    private var eventCancellable: AnyCancellable?
 
     // MARK: - Computed Properties
 
@@ -74,7 +71,47 @@ final class LocationQueueStore: ObservableObject {
 
     private init(locationId: UUID) {
         self.locationId = locationId
-        self.supabase = SupabaseService.shared.client
+        setupEventListening()
+    }
+
+    // MARK: - EventBus Integration
+
+    private func setupEventListening() {
+        // Connect to EventBus (happens once per location globally)
+        Task {
+            await RealtimeEventBus.shared.connect(to: locationId)
+        }
+
+        // Subscribe to queue events for this location
+        eventCancellable = RealtimeEventBus.shared
+            .queueEvents(for: locationId)
+            .sink { [weak self] event in
+                Task { @MainActor [weak self] in
+                    await self?.handleEvent(event)
+                }
+            }
+    }
+
+    private func handleEvent(_ event: RealtimeEvent) async {
+        switch event {
+        case .queueUpdated(let locationId):
+            guard locationId == self.locationId else { return }
+            NSLog("🔔 Queue updated for location \(locationId)")
+            await loadQueue()
+
+        case .queueCustomerAdded(let locationId, let customerId):
+            guard locationId == self.locationId else { return }
+            NSLog("🔔 Customer \(customerId) added to queue")
+            await loadQueue()
+
+        case .queueCustomerRemoved(let locationId, let customerId):
+            guard locationId == self.locationId else { return }
+            NSLog("🔔 Customer \(customerId) removed from queue")
+            await loadQueue()
+
+        default:
+            break
+        }
     }
 
     // MARK: - Queue Operations
@@ -87,30 +124,25 @@ final class LocationQueueStore: ObservableObject {
         do {
             let entries = try await LocationQueueService.shared.getQueue(locationId: locationId)
 
-            // Only update if data actually changed (avoid unnecessary UI refreshes)
-            let hasChanged = queue.count != entries.count || !queue.elementsEqual(entries)
+            // Notify observers
+            objectWillChange.send()
+            queue = entries
+            lastUpdated = Date()
 
-            if hasChanged {
-                objectWillChange.send()
-                queue = entries
-                lastUpdated = Date()
+            // If we have entries but no selection, select the first one
+            if selectedCartId == nil, let first = entries.first {
+                selectedCartId = first.cartId
+            }
 
-                // If we have entries but no selection, select the first one
-                if selectedCartId == nil, let first = entries.first {
-                    selectedCartId = first.cartId
-                }
-
-                // If selected cart is no longer in queue, clear selection
-                if let selectedId = selectedCartId, !entries.contains(where: { $0.cartId == selectedId }) {
-                    selectedCartId = entries.first?.cartId
-                }
-
-                // Post notification for UI updates
-                NotificationCenter.default.post(name: .queueDidChange, object: locationId)
-                NSLog("[LocationQueueStore] Queue updated with \(entries.count) entries")
+            // If selected cart is no longer in queue, clear selection
+            if let selectedId = selectedCartId, !entries.contains(where: { $0.cartId == selectedId }) {
+                selectedCartId = entries.first?.cartId
             }
 
             isLoading = false
+            // Post notification for UI updates
+            NotificationCenter.default.post(name: .queueDidChange, object: locationId)
+            NSLog("[LocationQueueStore] Queue updated with \(entries.count) entries")
         } catch {
             self.error = error.localizedDescription
             isLoading = false
@@ -193,166 +225,17 @@ final class LocationQueueStore: ObservableObject {
 
     /// Subscribe to realtime updates for this location's queue
     func subscribeToRealtime() {
-        guard !isSubscribed else {
-            NSLog("[LocationQueueStore] ⚠️ Already subscribed, skipping")
-            return
-        }
-
-        let channelName = "location-queue-\(locationId.uuidString)"
-        let locId = locationId
-
-        NSLog("[LocationQueueStore] 🔌 Starting realtime subscription for location \(locId)")
-
-        connectionState = .connecting
-
-        // Start polling as backup (every 5 seconds) - Apple's typical refresh interval
-        startPolling(interval: 5.0)
-
-        // Use realtimeV2 API (Supabase Swift SDK v2+)
-        let channel = supabase.realtimeV2.channel(channelName)
-
-        // Listen for ALL event types WITHOUT filter first to see if events are coming through
-        let allInserts = channel.postgresChange(
-            InsertAction.self,
-            schema: "public",
-            table: "location_queue"
-        )
-
-        let allUpdates = channel.postgresChange(
-            UpdateAction.self,
-            schema: "public",
-            table: "location_queue"
-        )
-
-        let allDeletes = channel.postgresChange(
-            DeleteAction.self,
-            schema: "public",
-            table: "location_queue"
-        )
-
-        NSLog("[LocationQueueStore] ⚠️ DEBUG MODE: Listening to ALL events on location_queue (no filter) to debug")
-
-        realtimeChannel = channel
-
-        // Subscribe and listen for changes
-        realtimeTask = Task { [weak self] in
-            guard let self = self else { return }
-
-            do {
-                NSLog("[LocationQueueStore] Subscribing to channel...")
-                try await channel.subscribeWithError()
-
-                await MainActor.run { [weak self] in
-                    self?.isSubscribed = true
-                    self?.connectionState = .connected
-                    NSLog("[LocationQueueStore] ✅ SUBSCRIBED to realtime for location \(locId)")
-                }
-
-                // Listen for all event types concurrently
-                await withTaskGroup(of: Void.self) { group in
-                    // Listen for INSERTs
-                    group.addTask { [weak self] in
-                        for await insert in allInserts {
-                            guard !Task.isCancelled else { break }
-                            let eventLocIdStr = String(describing: insert.record["location_id"] ?? "unknown")
-                            NSLog("[LocationQueueStore] 📡 INSERT EVENT DETECTED! Location: \(eventLocIdStr)")
-                            // Only handle if it's for our location
-                            if eventLocIdStr.lowercased() == locId.uuidString.lowercased() {
-                                NSLog("[LocationQueueStore] ✅ INSERT is for our location - handling")
-                                await self?.handleInsertEvent(insert)
-                            } else {
-                                NSLog("[LocationQueueStore] ⚠️ INSERT is for different location - ignoring")
-                            }
-                        }
-                    }
-
-                    // Listen for UPDATEs
-                    group.addTask { [weak self] in
-                        for await update in allUpdates {
-                            guard !Task.isCancelled else { break }
-                            let eventLocIdStr = String(describing: update.record["location_id"] ?? "unknown")
-                            NSLog("[LocationQueueStore] 📡 UPDATE EVENT DETECTED! Location: \(eventLocIdStr)")
-                            // Only handle if it's for our location
-                            if eventLocIdStr.lowercased() == locId.uuidString.lowercased() {
-                                NSLog("[LocationQueueStore] ✅ UPDATE is for our location - handling")
-                                await self?.handleUpdateEvent(update)
-                            } else {
-                                NSLog("[LocationQueueStore] ⚠️ UPDATE is for different location - ignoring")
-                            }
-                        }
-                    }
-
-                    // Listen for DELETEs
-                    group.addTask { [weak self] in
-                        for await delete in allDeletes {
-                            guard !Task.isCancelled else { break }
-                            let eventLocIdStr = String(describing: delete.oldRecord["location_id"] ?? "unknown")
-                            NSLog("[LocationQueueStore] 📡 DELETE EVENT DETECTED! Location: \(eventLocIdStr)")
-                            // Only handle if it's for our location
-                            if eventLocIdStr.lowercased() == locId.uuidString.lowercased() {
-                                NSLog("[LocationQueueStore] ✅ DELETE is for our location - handling")
-                                await self?.handleDeleteEvent(delete)
-                            } else {
-                                NSLog("[LocationQueueStore] ⚠️ DELETE is for different location - ignoring")
-                            }
-                        }
-                    }
-
-                    await group.waitForAll()
-                }
-
-                NSLog("[LocationQueueStore] Realtime listener loop ended")
-            } catch {
-                NSLog("[LocationQueueStore] ❌ Subscription error: \(error.localizedDescription)")
-                await MainActor.run { [weak self] in
-                    self?.connectionState = .error
-                }
-            }
-
-            await MainActor.run { [weak self] in
-                self?.isSubscribed = false
-                self?.connectionState = .disconnected
-            }
-        }
+        // EventBus subscription is set up in init - no-op for compatibility
+        NSLog("[LocationQueueStore] Using EventBus for realtime (legacy call ignored)")
     }
+
 
     /// Unsubscribe from realtime updates
     func unsubscribeFromRealtime() {
-        realtimeTask?.cancel()
-        realtimeTask = nil
-
-        if let channel = realtimeChannel {
-            Task {
-                await channel.unsubscribe()
-                await supabase.realtimeV2.removeChannel(channel)
-                NSLog("[LocationQueueStore] Unsubscribed from realtime")
-            }
-            realtimeChannel = nil
-        }
-
-        isSubscribed = false
+        // EventBus manages connection lifecycle - no-op for compatibility
+        NSLog("[LocationQueueStore] EventBus manages connection (legacy call ignored)")
     }
 
-    /// Handle INSERT event - new customer added to queue
-    private func handleInsertEvent(_ insert: InsertAction) async {
-        NSLog("[LocationQueueStore] 🆕 INSERT - reloading queue")
-        await loadQueue()
-        NSLog("[LocationQueueStore] Queue reloaded - now has \(queue.count) entries")
-    }
-
-    /// Handle UPDATE event - customer updated in queue
-    private func handleUpdateEvent(_ update: UpdateAction) async {
-        NSLog("[LocationQueueStore] 🔄 UPDATE - reloading queue")
-        await loadQueue()
-        NSLog("[LocationQueueStore] Queue reloaded - now has \(queue.count) entries")
-    }
-
-    /// Handle DELETE event - customer removed from queue
-    private func handleDeleteEvent(_ delete: DeleteAction) async {
-        NSLog("[LocationQueueStore] 🗑️ DELETE - reloading queue")
-        await loadQueue()
-        NSLog("[LocationQueueStore] Queue reloaded - now has \(queue.count) entries")
-    }
 
     // MARK: - Polling (optional - for real-time sync without websockets)
 
@@ -377,8 +260,18 @@ final class LocationQueueStore: ObservableObject {
 
     static func removeStore(for locationId: UUID) {
         stores[locationId]?.stopPolling()
-        stores[locationId]?.unsubscribeFromRealtime()
+        stores[locationId]?.eventCancellable?.cancel()
         stores.removeValue(forKey: locationId)
+
+        // Optionally disconnect from EventBus if this was the last store
+        Task {
+            await RealtimeEventBus.shared.disconnect(from: locationId)
+        }
+    }
+
+    deinit {
+        eventCancellable?.cancel()
+        pollingTask?.cancel()
     }
 }
 

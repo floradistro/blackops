@@ -243,9 +243,10 @@ struct QueueEntryRow: View {
 
             // Customer info
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
+                HStack(spacing: 8) {
                     Text(entry.customerName)
                         .font(.headline)
+
                     if entry.customerId == nil {
                         Text("Guest")
                             .font(.caption)
@@ -254,25 +255,42 @@ struct QueueEntryRow: View {
                             .background(Color.orange.opacity(0.2))
                             .cornerRadius(4)
                     }
+
+                    // Loyalty points badge (matches iOS design)
+                    if let points = entry.customerLoyaltyPoints {
+                        HStack(spacing: 3) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10, weight: .bold))
+                            Text("\(points)")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                        }
+                        .foregroundColor(points >= 0 ? .yellow : .red)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.15))
+                        .cornerRadius(12)
+                    }
                 }
 
-                if let phone = entry.customerPhone {
-                    Text(phone)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                HStack(spacing: 8) {
+                    if let phone = entry.customerPhone {
+                        Text(phone)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
 
-                HStack(spacing: 4) {
-                    Image(systemName: "cart.fill")
-                        .font(.caption2)
-                    Text("\(entry.cartItemCount) items")
-                        .font(.caption)
-                    Text("•")
-                        .font(.caption)
-                    Text("$\(entry.cartTotal as NSDecimalNumber, formatter: currencyFormatter)")
-                        .font(.caption)
+                    HStack(spacing: 4) {
+                        Image(systemName: "cart.fill")
+                            .font(.caption2)
+                        Text("\(entry.cartItemCount) items")
+                            .font(.caption)
+                        Text("•")
+                            .font(.caption)
+                        Text("$\(entry.cartTotal as NSDecimalNumber, formatter: currencyFormatter)")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
                 }
-                .foregroundColor(.secondary)
             }
 
             Spacer()
