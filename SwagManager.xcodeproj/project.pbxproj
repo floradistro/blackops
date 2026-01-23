@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA1B2C3D4E5F678901234001 /* AIAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234002 /* AIAgent.swift */; };
+		AA1B2C3D4E5F678901234003 /* EditorStore+AIAgents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234004 /* EditorStore+AIAgents.swift */; };
+		AA1B2C3D4E5F678901234005 /* SidebarAgentsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234006 /* SidebarAgentsSection.swift */; };
 		016B1ADA701486EC2B715B92 /* GlassComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C641288A47B71AED2B5B2A /* GlassComponents.swift */; };
 		02E752E57BEDC920B9E6875E /* MCPTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21009677FD1663F08DF7872A /* MCPTestView.swift */; };
 		056B802DFD1A814921946476 /* EditorStore+RealtimeSubscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E997DEEA064B81D83FD7F05 /* EditorStore+RealtimeSubscriptions.swift */; };
@@ -190,6 +193,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AA1B2C3D4E5F678901234002 /* AIAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAgent.swift; sourceTree = "<group>"; };
+		AA1B2C3D4E5F678901234004 /* EditorStore+AIAgents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EditorStore+AIAgents.swift"; sourceTree = "<group>"; };
+		AA1B2C3D4E5F678901234006 /* SidebarAgentsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarAgentsSection.swift; sourceTree = "<group>"; };
 		0593AC952EEA0C69C0B00A9B /* EditorStore+CategoryHierarchy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+CategoryHierarchy.swift"; sourceTree = "<group>"; };
 		06E7DCECA1C17C514C1D0300 /* ProductEditorComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProductEditorComponents.swift; sourceTree = "<group>"; };
 		0729951BC8B3F29E28E00480 /* InteractiveBrowserView+DarkMode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "InteractiveBrowserView+DarkMode.swift"; sourceTree = "<group>"; };
@@ -487,6 +493,7 @@
 		A8F03DFA70DD47427960D739 /* Sidebar */ = {
 			isa = PBXGroup;
 			children = (
+				AA1B2C3D4E5F678901234006 /* SidebarAgentsSection.swift */,
 				AF80218B8C4DCEDF43525B06 /* SidebarSearchBar.swift */,
 				8555502D47FE1315BE665533 /* SidebarEmptyState.swift */,
 				2A39EC92F9D85FB8E3AF3B88 /* SidebarLoadingState.swift */,
@@ -669,6 +676,7 @@
 		GR007 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				AA1B2C3D4E5F678901234002 /* AIAgent.swift */,
 				SF019 /* BrowserSession.swift */,
 				SF013 /* Chat.swift */,
 				SF007 /* Collection.swift */,
@@ -756,6 +764,7 @@
 		GR021 /* Stores */ = {
 			isa = PBXGroup;
 			children = (
+				AA1B2C3D4E5F678901234004 /* EditorStore+AIAgents.swift */,
 				9C3B2C7358DD27BA111462E7 /* EditorStore+TabManagement.swift */,
 				13AC7CCBC4DCC5B56C08CD8E /* EditorStore+Zoom.swift */,
 				7C5C67CD673A9F65742FBF35 /* EditorStore+Creation.swift */,
@@ -876,6 +885,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA1B2C3D4E5F678901234001 /* AIAgent.swift in Sources */,
+				AA1B2C3D4E5F678901234003 /* EditorStore+AIAgents.swift in Sources */,
+				AA1B2C3D4E5F678901234005 /* SidebarAgentsSection.swift in Sources */,
 				BF910 /* DesignSystem.swift in Sources */,
 				BF915 /* StateViews.swift in Sources */,
 				BF916 /* ChatComponents.swift in Sources */,

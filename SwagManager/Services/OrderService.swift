@@ -51,19 +51,11 @@ public final class OrderService {
 
             allOrders.append(contentsOf: batch)
 
-            if offset == 0 {
-                NSLog("[OrderService] Fetched first \(batch.count) orders")
-            } else {
-                NSLog("[OrderService] Fetched batch \(offset/batchSize + 1): \(batch.count) orders (total: \(allOrders.count))")
-            }
-
             if batch.count < batchSize {
                 break // No more orders
             }
             offset += batchSize
         }
-
-        NSLog("[OrderService] Finished loading all \(allOrders.count) orders")
         return allOrders
     }
 
@@ -198,7 +190,6 @@ public final class OrderService {
     // MARK: - Order Items
 
     func fetchOrderItems(orderId: UUID) async throws -> [OrderItem] {
-        NSLog("[OrderService] Fetching items for order: \(orderId)")
         let items: [OrderItem] = try await client.from("order_items")
             .select("""
                 id, order_id, product_id, product_name, product_sku, product_image, product_type,
@@ -211,7 +202,6 @@ public final class OrderService {
             .order("created_at", ascending: true)
             .execute()
             .value
-        NSLog("[OrderService] Found \(items.count) items")
         return items
     }
 

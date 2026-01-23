@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - Sidebar MCP Servers Section
-// Following Apple engineering standards
+// Premium monochromatic design
 
 struct SidebarMCPServersSection: View {
     @ObservedObject var store: EditorStore
@@ -16,20 +16,20 @@ struct SidebarMCPServersSection: View {
                     store.sidebarMCPServersExpanded.toggle()
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xs) {
+                HStack(spacing: 6) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                         .rotationEffect(.degrees(store.sidebarMCPServersExpanded ? 90 : 0))
-                        .frame(width: 16)
+                        .frame(width: 12)
 
                     Image(systemName: "server.rack")
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(red: 0.35, green: 0.38, blue: 0.95))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.primary.opacity(0.5))
 
                     Text("MCP Servers")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.85))
 
                     Spacer()
 
@@ -38,8 +38,8 @@ struct SidebarMCPServersSection: View {
                         isLoading: store.isLoadingMCPServers
                     )
                 }
-                .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -48,10 +48,10 @@ struct SidebarMCPServersSection: View {
             if store.sidebarMCPServersExpanded {
                 if store.mcpServers.isEmpty {
                     Text("No MCP servers available")
-                        .font(.system(size: 11))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                        .padding(.horizontal, DesignSystem.Spacing.lg)
-                        .padding(.vertical, DesignSystem.Spacing.sm)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 8)
                 } else {
                     // Group by category
                     ForEach(store.mcpServerCategories, id: \.self) { category in
@@ -78,30 +78,30 @@ struct SidebarMCPServersSection: View {
                     }
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xs) {
+                HStack(spacing: 6) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.35))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .frame(width: 12)
+                        .frame(width: 10)
 
                     Image(systemName: "folder")
-                        .font(.system(size: 11))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.45))
 
                     Text(category.capitalized)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.7))
 
                     Spacer()
 
                     Text("(\(servers.count))")
-                        .font(.system(size: 10))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .padding(.leading, 20)
+                .padding(.trailing, 12)
+                .padding(.vertical, 4)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -117,47 +117,46 @@ struct SidebarMCPServersSection: View {
 
     @ViewBuilder
     private func mcpServerRow(_ server: MCPServer) -> some View {
-        HStack(spacing: DesignSystem.Spacing.xs) {
-            Image(systemName: (server.isActive ?? true) ? "circle.fill" : "circle")
-                .font(.system(size: 8))
-                .foregroundColor((server.isActive ?? true) ? DesignSystem.Colors.green : DesignSystem.Colors.textSecondary)
-                .frame(width: 12)
+        HStack(spacing: 6) {
+            // Active indicator
+            Circle()
+                .fill(Color.primary.opacity((server.isActive ?? true) ? 0.4 : 0.15))
+                .frame(width: 5, height: 5)
 
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 11))
-                .foregroundColor((server.isReadOnly ?? false) ? DesignSystem.Colors.textSecondary : Color(red: 0.35, green: 0.38, blue: 0.95))
+            // Icon
+            Image(systemName: "bolt")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity((server.isReadOnly ?? false) ? 0.35 : 0.5))
 
+            // Name
             Text(server.name)
-                .font(.system(size: 11))
-                .foregroundColor(DesignSystem.Colors.textPrimary)
+                .font(.system(size: 10.5))
+                .foregroundStyle(Color.primary.opacity(0.8))
                 .lineLimit(1)
 
             Spacer()
 
+            // Read-only indicator
             if server.isReadOnly ?? false {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                Image(systemName: "lock")
+                    .font(.system(size: 8))
+                    .foregroundStyle(Color.primary.opacity(0.35))
             }
         }
         .padding(.leading, 40)
-        .padding(.trailing, DesignSystem.Spacing.sm)
-        .padding(.vertical, DesignSystem.Spacing.xxs)
+        .padding(.trailing, 12)
+        .padding(.vertical, 4)
         .background(
             store.selectedMCPServer?.id == server.id ?
-                DesignSystem.Colors.selectionActive : Color.clear
+                Color.primary.opacity(0.08) : Color.clear
         )
         .contentShape(Rectangle())
         .onTapGesture {
             store.openMCPServer(server)
         }
         .onDrag {
-            print("🚀 Starting drag for MCP server: \(server.name) (\(server.id))")
             let dragString = DragItemType.encode(.mcpServer, uuid: server.id)
-            print("🔑 Drag data: \(dragString)")
-
             let provider = NSItemProvider(object: dragString as NSString)
-            print("✅ NSItemProvider created successfully")
             return provider
         }
     }

@@ -1,8 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Communications Section
-// Discord-like channel structure with categories
-// File size: under 200 lines following Apple engineering standards
+// Premium monochromatic design
 
 struct SidebarTeamChatSection: View {
     @ObservedObject var store: EditorStore
@@ -10,8 +9,8 @@ struct SidebarTeamChatSection: View {
     var body: some View {
         TreeSectionHeader(
             title: "Communications",
-            icon: "bubble.left.and.bubble.right.fill",
-            iconColor: DesignSystem.Colors.cyan,
+            icon: "bubble.left.and.bubble.right",
+            iconColor: nil,
             isExpanded: $store.sidebarChatExpanded,
             count: store.conversations.count,
             isLoading: store.isLoadingConversations
@@ -128,19 +127,19 @@ struct ChannelCategory: View {
     var body: some View {
         VStack(spacing: 0) {
             // Category header
-            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: DesignSystem.TreeSpacing.chevronSize, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.4))
 
                 Text(title)
-                    .font(.system(size: 11))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
-                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
+                Spacer(minLength: 4)
             }
-            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
-            .padding(.vertical, DesignSystem.TreeSpacing.sectionPaddingVertical)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
 
             // Channels
             ForEach(channels) { channel in
@@ -151,7 +150,7 @@ struct ChannelCategory: View {
                 )
             }
         }
-        .padding(.bottom, DesignSystem.TreeSpacing.sectionPaddingTop)
+        .padding(.bottom, 4)
     }
 }
 
@@ -164,35 +163,34 @@ struct ChannelRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+            HStack(spacing: 6) {
                 // Channel icon
                 Text("#")
-                    .font(.system(size: DesignSystem.TreeSpacing.iconSize, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .frame(width: 14)
 
                 // Channel name
                 Text(channel.displayTitle)
-                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
-                    .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.7))
                     .lineLimit(1)
 
-                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
+                Spacer(minLength: 4)
 
                 // Message count badge
                 if let count = channel.messageCount, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
             }
-            .frame(height: DesignSystem.TreeSpacing.itemHeight)
-            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
+            .frame(height: 24)
+            .padding(.horizontal, 12)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                    .fill(isSelected ? DesignSystem.Colors.selectionActive : Color.clear)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.primary.opacity(0.08) : Color.clear)
             )
-            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
@@ -205,25 +203,25 @@ struct EmailCampaignsCategory: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        VStack(spacing: DesignSystem.Spacing.xxs) {
+        VStack(spacing: 2) {
             // Category header
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 Image(systemName: "envelope.badge")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.blue)
+                    .foregroundStyle(Color.primary.opacity(0.4))
 
                 Text("Email Campaigns")
                     .font(.system(size: 10))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
                 Spacer()
 
                 Text("(\(store.emailCampaigns.count))")
                     .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(Color.primary.opacity(0.4))
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xs)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
 
             // Campaigns
             ForEach(store.emailCampaigns.prefix(5)) { campaign in
@@ -231,7 +229,7 @@ struct EmailCampaignsCategory: View {
                     icon: "envelope",
                     title: campaign.name,
                     status: campaign.status.rawValue,
-                    statusColor: emailStatusColor(campaign.status),
+                    statusColor: Color.primary.opacity(0.5),
                     count: campaign.totalSent,
                     isSelected: store.selectedEmailCampaign?.id == campaign.id,
                     onTap: { store.selectEmailCampaign(campaign) }
@@ -241,24 +239,12 @@ struct EmailCampaignsCategory: View {
             if store.emailCampaigns.count > 5 {
                 Text("+\(store.emailCampaigns.count - 5) more")
                     .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .padding(.horizontal, DesignSystem.Spacing.md)
-                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
             }
         }
-        .padding(.bottom, DesignSystem.Spacing.sm)
-    }
-
-    func emailStatusColor(_ status: CampaignStatus) -> Color {
-        switch status {
-        case .draft: return DesignSystem.Colors.textTertiary
-        case .scheduled: return DesignSystem.Colors.orange
-        case .sending: return DesignSystem.Colors.blue
-        case .sent: return DesignSystem.Colors.green
-        case .paused: return DesignSystem.Colors.yellow
-        case .cancelled: return DesignSystem.Colors.red
-        case .testing: return DesignSystem.Colors.purple
-        }
+        .padding(.bottom, 8)
     }
 }
 
@@ -268,33 +254,33 @@ struct MetaCampaignsCategory: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        VStack(spacing: DesignSystem.Spacing.xxs) {
+        VStack(spacing: 2) {
             // Category header
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 Image(systemName: "megaphone")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.pink)
+                    .foregroundStyle(Color.primary.opacity(0.4))
 
                 Text("Meta Campaigns")
                     .font(.system(size: 10))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
                 Spacer()
 
                 Text("(\(store.metaCampaigns.count))")
                     .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(Color.primary.opacity(0.4))
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xs)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
 
             // Campaigns
             ForEach(store.metaCampaigns.prefix(5)) { campaign in
                 CampaignRow(
-                    icon: "megaphone.fill",
+                    icon: "megaphone",
                     title: campaign.name,
                     status: campaign.status ?? "unknown",
-                    statusColor: DesignSystem.Colors.pink,
+                    statusColor: Color.primary.opacity(0.5),
                     count: campaign.impressions,
                     isSelected: store.selectedMetaCampaign?.id == campaign.id,
                     onTap: { store.selectMetaCampaign(campaign) }
@@ -304,12 +290,12 @@ struct MetaCampaignsCategory: View {
             if store.metaCampaigns.count > 5 {
                 Text("+\(store.metaCampaigns.count - 5) more")
                     .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .padding(.horizontal, DesignSystem.Spacing.md)
-                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
             }
         }
-        .padding(.bottom, DesignSystem.Spacing.sm)
+        .padding(.bottom, 8)
     }
 }
 
@@ -319,48 +305,48 @@ struct SMSCampaignsCategory: View {
     @ObservedObject var store: EditorStore
 
     var body: some View {
-        VStack(spacing: DesignSystem.Spacing.xxs) {
+        VStack(spacing: 2) {
             // Category header
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 Image(systemName: "message")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.green)
+                    .foregroundStyle(Color.primary.opacity(0.4))
 
                 Text("SMS Campaigns")
                     .font(.system(size: 10))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
                 Spacer()
 
                 Text("(\(store.smsCampaigns.count))")
                     .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(Color.primary.opacity(0.4))
             }
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.xs)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
 
             // Campaigns
             ForEach(store.smsCampaigns.prefix(5)) { campaign in
                 CampaignRow(
-                    icon: "message.fill",
+                    icon: "message",
                     title: campaign.name,
                     status: campaign.status.rawValue,
-                    statusColor: DesignSystem.Colors.green,
+                    statusColor: Color.primary.opacity(0.5),
                     count: campaign.totalSent,
-                    isSelected: false, // SMS campaigns don't have selection yet
-                    onTap: { print("SMS Campaign: \(campaign.name)") }
+                    isSelected: false,
+                    onTap: { }
                 )
             }
 
             if store.smsCampaigns.count > 5 {
                 Text("+\(store.smsCampaigns.count - 5) more")
                     .font(.system(size: 9))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .padding(.horizontal, DesignSystem.Spacing.md)
-                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
             }
         }
-        .padding(.bottom, DesignSystem.Spacing.sm)
+        .padding(.bottom, 8)
     }
 }
 
@@ -377,47 +363,46 @@ struct CampaignRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+            HStack(spacing: 6) {
                 // Icon
                 Image(systemName: icon)
-                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
-                    .foregroundColor(statusColor)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.45))
                     .frame(width: 14)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     // Title
                     Text(title)
-                        .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize, weight: .medium))
-                        .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.75))
                         .lineLimit(1)
 
                     // Status and count
-                    HStack(spacing: DesignSystem.TreeSpacing.elementSpacing) {
+                    HStack(spacing: 4) {
                         Text(status.capitalized)
-                            .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                            .foregroundColor(statusColor)
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.primary.opacity(0.45))
 
                         if count > 0 {
                             Text("•")
-                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.primary.opacity(0.3))
 
                             Text("\(count)")
-                                .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.primary.opacity(0.4))
                         }
                     }
                 }
 
-                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
+                Spacer(minLength: 4)
             }
-            .frame(height: DesignSystem.TreeSpacing.itemHeight)
-            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
+            .frame(height: 28)
+            .padding(.horizontal, 12)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                    .fill(isSelected ? DesignSystem.Colors.selectionActive : Color.clear)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.primary.opacity(0.08) : Color.clear)
             )
-            .animation(DesignSystem.Animation.fast, value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())

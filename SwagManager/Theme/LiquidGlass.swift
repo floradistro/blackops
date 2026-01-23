@@ -112,11 +112,11 @@ enum GlassStyle {
 }
 
 // Type-erased InsettableShape wrapper
-struct AnyInsettableShape: InsettableShape {
-    private let _path: (CGRect) -> Path
-    private let _inset: (CGFloat) -> AnyInsettableShape
+struct AnyInsettableShape: InsettableShape, @unchecked Sendable {
+    private let _path: @Sendable (CGRect) -> Path
+    private let _inset: @Sendable (CGFloat) -> AnyInsettableShape
 
-    init<S: InsettableShape>(_ shape: S) {
+    init<S: InsettableShape>(_ shape: S) where S: Sendable {
         _path = { rect in shape.path(in: rect) }
         _inset = { amount in AnyInsettableShape(shape.inset(by: amount)) }
     }

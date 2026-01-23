@@ -42,6 +42,7 @@ struct LoadingCountBadge: View {
 }
 
 // MARK: - Tree Section Header
+// Premium monochromatic design - Apple-like simplicity
 
 struct TreeSectionHeader: View {
     let title: String
@@ -55,7 +56,8 @@ struct TreeSectionHeader: View {
     init(title: String, icon: String? = nil, iconColor: Color? = nil, isExpanded: Binding<Bool>, count: Int, isLoading: Bool = false, realtimeConnected: Bool = false) {
         self.title = title
         self.icon = icon
-        self.iconColor = iconColor
+        // Ignore iconColor - use monochromatic styling
+        self.iconColor = nil
         self._isExpanded = isExpanded
         self.count = count
         self.isLoading = isLoading
@@ -63,29 +65,29 @@ struct TreeSectionHeader: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Image(systemName: "chevron.right")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.4))
                 .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 .animation(DesignSystem.Animation.fast, value: isExpanded)
-                .frame(width: 16)
+                .frame(width: 12)
 
             if let icon = icon {
                 Image(systemName: icon)
-                    .font(.system(size: 13))
-                    .foregroundStyle(iconColor ?? .secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.primary.opacity(0.5))
             }
 
             Text(title)
-                .font(.system(size: 13))
-                .foregroundStyle(.primary)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.85))
 
-            // Realtime connection indicator
+            // Realtime connection indicator - subtle dot instead of antenna
             if realtimeConnected {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: 10))
-                    .foregroundStyle(DesignSystem.Colors.green)
+                Circle()
+                    .fill(Color.primary.opacity(0.3))
+                    .frame(width: 4, height: 4)
                     .transition(.opacity)
             }
 
@@ -96,8 +98,8 @@ struct TreeSectionHeader: View {
                 isLoading: isLoading
             )
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(DesignSystem.Animation.fast) {
@@ -109,23 +111,13 @@ struct TreeSectionHeader: View {
 }
 
 // MARK: - Section Group Header
-// Floating glass headers matching native macOS style (Finder, Mail, etc.)
-// These pin to the top when scrolling, providing persistent navigation context
+// Premium monochromatic headers - clean Apple aesthetic
 
 enum SidebarGroup: String {
     case workspace = "Workspace"
     case content = "Content"
     case operations = "Operations"
     case infrastructure = "Infrastructure"
-
-    var color: Color {
-        switch self {
-        case .workspace: return .green
-        case .content: return .blue
-        case .operations: return .orange
-        case .infrastructure: return .purple
-        }
-    }
 }
 
 struct SectionGroupHeader: View {
@@ -139,27 +131,28 @@ struct SectionGroupHeader: View {
                 isCollapsed.toggle()
             }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 // Chevron
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.35))
                     .rotationEffect(.degrees(isCollapsed ? 0 : 90))
-                    .frame(width: 16)
+                    .frame(width: 12)
 
-                // Title
-                Text(title)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.primary)
+                // Title - uppercase, letter-spaced for premium feel
+                Text(title.uppercased())
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.primary.opacity(0.45))
 
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(DesignSystem.Colors.surfaceSecondary.opacity(0.5))
+        .background(Color.primary.opacity(0.02))
     }
 }
 

@@ -1,6 +1,7 @@
 import SwiftUI
 import Supabase
 import Realtime
+import Combine
 
 // MARK: - Cart Panel (POS View)
 // Full-screen POS interface with floating cart dock (Apple/Whale pattern)
@@ -18,6 +19,7 @@ struct CartPanel: View {
     @State private var popoverAnchor: CGRect = .zero
     @State private var selectedRegisterId: UUID? = nil
     @State private var availableRegisters: [Register] = []
+    @State private var inventorySubscription: AnyCancellable? = nil
 
     // Create SessionInfo for payment tracking
     private var sessionInfo: SessionInfo {
@@ -94,6 +96,10 @@ struct CartPanel: View {
             }
         }
         .task {
+            // Connect to EventBus for this location (enables realtime cart updates)
+            NSLog("[CartPanel] Connecting to EventBus for location \(queueEntry.locationId)")
+            await RealtimeEventBus.shared.connect(to: queueEntry.locationId)
+
             await cartStore.loadCart(
                 storeId: store.selectedStore?.id ?? UUID(),
                 locationId: queueEntry.locationId,
@@ -102,6 +108,23 @@ struct CartPanel: View {
 
             // Pre-load pricing schemas for instant tier selection
             await loadPricingSchemas()
+
+            // Monitor queue for cart removal (e.g., if iOS device checks out)
+            // If this cart is removed from queue, auto-close the panel
+            await monitorQueueForRemoval()
+
+            // Subscribe to inventory updates for this location
+            subscribeToInventoryUpdates()
+        }
+        .onDisappear {
+            // Clean up inventory subscription
+            inventorySubscription?.cancel()
+            inventorySubscription = nil
+            // Disconnect from EventBus when view closes
+            Task {
+                NSLog("[CartPanel] Disconnecting from EventBus")
+                await RealtimeEventBus.shared.disconnect(from: queueEntry.locationId)
+            }
         }
         .sheet(isPresented: $showCheckout) {
             CheckoutSheet(
@@ -273,6 +296,46 @@ struct CartPanel: View {
         // This is just a placeholder - schemas are pre-loaded
     }
 
+    /// Subscribe to inventory updates and reload products when stock changes
+    private func subscribeToInventoryUpdates() {
+        NSLog("[CartPanel] Subscribing to inventory updates for location \(queueEntry.locationId)")
+
+        inventorySubscription = RealtimeEventBus.shared.inventoryEvents(for: queueEntry.locationId)
+            .sink { [weak store] event in
+                NSLog("[CartPanel] 📡 Received inventory event: \(event) - reloading products")
+                Task { @MainActor in
+                    // Reload products to get updated stock levels
+                    await store?.loadCatalogData()
+                }
+            }
+    }
+
+    /// Monitor queue for this cart being removed (e.g., if iOS device checks out)
+    /// If cart is removed from queue, auto-close this panel
+    private func monitorQueueForRemoval() async {
+        let queueStore = LocationQueueStore.shared(for: queueEntry.locationId)
+
+        // Poll queue periodically to detect removal
+        // EventBus triggers queue reloads, so we just need to check if our cart is still there
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // Check every 2 seconds
+
+            // Check if our cart is still in the queue
+            let currentQueue = queueStore.queue
+            let stillInQueue = currentQueue.contains { $0.cartId == queueEntry.cartId }
+
+            if !stillInQueue {
+                NSLog("[CartPanel] Cart \(queueEntry.cartId) removed from queue - auto-closing panel")
+                await MainActor.run {
+                    if let activeTab = store.activeTab {
+                        store.closeTab(activeTab)
+                    }
+                }
+                break
+            }
+        }
+    }
+
     private func addToCart(product: Product, quantity: Int, tier: PricingTier?) async {
         NSLog("[CartPanel] addToCart - product: \(product.name), quantity: \(quantity), tier: \(tier?.label ?? "nil")")
         NSLog("[CartPanel] - tier.defaultPrice: \(tier.map { String(describing: $0.defaultPrice) } ?? "nil"), tier.quantity: \(tier.map { String($0.quantity) } ?? "nil")")
@@ -437,65 +500,41 @@ class CartStore: ObservableObject {
         // Cancel any existing subscription
         unsubscribeFromCart()
 
-        let channelName = "cart-updates-\(cartId.uuidString.prefix(8))-\(UInt64(Date().timeIntervalSince1970 * 1000))"
-        let supabase = SupabaseService.shared.client
+        guard let locationId = cart?.locationId else {
+            NSLog("[CartStore] ⚠️ Cannot subscribe - no locationId on cart")
+            return
+        }
 
-        NSLog("[CartStore] 🔌 Creating realtime channel: \(channelName)")
+        NSLog("[CartStore] 🔌 Subscribing to EventBus for location \(locationId)")
 
-        // Use realtimeV2 API matching queue implementation
-        let channel = supabase.realtimeV2.channel(channelName)
-
-        // Subscribe to cart table changes (totals, discounts)
-        let cartChanges = channel.postgresChange(
-            AnyAction.self,
-            schema: "public",
-            table: "carts",
-            filter: "id=eq.\(cartId)"
-        )
-
-        // Subscribe to cart_items table changes (items added/removed/updated)
-        let itemChanges = channel.postgresChange(
-            AnyAction.self,
-            schema: "public",
-            table: "cart_items",
-            filter: "cart_id=eq.\(cartId)"
-        )
-
-        // Subscribe and listen in background task (matching queue pattern)
+        // Use EventBus instead of direct Supabase subscription
+        // This ensures we receive broadcasts from ALL devices (iOS, other Macs, etc.)
         cartRealtimeTask = Task { [weak self] in
             guard let self = self else { return }
 
-            do {
-                NSLog("[CartStore] Subscribing to channel...")
-                try await channel.subscribeWithError()
+            // Subscribe to queue events (includes all cart/queue changes at this location)
+            // When any cart or queue changes at this location, refetch our cart
+            let cancellable = RealtimeEventBus.shared.queueEvents(for: locationId)
+                .sink { [weak self] event in
+                    Task { @MainActor [weak self] in
+                        guard let self = self else { return }
 
-                NSLog("[CartStore] ✅ Subscribed to realtime for cart \(cartId)")
+                        NSLog("[CartStore] 📡 Received queue event: \(event)")
 
-                // Listen for both event types concurrently
-                await withTaskGroup(of: Void.self) { group in
-                    // Listen for cart changes
-                    group.addTask { [weak self] in
-                        for await _ in cartChanges {
-                            guard !Task.isCancelled else { break }
-                            await self?.handleCartUpdate(cartId: cartId)
-                        }
+                        // Any queue/cart change at this location = refetch our cart
+                        await self.handleCartUpdate(cartId: cartId)
                     }
-
-                    // Listen for item changes
-                    group.addTask { [weak self] in
-                        for await _ in itemChanges {
-                            guard !Task.isCancelled else { break }
-                            await self?.handleCartUpdate(cartId: cartId)
-                        }
-                    }
-
-                    await group.waitForAll()
                 }
 
-                NSLog("[CartStore] Realtime listener loop ended")
-                await channel.unsubscribe()
-            } catch {
-                NSLog("[CartStore] ❌ Subscription error: \(error.localizedDescription)")
+            // Keep cancellable alive until task is cancelled
+            await withTaskCancellationHandler {
+                // Wait indefinitely (until task is cancelled)
+                await withCheckedContinuation { (_: CheckedContinuation<Void, Never>) in
+                    // Never resume - this keeps the subscription alive
+                }
+            } onCancel: {
+                NSLog("[CartStore] Cancelling EventBus subscription")
+                cancellable.cancel()
             }
         }
     }

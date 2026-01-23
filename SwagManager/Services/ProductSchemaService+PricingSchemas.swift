@@ -67,8 +67,6 @@ extension ProductSchemaService {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         let schemas = try decoder.decode([PricingSchema].self, from: response.data)
-
-        NSLog("[ProductSchemaService] Fetched \(schemas.count) pricing schemas via RPC for catalog \(catalogId?.uuidString ?? "nil"), category \(categoryName ?? "nil")")
         return schemas
     }
 
@@ -146,6 +144,5 @@ extension ProductSchemaService {
         _ = try await client
             .rpc("delete_pricing_schema", params: ["p_schema_id": schemaId.uuidString])
             .execute()
-        NSLog("[ProductSchemaService] Deleted pricing schema via RPC: \(schemaId)")
     }
 }

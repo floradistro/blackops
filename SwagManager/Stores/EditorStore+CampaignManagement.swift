@@ -13,13 +13,13 @@ extension EditorStore {
         isLoadingCampaigns = true
         defer { isLoadingCampaigns = false }
 
-        async let emailCampaignsTask = loadEmailCampaigns(storeId: storeId)
-        async let metaCampaignsTask = loadMetaCampaigns(storeId: storeId)
-        async let metaIntegrationsTask = loadMetaIntegrations(storeId: storeId)
-        async let marketingCampaignsTask = loadMarketingCampaigns(storeId: storeId)
-        async let smsCampaignsTask = loadSMSCampaigns(storeId: storeId)
-
-        _ = await (emailCampaignsTask, metaCampaignsTask, metaIntegrationsTask, marketingCampaignsTask, smsCampaignsTask)
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.loadEmailCampaigns(storeId: storeId) }
+            group.addTask { await self.loadMetaCampaigns(storeId: storeId) }
+            group.addTask { await self.loadMetaIntegrations(storeId: storeId) }
+            group.addTask { await self.loadMarketingCampaigns(storeId: storeId) }
+            group.addTask { await self.loadSMSCampaigns(storeId: storeId) }
+        }
     }
 
     func loadEmailCampaigns(storeId: UUID) async {

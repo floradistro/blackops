@@ -27,6 +27,15 @@ struct EditorView: View {
         return store.selectedBrowserSession != nil
     }
 
+    private var isOnWelcomeScreen: Bool {
+        store.activeTab == nil &&
+        store.selectedBrowserSession == nil &&
+        store.selectedCategory == nil &&
+        store.selectedConversation == nil &&
+        store.selectedProduct == nil &&
+        store.selectedCreation == nil
+    }
+
     // MARK: - Main Content View
 
     @ViewBuilder
@@ -112,7 +121,7 @@ struct EditorView: View {
                 .id("browser-\(browserSession.id)")
         } else if let category = store.selectedCategory {
             CategoryConfigView(category: category, store: store)
-        } else if let conversation = store.selectedConversation {
+        } else if store.selectedConversation != nil {
             TeamChatView(store: store)
         } else if let product = store.selectedProduct {
             ProductEditorPanel(product: product, store: store)
@@ -149,21 +158,20 @@ struct EditorView: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarPanel(store: store, sidebarCollapsed: $sidebarCollapsed)
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
-                .toolbarBackground(.hidden, for: .windowToolbar)
         } detail: {
-            VStack(spacing: 0) {
-                // Main content
-                ZStack {
-                    VisualEffectBackground(material: .underWindowBackground)
-                        .ignoresSafeArea()
+            ZStack {
+                VisualEffectBackground(material: .underWindowBackground)
+                    .ignoresSafeArea()
 
-                    mainContentView
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+                mainContentView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .toolbar(isOnWelcomeScreen ? .hidden : .automatic, for: .windowToolbar)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    ToolbarTabStrip(store: store)
+                if !isOnWelcomeScreen {
+                    ToolbarItem(placement: .principal) {
+                        ToolbarTabStrip(store: store)
+                    }
                 }
 
                 if case .browserSession = store.activeTab {
@@ -174,6 +182,7 @@ struct EditorView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .toolbarBackground(.hidden, for: .windowToolbar)
     }
 
     var body: some View {
@@ -302,7 +311,11 @@ class EditorStore: ObservableObject {
     @Published var sidebarMCPServersExpanded = false
     @Published var isLoadingMCPServers = false
 
-    // MARK: - Agent Builder State
+    // MARK: - AI Agents State
+    @Published var aiAgents: [AIAgent] = []
+    @Published var selectedAIAgent: AIAgent?
+    @Published var sidebarAgentsExpanded = true
+    @Published var isLoadingAgents = false
     var agentBuilderStore: AgentBuilderStore?
 
     // MARK: - Emails State (Resend)

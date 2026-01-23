@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Agent Builder Section
-// Follows Apple HIG and matches existing sidebar sections
+// Premium monochromatic design
 
 struct SidebarAgentBuilderSection: View {
     @ObservedObject var store: EditorStore
@@ -10,25 +10,26 @@ struct SidebarAgentBuilderSection: View {
         Button {
             store.openTab(.agentBuilder)
         } label: {
-            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+            HStack(spacing: 6) {
                 Image(systemName: "brain.head.profile")
-                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
-                    .foregroundStyle(.purple)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
                 Text("Agent Builder")
-                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.85))
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: DesignSystem.TreeSpacing.chevronSize - 1))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.3))
             }
-            .frame(height: DesignSystem.TreeSpacing.itemHeight)
-            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
+            .frame(height: 24)
+            .padding(.horizontal, 12)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(store.activeTab == .agentBuilder ? DesignSystem.Colors.selectionActive : Color.clear)
+                    .fill(store.activeTab == .agentBuilder ? Color.primary.opacity(0.08) : Color.clear)
             )
             .contentShape(Rectangle())
         }

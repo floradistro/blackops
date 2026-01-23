@@ -1,8 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Creations Section
-// Extracted from EditorSidebarView.swift following Apple engineering standards
-// File size: ~115 lines (under Apple's 300 line "excellent" threshold)
+// Premium monochromatic design
 
 struct SidebarCreationsSection: View {
     @ObservedObject var store: EditorStore
@@ -14,7 +13,7 @@ struct SidebarCreationsSection: View {
         TreeSectionHeader(
             title: "Creations",
             icon: "sparkles",
-            iconColor: DesignSystem.Colors.yellow,
+            iconColor: nil,
             isExpanded: $store.sidebarCreationsExpanded,
             count: store.creations.count
         )
@@ -92,20 +91,20 @@ struct SidebarCreationsSection: View {
                     Spacer()
                     VStack(spacing: DesignSystem.Spacing.xxs) {
                         Text("No creations yet")
-                            .font(DesignSystem.Typography.caption1)
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.primary.opacity(0.4))
                         Button {
                             store.showNewCreationSheet = true
                         } label: {
                             Text("Create one")
-                                .font(DesignSystem.Typography.caption1)
+                                .font(.system(size: 10))
                         }
                         .buttonStyle(.plain)
-                        .foregroundColor(DesignSystem.Colors.blue)
+                        .foregroundStyle(Color.primary.opacity(0.6))
                     }
                     Spacer()
                 }
-                .padding(.vertical, DesignSystem.Spacing.sm)
+                .padding(.vertical, 8)
             }
         }
     }

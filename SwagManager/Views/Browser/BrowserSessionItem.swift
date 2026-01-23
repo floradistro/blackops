@@ -19,30 +19,30 @@ struct BrowserSessionItem: View {
         Button {
             onTap()
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 // Status indicator circle
                 Circle()
-                    .fill(statusColor)
-                    .frame(width: 6, height: 6)
+                    .fill(statusOpacity)
+                    .frame(width: 5, height: 5)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     // Title/URL
                     Text(session.displayName)
-                        .font(.system(size: 11, weight: isSelected ? .medium : .regular))
-                        .foregroundStyle(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 10.5, weight: isSelected ? .medium : .regular))
+                        .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.75))
                         .lineLimit(1)
 
                     // Shortened URL with better formatting
                     if let url = session.currentUrl, !url.isEmpty {
                         HStack(spacing: 3) {
                             if session.isSecure {
-                                Image(systemName: "lock.fill")
+                                Image(systemName: "lock")
                                     .font(.system(size: 7))
-                                    .foregroundStyle(DesignSystem.Colors.success.opacity(0.6))
+                                    .foregroundStyle(Color.primary.opacity(0.35))
                             }
                             Text(shortenUrl(url))
                                 .font(.system(size: 9))
-                                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                                .foregroundStyle(Color.primary.opacity(0.4))
                                 .lineLimit(1)
                         }
                     }
@@ -56,12 +56,12 @@ struct BrowserSessionItem: View {
                         onClose()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-                            .frame(width: 16, height: 16)
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Color.primary.opacity(0.5))
+                            .frame(width: 14, height: 14)
                             .background(
                                 Circle()
-                                    .fill(DesignSystem.Colors.surfaceHover)
+                                    .fill(Color.primary.opacity(0.08))
                             )
                             .contentShape(Circle())
                     }
@@ -70,15 +70,15 @@ struct BrowserSessionItem: View {
                 } else if let lastActivity = session.lastActivity {
                     Text(timeAgo(lastActivity))
                         .font(.system(size: 9))
-                        .foregroundStyle(DesignSystem.Colors.textTertiary)
+                        .foregroundStyle(Color.primary.opacity(0.4))
                         .monospacedDigit()
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? DesignSystem.Colors.selectionActive : (isHovering ? DesignSystem.Colors.surfaceHover : Color.clear))
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.primary.opacity(0.08) : (isHovering ? Color.primary.opacity(0.04) : Color.clear))
             )
             .contentShape(Rectangle())
         }
@@ -90,13 +90,13 @@ struct BrowserSessionItem: View {
         }
     }
 
-    private var statusColor: Color {
+    private var statusOpacity: Color {
         switch session.status {
-        case "active": return DesignSystem.Colors.success
-        case "paused": return DesignSystem.Colors.warning
-        case "closed": return DesignSystem.Colors.textTertiary
-        case "error": return DesignSystem.Colors.error
-        default: return DesignSystem.Colors.textTertiary
+        case "active": return Color.primary.opacity(0.5)
+        case "paused": return Color.primary.opacity(0.35)
+        case "closed": return Color.primary.opacity(0.2)
+        case "error": return Color.primary.opacity(0.6)
+        default: return Color.primary.opacity(0.2)
         }
     }
 
@@ -142,22 +142,21 @@ struct BrowserSessionsSectionHeader: View {
         Button {
             withAnimation(DesignSystem.Animation.spring) { isExpanded.toggle() }
         } label: {
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .animation(DesignSystem.Animation.fast, value: isExpanded)
-                    .frame(width: 16)
+                    .frame(width: 12)
 
-                Image(systemName: "safari.fill")
-                    .font(.system(size: 13))
-                    .foregroundColor(DesignSystem.Colors.cyan)
+                Image(systemName: "safari")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
-                Text("BROWSER SESSIONS")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                    .tracking(0.5)
+                Text("Browser Sessions")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.85))
 
                 Spacer()
 
@@ -168,20 +167,20 @@ struct BrowserSessionsSectionHeader: View {
 
                 Button(action: onNewSession) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
-                        .frame(width: 20, height: 20)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.5))
+                        .frame(width: 18, height: 18)
                         .background(
                             Circle()
-                                .fill(isHovering ? DesignSystem.Colors.surfaceHover : Color.clear)
+                                .fill(isHovering ? Color.primary.opacity(0.08) : Color.clear)
                         )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("New browser session")
             }
-            .padding(.horizontal, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -504,7 +504,7 @@ struct CustomerSegment {
 }
 
 struct PromptTemplate: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let content: String
     let description: String?

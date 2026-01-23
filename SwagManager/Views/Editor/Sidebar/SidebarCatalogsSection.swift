@@ -1,8 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Catalogs Section
-// Extracted from EditorSidebarView.swift following Apple engineering standards
-// File size: ~75 lines (under Apple's 300 line "excellent" threshold)
+// Premium monochromatic design
 
 struct SidebarCatalogsSection: View {
     @ObservedObject var store: EditorStore
@@ -11,8 +10,8 @@ struct SidebarCatalogsSection: View {
     var body: some View {
         TreeSectionHeader(
             title: "Catalogs",
-            icon: "book.fill",
-            iconColor: DesignSystem.Colors.purple,
+            icon: "book",
+            iconColor: nil,
             isExpanded: $store.sidebarCatalogExpanded,
             count: store.catalogs.count,
             isLoading: store.isLoadingCatalogs

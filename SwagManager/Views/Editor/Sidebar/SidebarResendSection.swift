@@ -69,20 +69,20 @@ struct SidebarResendSection: View {
                 store.sidebarEmailsExpanded.toggle()
             }
         }) {
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .rotationEffect(.degrees(store.sidebarEmailsExpanded ? 90 : 0))
-                    .frame(width: 16)
+                    .frame(width: 12)
 
-                Image(systemName: "envelope.fill")
-                    .font(.system(size: 13))
-                    .foregroundColor(DesignSystem.Colors.blue)
+                Image(systemName: "envelope")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.primary.opacity(0.5))
 
                 Text("Emails")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.85))
 
                 Spacer()
 
@@ -92,8 +92,8 @@ struct SidebarResendSection: View {
                     isLoading: store.isLoadingEmails
                 )
             }
-            .padding(.horizontal, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -104,31 +104,31 @@ struct SidebarResendSection: View {
     private var failedEmailsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: { toggleGroup(.system) }) {
-                HStack(spacing: DesignSystem.Spacing.xs) {
+                HStack(spacing: 6) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                         .rotationEffect(.degrees(expandedGroups.contains(.system) ? 90 : 0))
-                        .frame(width: 12)
+                        .frame(width: 10)
 
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 10))
-                        .foregroundColor(DesignSystem.Colors.red)
+                        .foregroundStyle(Color.primary.opacity(0.5))
                         .frame(width: 14)
 
                     Text("Failed")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.red)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.7))
 
                     Spacer()
 
                     Text("(\(store.failedEmails.count))")
-                        .font(.system(size: 10))
-                        .foregroundColor(DesignSystem.Colors.red.opacity(0.8))
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.primary.opacity(0.45))
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .padding(.leading, 20)
+                .padding(.trailing, 12)
+                .padding(.vertical, 4)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -166,31 +166,31 @@ struct SidebarResendSection: View {
                     }
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xs) {
+                HStack(spacing: 6) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .frame(width: 12)
+                        .frame(width: 10)
 
                     Image(systemName: group.icon)
                         .font(.system(size: 10))
-                        .foregroundColor(group.color)
+                        .foregroundStyle(Color.primary.opacity(0.5))
                         .frame(width: 14)
 
                     Text(group.displayName)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.7))
 
                     Spacer()
 
                     Text("(\(groupCount))")
-                        .font(.system(size: 10))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.primary.opacity(0.45))
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .padding(.leading, 20)
+                .padding(.trailing, 12)
+                .padding(.vertical, 4)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -254,36 +254,36 @@ struct SidebarResendSection: View {
                     }
                 }
             }) {
-                HStack(spacing: DesignSystem.Spacing.xs) {
+                HStack(spacing: 6) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .frame(width: 12)
+                        .frame(width: 10)
 
-                    Image(systemName: "envelope.fill")
+                    Image(systemName: "envelope")
                         .font(.system(size: 10))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .foregroundStyle(Color.primary.opacity(0.45))
                         .frame(width: 14)
 
                     Text("Uncategorized")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.7))
 
                     Spacer()
 
                     Text("(\(count))")
-                        .font(.system(size: 10))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.primary.opacity(0.45))
 
                     // Warning badge
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 8))
-                        .foregroundColor(DesignSystem.Colors.orange)
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
-                .padding(.leading, DesignSystem.Spacing.md)
-                .padding(.trailing, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .padding(.leading, 20)
+                .padding(.trailing, 12)
+                .padding(.vertical, 4)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -383,31 +383,31 @@ struct EmailChannelGroup: View {
     var body: some View {
         // Channel header
         Button(action: onToggle) {
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .frame(width: 12)
+                    .frame(width: 10)
 
                 Image(systemName: icon)
                     .font(.system(size: 10))
-                    .foregroundColor(color)
+                    .foregroundStyle(Color.primary.opacity(0.5))
                     .frame(width: 14)
 
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.7))
 
                 Spacer()
 
                 Text("(\(emails.count))")
-                    .font(.system(size: 10))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.primary.opacity(0.45))
             }
-            .padding(.leading, DesignSystem.Spacing.md)
-            .padding(.trailing, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .padding(.leading, 20)
+            .padding(.trailing, 12)
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -438,38 +438,38 @@ struct EmailTreeItem: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: DesignSystem.Spacing.xs) {
+            HStack(spacing: 6) {
                 // Status indicator
                 Circle()
-                    .fill(email.statusColor)
-                    .frame(width: 6, height: 6)
+                    .fill(Color.primary.opacity(email.hasError ? 0.5 : 0.25))
+                    .frame(width: 5, height: 5)
 
                 // Email icon
-                Image(systemName: email.hasError ? "exclamationmark.triangle.fill" : "envelope")
-                    .font(.system(size: 11))
-                    .foregroundColor(email.hasError ? DesignSystem.Colors.red : DesignSystem.Colors.textSecondary)
-                    .frame(width: 16)
+                Image(systemName: email.hasError ? "exclamationmark.triangle" : "envelope")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(email.hasError ? 0.6 : 0.45))
+                    .frame(width: 14)
 
                 // Subject
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     Text(email.displaySubject)
-                        .font(.system(size: 11))
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Color.primary.opacity(0.85))
                         .lineLimit(1)
 
                     HStack(spacing: 4) {
                         Text(email.displayTo)
                             .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
                             .lineLimit(1)
 
                         Text("•")
                             .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.3))
 
                         Text(email.displayDate)
                             .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
                     }
                 }
 
@@ -477,17 +477,17 @@ struct EmailTreeItem: View {
 
                 // Order badge if linked to order
                 if email.orderId != nil {
-                    Image(systemName: "tag.fill")
+                    Image(systemName: "tag")
                         .font(.system(size: 8))
-                        .foregroundColor(DesignSystem.Colors.orange)
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
             }
             .padding(.leading, 40)
-            .padding(.trailing, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xxs)
+            .padding(.trailing, 12)
+            .padding(.vertical, 4)
             .background(
                 isActive ?
-                    DesignSystem.Colors.selectionActive : Color.clear
+                    Color.primary.opacity(0.08) : Color.clear
             )
             .contentShape(Rectangle())
         }

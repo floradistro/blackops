@@ -1,142 +1,278 @@
 import SwiftUI
 
 // MARK: - Editor Welcome & Small Panel Components
-// Extracted from EditorView.swift following Apple engineering standards
-// File size: ~242 lines (under Apple's 300 line "excellent" threshold)
 
-// MARK: - Welcome View
+// MARK: - Welcome View (2030 Dark AI Aesthetic)
 
 struct WelcomeView: View {
     @ObservedObject var store: EditorStore
     @State private var appeared = false
+    @State private var breathe: CGFloat = 0
+    @State private var glowIntensity: CGFloat = 0
+    @State private var orbRotation: Double = 0
+    @Environment(\.contentZoom) private var zoom
+
+    private var contextualGreeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Morning"
+        case 12..<17: return "Afternoon"
+        case 17..<22: return "Evening"
+        default: return "Late night"
+        }
+    }
+
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                // Deep void background with noise texture feel
+                Color.black.opacity(0.3)
+
+                // Floating ambient orbs
+                floatingOrbs
+
+                // Main content
+                VStack(spacing: 0) {
+                    Spacer()
+
+                    // Central AI presence
+                    aiPresenceCore
+                        .padding(.bottom, 48 * zoom)
+
+
+                    // Ghost action buttons
+                    actionRow
+                        .padding(.bottom, 48 * zoom)
+
+                    Spacer()
+                }
+                .frame(maxWidth: 600 * zoom)
+                .padding(.horizontal, 32)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.2)) {
+                appeared = true
+            }
+            withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+                breathe = 1
+            }
+            withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
+                glowIntensity = 1
+            }
+            withAnimation(.linear(duration: 60).repeatForever(autoreverses: false)) {
+                orbRotation = 360
+            }
+        }
+    }
+
+
+    // MARK: - Floating Orbs
+
+    private var floatingOrbs: some View {
+        ZStack {
+            // Single subtle white glow
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(0.03 + glowIntensity * 0.02),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 350
+                    )
+                )
+                .frame(width: 700, height: 700)
+                .offset(x: breathe * 10, y: -30)
+                .blur(radius: 100)
+        }
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - AI Presence Core
+
+    private var aiPresenceCore: some View {
+        VStack(spacing: 24 * zoom) {
+            // The orb with store logo
+            ZStack {
+                // Outer breathing ring
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.02)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                    .frame(width: 140 * zoom, height: 140 * zoom)
+                    .scaleEffect(1.0 + breathe * 0.08)
+                    .opacity(0.6 - breathe * 0.3)
+
+                // Second breathing ring (offset phase)
+                Circle()
+                    .stroke(
+                        Color.white.opacity(0.05),
+                        lineWidth: 1
+                    )
+                    .frame(width: 160 * zoom, height: 160 * zoom)
+                    .scaleEffect(1.0 + (1.0 - breathe) * 0.06)
+                    .opacity(0.4 - (1.0 - breathe) * 0.2)
+
+                // Glow behind logo
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color.white.opacity(0.03),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 60 * zoom
+                        )
+                    )
+                    .frame(width: 120 * zoom, height: 120 * zoom)
+
+                // Rotating accent arc
+                Circle()
+                    .trim(from: 0, to: 0.2)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.4),
+                                Color.clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+                    )
+                    .frame(width: 130 * zoom, height: 130 * zoom)
+                    .rotationEffect(.degrees(orbRotation))
+
+                // Store logo or fallback
+                if let logoUrl = store.selectedStore?.logoUrl, let url = URL(string: logoUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 64 * zoom, height: 64 * zoom)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
+                        case .failure(_):
+                            fallbackIcon
+                        case .empty:
+                            ProgressView()
+                                .scaleEffect(0.5)
+                                .frame(width: 64 * zoom, height: 64 * zoom)
+                        @unknown default:
+                            fallbackIcon
+                        }
+                    }
+                } else {
+                    fallbackIcon
+                }
+            }
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared ? 1 : 0.5)
+            .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(0.2), value: appeared)
+
+            // Text - minimal
+            VStack(spacing: 6 * zoom) {
+                Text(contextualGreeting)
+                    .font(.system(size: 38 * zoom, weight: .ultraLight, design: .default))
+                    .tracking(4)
+                    .foregroundStyle(Color.white.opacity(0.85))
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 20)
+            .animation(.easeOut(duration: 0.8).delay(0.4), value: appeared)
+        }
+    }
+
+    private var fallbackIcon: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.05))
+                .frame(width: 64 * zoom, height: 64 * zoom)
+            Image(systemName: "sparkle")
+                .font(.system(size: 24 * zoom, weight: .light))
+                .foregroundStyle(Color.white.opacity(0.6))
+        }
+    }
+
+
+    // MARK: - Action Row
+
+    private var actionRow: some View {
+        HStack(spacing: 12 * zoom) {
+            GhostButton(label: "Create", shortcut: "⌘N") {
+                store.showNewCreationSheet = true
+            }
+            GhostButton(label: "Chat", shortcut: "⌘K") {
+                // Open AI chat
+            }
+        }
+        .opacity(appeared ? 1 : 0)
+        .animation(.easeOut(duration: 0.6).delay(0.6), value: appeared)
+    }
+
+}
+
+// MARK: - Ghost Button
+
+private struct GhostButton: View {
+    let label: String
+    let shortcut: String
+    let action: () -> Void
+
+    @State private var isHovering = false
     @Environment(\.contentZoom) private var zoom
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        Button(action: action) {
+            HStack(spacing: 8 * zoom) {
+                Text(label)
+                    .font(.system(size: 13 * zoom, weight: .regular))
+                    .tracking(0.5)
 
-            // Welcome card
-            VStack(alignment: .leading, spacing: 24 * zoom) {
-                // Header
-                HStack(spacing: 14 * zoom) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12 * zoom)
-                            .fill(DesignSystem.Colors.accent.opacity(0.15))
-                            .frame(width: 52 * zoom, height: 52 * zoom)
-                        Image(systemName: "storefront.fill")
-                            .font(.system(size: 22 * zoom))
-                            .foregroundStyle(DesignSystem.Colors.accent)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4 * zoom) {
-                        Text(store.selectedStore?.storeName ?? "Workspace")
-                            .font(.system(size: 18 * zoom, weight: .semibold))
-                            .foregroundStyle(DesignSystem.Colors.textPrimary)
-                        Text("Ready to build")
-                            .font(.system(size: 12 * zoom))
-                            .foregroundStyle(DesignSystem.Colors.textSecondary)
-                    }
-                }
-
-                // Stats
-                if !store.products.isEmpty || !store.categories.isEmpty || !store.creations.isEmpty {
-                    HStack(spacing: 0) {
-                        statItem(value: store.products.count, label: "Products", color: DesignSystem.Colors.green)
-                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40 * zoom)
-                        statItem(value: store.categories.count, label: "Categories", color: DesignSystem.Colors.yellow)
-                        Rectangle().fill(DesignSystem.Colors.border).frame(width: 1, height: 40 * zoom)
-                        statItem(value: store.creations.count, label: "Creations", color: DesignSystem.Colors.cyan)
-                    }
-                    .padding(.vertical, 16 * zoom)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 10 * zoom))
-                }
-
-                // Quick actions
-                VStack(alignment: .leading, spacing: 12 * zoom) {
-                    Text("Quick Actions")
-                        .font(.system(size: 11 * zoom, weight: .semibold))
-                        .foregroundStyle(DesignSystem.Colors.textTertiary)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-
-                    HStack(spacing: 12 * zoom) {
-                        QuickActionButton(icon: "plus", label: "New Creation", shortcut: "⌘N") {
-                            store.showNewCreationSheet = true
-                        }
-                        QuickActionButton(icon: "folder.badge.plus", label: "New Collection", shortcut: "⌘⇧N") {
-                            store.showNewCollectionSheet = true
-                        }
-                    }
-                }
+                Text(shortcut)
+                    .font(.system(size: 10 * zoom, weight: .regular, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.3))
             }
-            .padding(32 * zoom)
-            .background(DesignSystem.Colors.surfaceTertiary)
-            .clipShape(RoundedRectangle(cornerRadius: 16 * zoom))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16 * zoom)
-                    .stroke(DesignSystem.Colors.border, lineWidth: 1)
+            .foregroundStyle(Color.white.opacity(isHovering ? 0.9 : 0.6))
+            .padding(.horizontal, 20 * zoom)
+            .padding(.vertical, 12 * zoom)
+            .background(
+                RoundedRectangle(cornerRadius: 8 * zoom)
+                    .fill(Color.white.opacity(isHovering ? 0.1 : 0.03))
             )
-            .frame(maxWidth: 440 * zoom)
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 20)
-
-            Spacer()
-
-            // Keyboard hints
-            HStack(spacing: 32 * zoom) {
-                keyboardHint(keys: ["⌘", "N"], action: "New")
-                keyboardHint(keys: ["⌘", "F"], action: "Search")
-                keyboardHint(keys: ["⌘", "\\"], action: "Sidebar")
-            }
-            .padding(.bottom, 40 * zoom)
-            .opacity(appeared ? 1 : 0)
-
-            Spacer()
+            .overlay(
+                RoundedRectangle(cornerRadius: 8 * zoom)
+                    .stroke(Color.white.opacity(isHovering ? 0.2 : 0.06), lineWidth: 1)
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            withAnimation(DesignSystem.Animation.slow.delay(0.1)) {
-                appeared = true
-            }
-        }
-    }
-
-    private func statItem(value: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 4 * zoom) {
-            Text("\(value)")
-                .font(.system(size: 22 * zoom, weight: .semibold))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.system(size: 10 * zoom))
-                .foregroundStyle(DesignSystem.Colors.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func keyboardHint(keys: [String], action: String) -> some View {
-        HStack(spacing: 4 * zoom) {
-            ForEach(keys, id: \.self) { key in
-                Text(key)
-                    .font(.system(size: 10 * zoom, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
-                    .padding(.horizontal, 7 * zoom)
-                    .padding(.vertical, 4 * zoom)
-                    .background(DesignSystem.Colors.surfaceTertiary)
-                    .clipShape(RoundedRectangle(cornerRadius: 5 * zoom))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5 * zoom)
-                            .stroke(DesignSystem.Colors.border, lineWidth: 1)
-                    )
-            }
-            Text(action)
-                .font(.system(size: 10 * zoom))
-                .foregroundStyle(DesignSystem.Colors.textTertiary)
-        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .animation(.easeOut(duration: 0.2), value: isHovering)
     }
 }
 
-// MARK: - Quick Action Button
+// MARK: - Quick Action Button (Legacy support)
 
 struct QuickActionButton: View {
     let icon: String

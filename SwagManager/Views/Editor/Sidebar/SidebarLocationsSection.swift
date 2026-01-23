@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Locations & Orders Section
-// Polished hierarchical tree: Location > Month > Day > Orders
+// Premium monochromatic hierarchical tree
 
 struct SidebarLocationsSection: View {
     @ObservedObject var store: EditorStore
@@ -12,16 +12,11 @@ struct SidebarLocationsSection: View {
     // UUID for "No Location" section
     private static let nilLocationId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
 
-    // Consistent spacing values
-    private let baseIndent: CGFloat = 12
-    private let itemHeight: CGFloat = 24
-    private let iconSize: CGFloat = 10
-
     var body: some View {
         TreeSectionHeader(
             title: "Locations",
             icon: "mappin.and.ellipse",
-            iconColor: DesignSystem.Colors.orange,
+            iconColor: nil,
             isExpanded: $store.sidebarLocationsExpanded,
             count: store.orders.count,
             isLoading: store.isLoadingOrders || store.isLoadingLocations,
@@ -63,13 +58,12 @@ struct SidebarLocationsSection: View {
         let orders = store.ordersForLocation(location.id)
 
         // Location header
-        TreeButton(
+        TreeRowButton(
             isExpanded: isExpanded,
             icon: "mappin.and.ellipse",
-            iconColor: .purple,
             title: location.name,
             count: orders.count,
-            badge: location.isActive == true ? AnyView(activeBadge) : nil,
+            showActiveBadge: location.isActive == true,
             indentLevel: 0,
             action: { toggleLocation(location.id) }
         )
@@ -93,18 +87,15 @@ struct SidebarLocationsSection: View {
     private func noLocationSection() -> some View {
         let isExpanded = expandedLocationIds.contains(Self.nilLocationId)
 
-        // No location header
-        TreeButton(
+        TreeRowButton(
             isExpanded: isExpanded,
             icon: "questionmark.circle",
-            iconColor: .orange,
             title: "No Location",
             count: ordersWithoutLocation.count,
             indentLevel: 0,
             action: { toggleLocation(Self.nilLocationId) }
         )
 
-        // Expanded months
         if isExpanded {
             let ordersByMonth = groupOrdersByMonth(ordersWithoutLocation)
             ForEach(ordersByMonth.keys.sorted(by: >), id: \.self) { monthKey in
@@ -124,18 +115,15 @@ struct SidebarLocationsSection: View {
         let expandKey = "\(locationId)-\(monthKey)"
         let isExpanded = expandedMonths.contains(expandKey)
 
-        // Month header
-        TreeButton(
+        TreeRowButton(
             isExpanded: isExpanded,
             icon: "calendar",
-            iconColor: .cyan,
             title: formatMonthKey(monthKey),
             count: orders.count,
             indentLevel: 1,
             action: { toggleMonth(locationId, monthKey) }
         )
 
-        // Expanded days
         if isExpanded {
             let ordersByDay = groupOrdersByDay(orders)
             ForEach(ordersByDay.keys.sorted(by: >), id: \.self) { dayKey in
@@ -156,18 +144,15 @@ struct SidebarLocationsSection: View {
         let expandKey = "\(locationId)-\(monthKey)-\(dayKey)"
         let isExpanded = expandedDays.contains(expandKey)
 
-        // Day header (no icon, just text)
-        TreeButton(
+        TreeRowButton(
             isExpanded: isExpanded,
             icon: nil,
-            iconColor: nil,
             title: formatDayKey(dayKey),
             count: orders.count,
             indentLevel: 2,
             action: { toggleDay(locationId, monthKey, dayKey) }
         )
 
-        // Expanded orders
         if isExpanded {
             ForEach(orders) { order in
                 OrderTreeItem(
@@ -187,17 +172,11 @@ struct SidebarLocationsSection: View {
         HStack {
             Spacer()
             Text("No locations or orders")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
             Spacer()
         }
         .padding(.vertical, 12)
-    }
-
-    private var activeBadge: some View {
-        Circle()
-            .fill(.green)
-            .frame(width: 6, height: 6)
     }
 
     // MARK: - Toggle Functions
@@ -304,37 +283,16 @@ struct SidebarLocationsSection: View {
     }
 }
 
-// MARK: - Tree Button Component
+// MARK: - Tree Row Button (Monochromatic)
 
-private struct TreeButton: View {
+private struct TreeRowButton: View {
     let isExpanded: Bool
     let icon: String?
-    let iconColor: Color?
     let title: String
     let count: Int
-    let badge: AnyView?
+    var showActiveBadge: Bool = false
     let indentLevel: Int
     let action: () -> Void
-
-    init(
-        isExpanded: Bool,
-        icon: String?,
-        iconColor: Color?,
-        title: String,
-        count: Int,
-        badge: AnyView? = nil,
-        indentLevel: Int,
-        action: @escaping () -> Void
-    ) {
-        self.isExpanded = isExpanded
-        self.icon = icon
-        self.iconColor = iconColor
-        self.title = title
-        self.count = count
-        self.badge = badge
-        self.indentLevel = indentLevel
-        self.action = action
-    }
 
     var body: some View {
         Button(action: action) {
@@ -346,40 +304,42 @@ private struct TreeButton: View {
 
                 // Chevron
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 8, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.4))
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .frame(width: 10, alignment: .center)
+                    .frame(width: 10)
 
                 // Icon
-                if let icon = icon, let iconColor = iconColor {
+                if let icon = icon {
                     Image(systemName: icon)
                         .font(.system(size: 10))
-                        .foregroundStyle(iconColor)
-                        .frame(width: 14, alignment: .center)
+                        .foregroundStyle(Color.primary.opacity(0.5))
+                        .frame(width: 14)
                 }
 
                 // Title
                 Text(title)
-                    .font(.system(size: indentLevel == 0 ? 11 : 10.5))
-                    .foregroundStyle(Color.primary.opacity(indentLevel == 0 ? 0.95 : 0.8))
+                    .font(.system(size: indentLevel == 0 ? 11 : 10.5, weight: indentLevel == 0 ? .medium : .regular))
+                    .foregroundStyle(Color.primary.opacity(indentLevel == 0 ? 0.85 : 0.75))
                     .lineLimit(1)
 
                 Spacer(minLength: 4)
 
-                // Badge (active indicator)
-                if let badge = badge {
-                    badge
+                // Active badge
+                if showActiveBadge {
+                    Circle()
+                        .fill(Color.primary.opacity(0.3))
+                        .frame(width: 5, height: 5)
                 }
 
                 // Count
                 if count > 0 {
                     Text("\(count)")
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(Color.primary.opacity(0.5))
+                        .foregroundStyle(Color.primary.opacity(0.45))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.primary.opacity(0.06))
+                        .background(Color.primary.opacity(0.05))
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
             }

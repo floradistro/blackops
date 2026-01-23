@@ -86,6 +86,9 @@ struct SidebarPanel: View {
                 if store.emailTotalCount == 0 {
                     await store.loadEmailCounts()
                 }
+                if store.aiAgents.isEmpty {
+                    await store.loadAIAgents()
+                }
             }
             if store.mcpServers.isEmpty {
                 await store.loadMCPServers()
@@ -97,6 +100,7 @@ struct SidebarPanel: View {
                 await store.loadOrders()
                 await store.loadLocations()
                 await store.loadEmailCounts()
+                await store.loadAIAgents()
             }
         }
         .onChange(of: searchText) { _, newValue in
@@ -181,9 +185,12 @@ struct SidebarPanel: View {
                     )
                 }
 
-                // INFRASTRUCTURE - MCP Servers, Agent Builder, Resend
+                // INFRASTRUCTURE - AI Agents, MCP Servers, Agent Builder, Resend
                 Section {
                     if !store.infrastructureGroupCollapsed {
+                        SidebarAgentsSection(store: store)
+                        Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
+
                         SidebarAgentBuilderSection(store: store)
                         Divider().padding(.horizontal, DesignSystem.Spacing.sm).padding(.vertical, DesignSystem.Spacing.xxs)
 

@@ -51,6 +51,11 @@ enum RealtimeEvent: Equatable {
 
     /// Order status changed
     case orderStatusChanged(orderId: UUID, newStatus: String)
+
+    // MARK: Inventory Events
+
+    /// Inventory was updated (stock levels changed)
+    case inventoryUpdated(locationId: UUID)
 }
 
 // MARK: - Event Bus
@@ -205,6 +210,20 @@ final class RealtimeEventBus: ObservableObject {
             .eraseToAnyPublisher()
     }
 
+    /// Get inventory events for a specific location
+    func inventoryEvents(for locationId: UUID) -> AnyPublisher<RealtimeEvent, Never> {
+        eventSubject
+            .filter { event in
+                switch event {
+                case .inventoryUpdated(let loc):
+                    return loc == locationId
+                default:
+                    return false
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+
     // MARK: - Private Implementation
 
     private func createChannel(for locationId: UUID) async throws -> ChannelState {
@@ -214,79 +233,69 @@ final class RealtimeEventBus: ObservableObject {
 
         // MIGRATION: When you migrate, change table name here:
         // "location_queue" → "queues"
-        let queueChanges = await channel.postgresChange(
+        let queueChanges = channel.postgresChange(
             AnyAction.self,
-            schema: "public",
             table: "location_queue",  // MIGRATION: Change to "queues"
-            filter: "location_id=eq.\(locationId.uuidString)"
+            filter: .eq("location_id", value: locationId.uuidString)
         )
 
         // MIGRATION: Update "carts" table name if changed
-        let cartChanges = await channel.postgresChange(
+        let cartChanges = channel.postgresChange(
             AnyAction.self,
-            schema: "public",
             table: "carts",  // MIGRATION: Update if table renamed
-            filter: "location_id=eq.\(locationId.uuidString)"
+            filter: .eq("location_id", value: locationId.uuidString)
         )
 
         // MIGRATION: Update "cart_items" table name if changed
-        let cartItemChanges = await channel.postgresChange(
+        let cartItemChanges = channel.postgresChange(
             AnyAction.self,
-            schema: "public",
             table: "cart_items"  // MIGRATION: Update if table renamed
         )
 
-        try await channel.subscribe()
+        let inventoryChanges = channel.postgresChange(
+            AnyAction.self,
+            table: "inventory",
+            filter: .eq("location_id", value: locationId.uuidString)
+        )
 
-        // Start listening to all change streams
+        try await channel.subscribeWithError()
+
+        // Listen to changes and broadcast events - subscribers refetch their own data
         let task = Task { [weak self] in
+            guard let self = self else { return }
+
             await withTaskGroup(of: Void.self) { group in
                 // Queue changes
-                group.addTask {
-                    for await change in queueChanges {
-                        await self?.handleQueueChange(locationId, change)
+                group.addTask { [weak self] in
+                    for await _ in queueChanges {
+                        self?.eventSubject.send(.queueUpdated(locationId: locationId))
                     }
                 }
 
-                // Cart changes
-                group.addTask {
-                    for await change in cartChanges {
-                        await self?.handleCartChange(change)
+                // Cart changes - broadcast location update so all carts at this location refetch
+                group.addTask { [weak self] in
+                    for await _ in cartChanges {
+                        self?.eventSubject.send(.queueUpdated(locationId: locationId))
                     }
                 }
 
-                // Cart item changes
-                group.addTask {
-                    for await change in cartItemChanges {
-                        await self?.handleCartItemChange(change)
+                // Cart item changes - same
+                group.addTask { [weak self] in
+                    for await _ in cartItemChanges {
+                        self?.eventSubject.send(.queueUpdated(locationId: locationId))
+                    }
+                }
+
+                // Inventory changes - notify product grids to refetch
+                group.addTask { [weak self] in
+                    for await _ in inventoryChanges {
+                        self?.eventSubject.send(.inventoryUpdated(locationId: locationId))
                     }
                 }
             }
         }
 
         return ChannelState(channel: channel, task: task)
-    }
-
-    // MARK: - Event Handlers
-
-    private func handleQueueChange(_ locationId: UUID, _ change: AnyAction) {
-        NSLog("📡 Queue change for location %@", locationId.uuidString)
-
-        // For now, just send generic update
-        // Future: Parse INSERT/UPDATE/DELETE for specific events
-        eventSubject.send(.queueUpdated(locationId: locationId))
-    }
-
-    private func handleCartChange(_ change: AnyAction) {
-        NSLog("📡 Cart change")
-
-        // Future: Parse cart_id and broadcast typed event
-    }
-
-    private func handleCartItemChange(_ change: AnyAction) {
-        NSLog("📡 Cart item change")
-
-        // Future: Parse cart_id and item_id and broadcast typed event
     }
 
     // MARK: - Reconnection Logic
@@ -322,4 +331,39 @@ final class RealtimeEventBus: ObservableObject {
             connectionState = .connected(locationIds: connectedIds)
         }
     }
+
+    // MARK: - Helper Methods for Parsing Supabase Changes
+
+    /// Extract UUID from JSONObject
+    private func extractUUID(from jsonObject: JSONObject, key: String) -> UUID? {
+        // JSONObject is [String: Any]
+        if let stringValue = jsonObject[key] as? String {
+            return UUID(uuidString: stringValue)
+        }
+
+        if let uuidValue = jsonObject[key] as? UUID {
+            return uuidValue
+        }
+
+        return nil
+    }
+
+    /// Extract Int from JSONObject
+    private func extractInt(from jsonObject: JSONObject, key: String) -> Int? {
+        if let intValue = jsonObject[key] as? Int {
+            return intValue
+        }
+
+        if let doubleValue = jsonObject[key] as? Double {
+            return Int(doubleValue)
+        }
+
+        if let stringValue = jsonObject[key] as? String,
+           let intValue = Int(stringValue) {
+            return intValue
+        }
+
+        return nil
+    }
+
 }

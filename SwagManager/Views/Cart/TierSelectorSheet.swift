@@ -34,29 +34,18 @@ struct TierSelectorSheet: View {
     private var allTiers: [PricingTier] {
         // Use embedded pricing schema from product (loaded via PostgREST join)
         if let schema = product.pricingSchema {
-            NSLog("[TierSelector] ✅ Found \(schema.tiers.count) tiers for product '\(product.name)' in embedded schema '\(schema.name)'")
-            for tier in schema.tiers {
-                NSLog("[TierSelector]    - Tier: id=\(tier.id), label=\(tier.label), qty=\(tier.quantity), unit=\(tier.unit), price=\(tier.defaultPrice)")
-            }
             return schema.tiers
         }
 
         // Fallback: Look up schema from store's pricing schemas array
         guard let schemaId = product.pricingSchemaId else {
-            NSLog("[TierSelector] ⚠️ Product '\(product.name)' has no pricingSchemaId and no embedded schema")
             return []
         }
 
         guard let schema = pricingSchemas.first(where: { $0.id == schemaId }) else {
-            NSLog("[TierSelector] ⚠️ No schema found for product '\(product.name)' with schemaId: \(schemaId)")
-            NSLog("[TierSelector] Available schemas: \(pricingSchemas.map { "\($0.name) (\($0.id))" }.joined(separator: ", "))")
             return []
         }
 
-        NSLog("[TierSelector] ✅ Found \(schema.tiers.count) tiers for product '\(product.name)' in schema '\(schema.name)'")
-        for tier in schema.tiers {
-            NSLog("[TierSelector]    - Tier: id=\(tier.id), label=\(tier.label), qty=\(tier.quantity), unit=\(tier.unit), price=\(tier.defaultPrice)")
-        }
         return schema.tiers
     }
 
@@ -110,9 +99,6 @@ struct TierSelectorSheet: View {
             }
         }
         .frame(width: 340, height: currentTiers.isEmpty ? 180 : min(400, CGFloat(currentTiers.count) * 48 + 120))
-        .onAppear {
-            NSLog("[TierSelector] Sheet opened for product: \(product.name), tiers: \(currentTiers.count)")
-        }
     }
 
     // MARK: - Variant Picker
@@ -186,7 +172,7 @@ struct TierSelectorSheet: View {
 
     private func tierButton(_ tier: PricingTier) -> some View {
         Button {
-            if let variant = selectedVariant {
+            if selectedVariant != nil {
                 // TODO: Handle variant-specific callback
                 onSelectTier(tier)
             } else {

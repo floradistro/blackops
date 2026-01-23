@@ -228,7 +228,6 @@ struct PricingTier: Codable, Hashable {
         } else if let str = try? container.decode(String.self, forKey: .defaultPrice), let decimal = Decimal(string: str) {
             defaultPrice = decimal
         } else {
-            NSLog("[PricingTier] ⚠️ No valid price found for tier '\(label)', defaulting to 0")
             defaultPrice = 0
         }
 

@@ -85,9 +85,8 @@ extension EditorStore {
             // Add postgres change listener with store_id filter
             let changes = channel.postgresChange(
                 AnyAction.self,
-                schema: "public",
                 table: "orders",
-                filter: "store_id=eq.\(storeId.uuidString)"
+                filter: .eq("store_id", value: storeId.uuidString)
             )
 
             // Store reference for cleanup
@@ -96,7 +95,7 @@ extension EditorStore {
             }
 
             // Subscribe (blocking network call)
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
 
             await MainActor.run { [weak self] in
                 guard let self else { return }
@@ -159,9 +158,6 @@ extension EditorStore {
 
         case .delete(let action):
             await handleOrderDelete(action)
-
-        default:
-            break
         }
     }
 
@@ -185,7 +181,7 @@ extension EditorStore {
             // Fetch the complete order with all data
             let completeOrder = try await supabase.fetchOrder(id: basicOrder.id)
 
-            NSLog("[EditorStore] 🆕 New order received: #\(completeOrder.orderNumber ?? "unknown")")
+            NSLog("[EditorStore] 🆕 New order received: #\(completeOrder.orderNumber)")
 
             // Use mutation lock to prevent race conditions
             await withOrderMutationLock {
@@ -222,7 +218,7 @@ extension EditorStore {
             // Fetch the complete order with all data
             let completeOrder = try await supabase.fetchOrder(id: basicOrder.id)
 
-            NSLog("[EditorStore] 🔄 Order updated: #\(completeOrder.orderNumber ?? "unknown")")
+            NSLog("[EditorStore] 🔄 Order updated: #\(completeOrder.orderNumber)")
 
             // Use mutation lock to prevent race conditions
             await withOrderMutationLock {
@@ -244,7 +240,7 @@ extension EditorStore {
     // MARK: - Delete Handler
 
     private func handleOrderDelete(_ action: DeleteAction) async {
-        if let idString = action.oldRecord["id"] as? String,
+        if let idString = action.oldRecord["id"]?.stringValue,
            let id = UUID(uuidString: idString) {
 
             NSLog("[EditorStore] 🗑️ Order deleted: \(idString)")

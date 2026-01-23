@@ -11,7 +11,6 @@ struct ToolbarTabStrip: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Safari-style proportional tabs - each tab gets equal width
             ForEach(store.openTabs) { tab in
                 SafariStyleTab(
                     tab: tab,
@@ -23,7 +22,7 @@ struct ToolbarTabStrip: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .frame(height: 26)
+        .frame(height: 22)
         .animation(DesignSystem.Animation.fast, value: store.openTabs.count)
     }
 
@@ -90,8 +89,8 @@ struct SafariStyleTab: View {
                 }
                 .frame(width: 16, height: 16)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 ZStack {

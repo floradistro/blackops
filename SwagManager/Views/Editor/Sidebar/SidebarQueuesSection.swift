@@ -1,9 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Queues Section
-// Following Apple engineering standards
-// Shows expandable locations with queue entries (customers in line)
-// Clicking a queue entry opens the cart panel
+// Premium monochromatic design
 
 struct SidebarQueuesSection: View {
     @ObservedObject var store: EditorStore
@@ -13,7 +11,7 @@ struct SidebarQueuesSection: View {
         TreeSectionHeader(
             title: "Queues",
             icon: "line.3.horizontal",
-            iconColor: DesignSystem.Colors.green,
+            iconColor: nil,
             isExpanded: $store.sidebarQueuesExpanded,
             count: store.locations.count
         )
@@ -41,14 +39,12 @@ struct SidebarQueuesSection: View {
             if store.locations.isEmpty {
                 HStack {
                     Spacer()
-                    VStack(spacing: DesignSystem.Spacing.xxs) {
-                        Text("No locations")
-                            .font(DesignSystem.Typography.caption1)
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
-                    }
+                    Text("No locations")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                     Spacer()
                 }
-                .padding(.vertical, DesignSystem.Spacing.sm)
+                .padding(.vertical, 8)
             }
         }
     }
@@ -84,23 +80,25 @@ private struct LocationQueueRow: View {
                 onToggleExpanded()
             } label: {
                 HStack(spacing: 6) {
-                    Spacer().frame(width: 10)
+                    Spacer().frame(width: 8)
 
                     // Chevron
                     Image(systemName: "chevron.right")
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .font(.system(size: 9))
-                        .frame(width: 10, alignment: .center)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.4))
+                        .frame(width: 10)
 
                     // Icon
-                    Image(systemName: "person.3.fill")
+                    Image(systemName: "person.3")
                         .font(.system(size: 10))
-                        .foregroundStyle(.blue)
-                        .frame(width: 14, alignment: .center)
+                        .foregroundStyle(Color.primary.opacity(0.5))
+                        .frame(width: 14)
 
                     // Location name
                     Text(location.name)
                         .font(.system(size: 10.5))
+                        .foregroundStyle(Color.primary.opacity(0.85))
                         .lineLimit(1)
 
                     Spacer(minLength: 4)
@@ -109,21 +107,21 @@ private struct LocationQueueRow: View {
                     if queueStore.count > 0 {
                         Text("\(queueStore.count)")
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.primary.opacity(0.5))
                     }
 
                     // Active indicator
                     if location.isActive == true {
                         Circle()
-                            .fill(.green)
-                            .frame(width: 6, height: 6)
+                            .fill(Color.primary.opacity(0.3))
+                            .frame(width: 5, height: 5)
                     }
 
                     // Realtime indicator
                     if queueStore.connectionState == .connected {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.green)
+                        Circle()
+                            .fill(Color.primary.opacity(0.2))
+                            .frame(width: 4, height: 4)
                     }
                 }
                 .frame(height: 24)
@@ -143,10 +141,10 @@ private struct LocationQueueRow: View {
                 // Empty queue state
                 if queueStore.queue.isEmpty {
                     HStack {
-                        Spacer().frame(width: 24 + 14) // Indent
+                        Spacer().frame(width: 38)
                         Text("No customers in queue")
                             .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(Color.primary.opacity(0.35))
                         Spacer()
                     }
                     .frame(height: 24)
@@ -184,30 +182,31 @@ private struct QueueEntryRow: View {
         } label: {
             HStack(spacing: 6) {
                 // Double indent for entry level
-                Spacer().frame(width: 24 + 14)
+                Spacer().frame(width: 38)
 
-                // Status indicator (green if has items, gray if empty)
+                // Status indicator
                 Circle()
-                    .fill(hasItems ? Color.green : Color.gray)
-                    .frame(width: 6, height: 6)
+                    .fill(Color.primary.opacity(hasItems ? 0.4 : 0.15))
+                    .frame(width: 5, height: 5)
 
                 // Customer name
                 Text(customerName)
                     .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.8))
                     .lineLimit(1)
 
-                // Loyalty points badge (compact sidebar version)
-                if let points = entry.customerLoyaltyPoints {
+                // Loyalty points badge (subtle)
+                if let points = entry.customerLoyaltyPoints, points > 0 {
                     HStack(spacing: 2) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 7, weight: .bold))
+                        Image(systemName: "star")
+                            .font(.system(size: 7))
                         Text("\(points)")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 8, weight: .medium))
                     }
-                    .foregroundStyle(points >= 0 ? .yellow : .red)
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(.white.opacity(0.1), in: .capsule)
+                    .background(Color.primary.opacity(0.05), in: .capsule)
                 }
 
                 Spacer(minLength: 4)
@@ -217,19 +216,19 @@ private struct QueueEntryRow: View {
                     HStack(spacing: 4) {
                         Text("\(entry.cartItemCount)")
                             .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.primary.opacity(0.5))
 
                         Text("·")
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(Color.primary.opacity(0.3))
 
                         Text(formatCurrency(entry.cartTotal))
                             .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.primary.opacity(0.5))
                     }
                 } else {
                     Text("Empty")
                         .font(.system(size: 9))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Color.primary.opacity(0.3))
                 }
             }
             .frame(height: 24)
