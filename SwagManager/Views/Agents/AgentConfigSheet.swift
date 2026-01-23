@@ -27,6 +27,10 @@ struct AgentConfigPanel: View {
         agent.name == "New Agent" && agent.createdAt == agent.updatedAt
     }
 
+    private var canSave: Bool {
+        !name.isEmpty && !isSaving
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Inline toolbar
@@ -256,15 +260,15 @@ struct AgentConfigPanel: View {
                             .multilineTextAlignment(.center)
                     }
 
-                    // Status badge
+                    // Status badge - monochromatic
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(isActive ? Color.green : Color.gray)
+                            .fill(Color.primary.opacity(isActive ? 0.6 : 0.3))
                             .frame(width: 6, height: 6)
 
                         Text(isActive ? "Active" : "Inactive")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(isActive ? .green : .secondary)
+                            .foregroundStyle(Color.primary.opacity(isActive ? 0.7 : 0.4))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -300,28 +304,38 @@ struct AgentConfigPanel: View {
                     Button {
                         Task { await saveAgent() }
                     } label: {
-                        HStack {
+                        HStack(spacing: 6) {
                             Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 11))
                             Text(isNewAgent ? "Create Agent" : "Save Changes")
+                                .font(.system(size: 11, weight: .medium))
                         }
+                        .foregroundStyle(Color.primary.opacity(canSave ? 0.8 : 0.3))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
+                        .background(Color.primary.opacity(canSave ? 0.1 : 0.04))
+                        .cornerRadius(6)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(name.isEmpty || isSaving)
+                    .buttonStyle(.plain)
+                    .disabled(!canSave)
 
                     if !isNewAgent {
-                        Button(role: .destructive) {
+                        Button {
                             // Delete agent
                         } label: {
-                            HStack {
+                            HStack(spacing: 6) {
                                 Image(systemName: "trash")
+                                    .font(.system(size: 11))
                                 Text("Delete Agent")
+                                    .font(.system(size: 11, weight: .medium))
                             }
+                            .foregroundStyle(Color.primary.opacity(0.5))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
+                            .background(Color.primary.opacity(0.04))
+                            .cornerRadius(6)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.top, 8)

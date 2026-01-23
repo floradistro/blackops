@@ -1,8 +1,7 @@
 import SwiftUI
 
 // MARK: - Creation Tree Item
-// Extracted from TreeItems.swift following Apple engineering standards
-// File size: ~48 lines (under Apple's 300 line "excellent" threshold)
+// Minimal monochromatic theme
 
 struct CreationTreeItem: View {
     let creation: Creation
@@ -15,34 +14,48 @@ struct CreationTreeItem: View {
         Button {
             onSelect()
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: creation.creationType.icon)
-                    .font(.system(size: 13))
-                    .foregroundStyle(creation.creationType.color)
-                    .frame(width: 16)
+            HStack(spacing: 6) {
+                // Indentation
+                if indentLevel > 0 {
+                    Color.clear.frame(width: CGFloat(indentLevel) * 14)
+                }
 
+                // Icon - monochromatic
+                Image(systemName: creation.creationType.icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                    .frame(width: 14)
+
+                // Name
                 Text(creation.name)
-                    .font(.system(size: 13))
-                    .foregroundStyle(isActive ? .primary : .secondary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.9 : 0.7))
                     .lineLimit(1)
 
                 Spacer(minLength: 4)
 
+                // Status - monochromatic dot
                 if let status = creation.status {
                     Circle()
-                        .fill(status.color)
-                        .frame(width: 6, height: 6)
+                        .fill(Color.primary.opacity(statusOpacity(status)))
+                        .frame(width: 5, height: 5)
                 }
             }
-            .padding(.leading, 16 + CGFloat(indentLevel) * 16)
-            .padding(.trailing, 16)
-            .padding(.vertical, 6)
+            .frame(height: 24)
+            .padding(.horizontal, 12)
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isActive ? Color.primary.opacity(0.08) : Color.clear)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func statusOpacity(_ status: CreationStatus) -> Double {
+        switch status {
+        case .draft: return 0.3
+        case .published: return 0.7
+        }
     }
 }

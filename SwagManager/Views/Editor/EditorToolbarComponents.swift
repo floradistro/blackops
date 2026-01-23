@@ -291,3 +291,23 @@ struct UnifiedToolbarContent: CustomizableToolbarContent {
         isURLFieldFocused = false
     }
 }
+
+// MARK: - POS Settings Button
+
+struct POSSettingsButton: View {
+    let locationId: UUID
+    @ObservedObject var store: EditorStore
+    @State private var showSettings = false
+
+    var body: some View {
+        Button {
+            showSettings.toggle()
+        } label: {
+            Image(systemName: "gearshape.fill")
+        }
+        .help("POS Settings - Register & Printer")
+        .popover(isPresented: $showSettings, arrowEdge: .bottom) {
+            POSSettingsView(store: store, locationId: locationId)
+        }
+    }
+}

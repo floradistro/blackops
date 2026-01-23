@@ -90,6 +90,9 @@ final class LocationQueueStore: ObservableObject {
                     await self?.handleEvent(event)
                 }
             }
+
+        // Polling disabled for now - was causing app freeze
+        // startPolling(interval: 3.0)
     }
 
     private func handleEvent(_ event: RealtimeEvent) async {

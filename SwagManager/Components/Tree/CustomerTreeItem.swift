@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - Customer Tree Item
-// Component for displaying customer in sidebar tree
+// Minimal monochromatic theme
 
 struct CustomerTreeItem: View {
     let customer: Customer
@@ -12,57 +12,63 @@ struct CustomerTreeItem: View {
     let onSelect: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: customer.statusIcon)
-                .font(.system(size: 13))
-                .foregroundColor(Color(customer.statusColor))
-                .frame(width: 16)
+        HStack(spacing: 6) {
+            // Indentation
+            if indentLevel > 0 {
+                Color.clear.frame(width: CGFloat(indentLevel) * 14)
+            }
 
+            // Icon - monochromatic
+            Image(systemName: "person.circle")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 14)
+
+            // Name
             Text(customer.displayName)
-                .font(.system(size: 13))
-                .foregroundColor(isSelected ? .primary : .secondary)
+                .font(.system(size: 10.5))
+                .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.7))
                 .lineLimit(1)
 
             Spacer(minLength: 4)
 
+            // Loyalty tier indicator
             if let tier = customer.loyaltyTier {
                 Text(tier.prefix(1).uppercased())
-                    .font(.system(size: 10))
-                    .foregroundColor(Color(customer.loyaltyTierColor))
-                    .opacity(0.7)
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
             }
 
+            // Total spent
             if let spent = customer.totalSpent, spent > 0 {
                 Text(customer.formattedTotalSpent)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.primary.opacity(0.4))
             }
         }
-        .padding(.leading, 16 + CGFloat(indentLevel) * 16)
-        .padding(.trailing, 16)
-        .padding(.vertical, 6)
+        .frame(height: 24)
+        .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isSelected ? Color.primary.opacity(0.08) : Color.clear)
         )
         .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
         }
         .onDrag {
-            print("🚀 Starting drag for customer: \(customer.displayName) (\(customer.id))")
             let dragString = DragItemType.encode(.customer, uuid: customer.id)
-            print("🔑 Drag data: \(dragString)")
-
             let provider = NSItemProvider(object: dragString as NSString)
-            print("✅ NSItemProvider created successfully")
             return provider
         }
     }
 }
 
 // MARK: - Customer Tree Item with Details
-// Extended version with more information
 
 struct CustomerTreeItemDetailed: View {
     let customer: Customer
@@ -73,8 +79,8 @@ struct CustomerTreeItemDetailed: View {
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                HStack(spacing: DesignSystem.Spacing.sm) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
                     // Avatar or initials
                     if let avatarUrl = customer.avatarUrl {
                         AsyncImage(url: URL(string: avatarUrl)) { image in
@@ -82,108 +88,103 @@ struct CustomerTreeItemDetailed: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                         } placeholder: {
-                            Circle()
-                                .fill(Color(customer.statusColor).opacity(0.2))
-                                .overlay(
-                                    Text(customer.initials)
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor(Color(customer.statusColor))
-                                )
+                            initialsCircle
                         }
                         .frame(width: 24, height: 24)
                         .clipShape(Circle())
                     } else {
-                        Circle()
-                            .fill(Color(customer.statusColor).opacity(0.2))
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                Text(customer.initials)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundColor(Color(customer.statusColor))
-                            )
+                        initialsCircle
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        // Name
                         Text(customer.displayName)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.7))
                             .lineLimit(1)
 
-                        // Contact info
                         if let email = customer.email {
                             Text(email)
-                                .font(.system(size: 10))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.primary.opacity(0.4))
                                 .lineLimit(1)
                         } else if let phone = customer.phone {
                             Text(phone)
-                                .font(.system(size: 10))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.primary.opacity(0.4))
                                 .lineLimit(1)
                         }
                     }
 
                     Spacer()
 
-                    // Status indicators
                     VStack(alignment: .trailing, spacing: 2) {
                         HStack(spacing: 4) {
                             if customer.idVerified == true {
                                 Image(systemName: "checkmark.shield.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.green)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color.primary.opacity(0.5))
                             }
 
                             if customer.loyaltyTier != nil {
                                 Image(systemName: customer.loyaltyTierIcon)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(Color(customer.loyaltyTierColor))
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color.primary.opacity(0.5))
                             }
                         }
 
                         Text(customer.formattedTotalSpent)
                             .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
                     }
                 }
 
                 // Order count
                 if let orderCount = customer.totalOrders, orderCount > 0 {
-                    HStack(spacing: DesignSystem.Spacing.xs) {
+                    HStack(spacing: 4) {
                         Image(systemName: "cart.fill")
-                            .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.primary.opacity(0.35))
 
                         Text("\(orderCount) orders")
                             .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
 
                         if let points = customer.loyaltyPoints, points > 0 {
-                            Text("•")
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                            Text("·")
+                                .foregroundStyle(Color.primary.opacity(0.3))
 
                             Text("\(points) pts")
                                 .font(.system(size: 9))
-                                .foregroundColor(Color(customer.loyaltyTierColor))
+                                .foregroundStyle(Color.primary.opacity(0.5))
                         }
                     }
                     .padding(.leading, 32)
                 }
             }
-            .padding(.leading, CGFloat(indentLevel) * DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
-            .padding(.horizontal, DesignSystem.Spacing.sm)
+            .padding(.leading, CGFloat(indentLevel) * 14)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? DesignSystem.Colors.surfaceSecondary.opacity(0.3) : Color.clear)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.primary.opacity(0.06) : Color.clear)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? DesignSystem.Colors.border : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? Color.primary.opacity(0.08) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
+    }
+
+    private var initialsCircle: some View {
+        Circle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(width: 24, height: 24)
+            .overlay(
+                Text(customer.initials)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.6))
+            )
     }
 }

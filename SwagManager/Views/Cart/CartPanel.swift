@@ -17,9 +17,9 @@ struct CartPanel: View {
     @State private var selectedProduct: Product?
     @State private var showCheckout = false
     @State private var popoverAnchor: CGRect = .zero
-    @State private var selectedRegisterId: UUID? = nil
-    @State private var availableRegisters: [Register] = []
     @State private var inventorySubscription: AnyCancellable? = nil
+    @State private var selectedRegisterId: UUID? = nil
+    @State private var showPOSSettings = false
 
     // Create SessionInfo for payment tracking
     private var sessionInfo: SessionInfo {
@@ -49,6 +49,25 @@ struct CartPanel: View {
                     )
 
                     Spacer(minLength: 0)
+
+                    // POS Settings button
+                    Button {
+                        showPOSSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.7))
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help("POS Settings - Register & Printer")
+                    .popover(isPresented: $showPOSSettings, arrowEdge: .bottom) {
+                        POSSettingsView(store: store, locationId: queueEntry.locationId)
+                    }
                 }
 
                 // Category pills
@@ -96,6 +115,9 @@ struct CartPanel: View {
             }
         }
         .task {
+            // Load saved register selection
+            selectedRegisterId = LabelPrinterSettings.shared.selectedRegisterId
+
             // Connect to EventBus for this location (enables realtime cart updates)
             NSLog("[CartPanel] Connecting to EventBus for location \(queueEntry.locationId)")
             await RealtimeEventBus.shared.connect(to: queueEntry.locationId)
@@ -312,11 +334,17 @@ struct CartPanel: View {
 
     /// Monitor queue for this cart being removed (e.g., if iOS device checks out)
     /// If cart is removed from queue, auto-close this panel
+    /// DISABLED: This was causing carts to close unexpectedly when queue state was stale
     private func monitorQueueForRemoval() async {
+        // Disabled - was causing carts to disappear unexpectedly
+        // The queue state can be stale or empty during loading, which caused false positives
+        // Users can manually close tabs when done
+        return
+
+        /*
         let queueStore = LocationQueueStore.shared(for: queueEntry.locationId)
 
         // Poll queue periodically to detect removal
-        // EventBus triggers queue reloads, so we just need to check if our cart is still there
         while !Task.isCancelled {
             try? await Task.sleep(nanoseconds: 2_000_000_000) // Check every 2 seconds
 
@@ -334,6 +362,7 @@ struct CartPanel: View {
                 break
             }
         }
+        */
     }
 
     private func addToCart(product: Product, quantity: Int, tier: PricingTier?) async {

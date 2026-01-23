@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Creations Section
-// Premium monochromatic design
+// Minimal monochromatic theme
 
 struct SidebarCreationsSection: View {
     @ObservedObject var store: EditorStore
@@ -17,7 +17,7 @@ struct SidebarCreationsSection: View {
             isExpanded: $store.sidebarCreationsExpanded,
             count: store.creations.count
         )
-        .padding(.top, DesignSystem.Spacing.xxs)
+        .padding(.top, 2)
 
         if store.sidebarCreationsExpanded {
             // Collections as folders
@@ -30,7 +30,7 @@ struct SidebarCreationsSection: View {
                     isExpanded: isExpanded,
                     itemCount: collectionCreations.count,
                     onToggle: {
-                        withAnimation(DesignSystem.Animation.fast) {
+                        withAnimation(.easeInOut(duration: 0.15)) {
                             if expandedCollectionIds.contains(collection.id) {
                                 expandedCollectionIds.remove(collection.id)
                             } else {
@@ -89,7 +89,7 @@ struct SidebarCreationsSection: View {
             if store.creations.isEmpty {
                 HStack {
                     Spacer()
-                    VStack(spacing: DesignSystem.Spacing.xxs) {
+                    VStack(spacing: 4) {
                         Text("No creations yet")
                             .font(.system(size: 10))
                             .foregroundStyle(Color.primary.opacity(0.4))

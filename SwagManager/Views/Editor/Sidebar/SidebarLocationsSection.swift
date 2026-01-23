@@ -22,24 +22,30 @@ struct SidebarLocationsSection: View {
             isLoading: store.isLoadingOrders || store.isLoadingLocations,
             realtimeConnected: store.ordersRealtimeConnected
         )
-        .padding(.top, DesignSystem.TreeSpacing.sectionPaddingTop)
+        .padding(.top, 2)
 
         if store.sidebarLocationsExpanded {
-            VStack(spacing: 0) {
+            LazyVStack(spacing: 0) {
                 // Locations
                 ForEach(store.locations) { location in
                     locationSection(location)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .top)),
+                            removal: .opacity
+                        ))
                 }
 
                 // Orders without location
                 if !ordersWithoutLocation.isEmpty {
                     noLocationSection()
+                        .transition(.opacity)
                 }
             }
 
             // Empty state
             if store.locations.isEmpty && store.orders.isEmpty {
                 emptyState
+                    .transition(.opacity)
             }
         }
     }
@@ -47,7 +53,7 @@ struct SidebarLocationsSection: View {
     // MARK: - Computed Properties
 
     private var ordersWithoutLocation: [Order] {
-        store.orders.filter { $0.locationId == nil && $0.pickupLocationId == nil }
+        store.orders.filter { $0.locationId == nil && $0.deliveryLocationId == nil }
     }
 
     // MARK: - Location Section
@@ -179,10 +185,10 @@ struct SidebarLocationsSection: View {
         .padding(.vertical, 12)
     }
 
-    // MARK: - Toggle Functions
+    // MARK: - Toggle Functions (Smooth Spring Animations)
 
     private func toggleLocation(_ id: UUID) {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(TreeAnimations.smoothSpring) {
             if expandedLocationIds.contains(id) {
                 expandedLocationIds.remove(id)
             } else {
@@ -192,7 +198,7 @@ struct SidebarLocationsSection: View {
     }
 
     private func toggleMonth(_ locationId: UUID, _ monthKey: String) {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(TreeAnimations.quickSpring) {
             let key = "\(locationId)-\(monthKey)"
             if expandedMonths.contains(key) {
                 expandedMonths.remove(key)
@@ -203,7 +209,7 @@ struct SidebarLocationsSection: View {
     }
 
     private func toggleDay(_ locationId: UUID, _ monthKey: String, _ dayKey: String) {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(TreeAnimations.quickSpring) {
             let key = "\(locationId)-\(monthKey)-\(dayKey)"
             if expandedDays.contains(key) {
                 expandedDays.remove(key)
@@ -283,7 +289,7 @@ struct SidebarLocationsSection: View {
     }
 }
 
-// MARK: - Tree Row Button (Monochromatic)
+// MARK: - Tree Row Button (Optimized with hover/press states)
 
 private struct TreeRowButton: View {
     let isExpanded: Bool
@@ -294,6 +300,9 @@ private struct TreeRowButton: View {
     let indentLevel: Int
     let action: () -> Void
 
+    @State private var isHovered = false
+    @State private var isPressed = false
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
@@ -302,12 +311,13 @@ private struct TreeRowButton: View {
                     Color.clear.frame(width: CGFloat(indentLevel) * 14)
                 }
 
-                // Chevron
+                // Chevron with spring animation
                 Image(systemName: "chevron.right")
                     .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .foregroundStyle(Color.primary.opacity(isHovered ? 0.6 : 0.4))
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .frame(width: 10)
+                    .animation(TreeAnimations.chevron, value: isExpanded)
 
                 // Icon
                 if let icon = icon {
@@ -320,22 +330,23 @@ private struct TreeRowButton: View {
                 // Title
                 Text(title)
                     .font(.system(size: indentLevel == 0 ? 11 : 10.5, weight: indentLevel == 0 ? .medium : .regular))
-                    .foregroundStyle(Color.primary.opacity(indentLevel == 0 ? 0.85 : 0.75))
+                    .foregroundStyle(Color.primary.opacity(isHovered ? 0.95 : (indentLevel == 0 ? 0.85 : 0.75)))
                     .lineLimit(1)
 
                 Spacer(minLength: 4)
 
-                // Active badge
+                // Active badge with pulse
                 if showActiveBadge {
                     Circle()
                         .fill(Color.primary.opacity(0.3))
                         .frame(width: 5, height: 5)
+                        .modifier(PulseModifier())
                 }
 
                 // Count
                 if count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 9, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.primary.opacity(0.45))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -345,8 +356,35 @@ private struct TreeRowButton: View {
             }
             .frame(height: 24)
             .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.primary.opacity(
+                        isPressed ? 0.08 :
+                        isHovered ? 0.04 : 0
+                    ))
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) {
+                isHovered = hovering
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.easeOut(duration: 0.08)) {
+                        isPressed = true
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                        isPressed = false
+                    }
+                }
+        )
+        .animation(.easeOut(duration: 0.12), value: isHovered)
     }
 }

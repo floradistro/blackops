@@ -1,9 +1,7 @@
 import SwiftUI
 
 // MARK: - Collection Tree Components
-// Extracted from TreeItems.swift following Apple engineering standards
-// Contains: CollectionTreeItem, CollectionListItem
-// File size: ~71 lines (under Apple's 300 line "excellent" threshold)
+// Minimal monochromatic theme
 
 // MARK: - Collection Tree Item
 
@@ -15,36 +13,40 @@ struct CollectionTreeItem: View {
 
     var body: some View {
         Button {
-            withAnimation(DesignSystem.Animation.spring) { onToggle() }
+            withAnimation(.easeInOut(duration: 0.15)) { onToggle() }
         } label: {
-            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+            HStack(spacing: 6) {
+                // Chevron
                 Image(systemName: "chevron.right")
-                    .font(.system(size: DesignSystem.TreeSpacing.chevronSize, weight: .bold))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .animation(DesignSystem.Animation.fast, value: isExpanded)
+                    .animation(.easeInOut(duration: 0.15), value: isExpanded)
                     .frame(width: 10)
 
+                // Icon
                 Image(systemName: "folder.fill")
-                    .font(.system(size: DesignSystem.TreeSpacing.iconSize))
-                    .foregroundStyle(DesignSystem.Colors.warning)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.5))
                     .frame(width: 14)
 
+                // Name
                 Text(collection.name)
-                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.primary.opacity(0.75))
                     .lineLimit(1)
 
-                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
+                Spacer(minLength: 4)
 
+                // Count
                 if itemCount > 0 {
                     Text("\(itemCount)")
-                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                        .foregroundStyle(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.primary.opacity(0.35))
                 }
             }
-            .frame(height: DesignSystem.TreeSpacing.itemHeight)
-            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
+            .frame(height: 24)
+            .padding(.horizontal, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
@@ -57,27 +59,26 @@ struct CollectionListItem: View {
     let collection: CreationCollection
 
     var body: some View {
-        HStack(spacing: DesignSystem.Spacing.xs) {
+        HStack(spacing: 6) {
             Image(systemName: "folder.fill")
-                .font(DesignSystem.Typography.caption2)
-                .foregroundStyle(.orange)
-                .frame(width: 16)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 14)
 
             Text(collection.name)
-                .font(DesignSystem.Typography.caption2)
-                .foregroundStyle(.primary)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.75))
                 .lineLimit(1)
 
             Spacer()
 
             if collection.isPublic == true {
                 Image(systemName: "globe")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 8))
+                    .foregroundStyle(Color.primary.opacity(0.35))
             }
         }
-        .padding(.horizontal, DesignSystem.Spacing.sm)
-        .padding(.vertical, DesignSystem.Spacing.xxs)
-        .cornerRadius(DesignSystem.Radius.sm)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
     }
 }

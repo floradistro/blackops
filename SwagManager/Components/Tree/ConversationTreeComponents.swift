@@ -1,9 +1,7 @@
 import SwiftUI
 
 // MARK: - Conversation Tree Components
-// Extracted from TreeItems.swift following Apple engineering standards
-// Contains: ConversationRow, ChatSectionLabel
-// File size: ~51 lines (under Apple's 300 line "excellent" threshold)
+// Minimal monochromatic theme
 
 // MARK: - Conversation Row
 
@@ -14,32 +12,35 @@ struct ConversationRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
+            HStack(spacing: 6) {
+                // Hash icon
                 Text("#")
-                    .font(.system(size: DesignSystem.TreeSpacing.iconSize, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.4))
                     .frame(width: 14)
 
+                // Title
                 Text(conversation.displayTitle)
-                    .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
-                    .foregroundStyle(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.7))
                     .lineLimit(1)
 
-                Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
+                Spacer(minLength: 4)
 
+                // Message count
                 if let count = conversation.messageCount, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                        .foregroundStyle(.tertiary)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.primary.opacity(0.35))
                 }
             }
-            .frame(height: DesignSystem.TreeSpacing.itemHeight)
-            .padding(.horizontal, DesignSystem.TreeSpacing.itemPaddingHorizontal)
+            .frame(height: 24)
+            .padding(.horizontal, 12)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
-                    .fill(isSelected ? DesignSystem.Colors.selectionActive : Color.clear)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.primary.opacity(0.08) : Color.clear)
             )
-            .animation(DesignSystem.Animation.fast, value: isSelected)
+            .animation(.easeInOut(duration: 0.15), value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(TreeItemButtonStyle())
@@ -53,11 +54,11 @@ struct ChatSectionLabel: View {
 
     var body: some View {
         Text(title.uppercased())
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(DesignSystem.Colors.textTertiary)
+            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+            .foregroundStyle(Color.primary.opacity(0.35))
             .tracking(0.5)
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.top, DesignSystem.Spacing.xs)
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
             .padding(.bottom, 3)
     }
 }

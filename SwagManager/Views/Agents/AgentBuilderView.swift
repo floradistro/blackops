@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - Agent Builder View
-// Apple-native three-pane agent builder with drag-and-drop
+// Minimal, monochromatic theme
 
 struct AgentBuilderView: View {
     @ObservedObject var editorStore: EditorStore
@@ -93,7 +93,7 @@ struct AgentBuilderView: View {
 
     private var canvasPane: some View {
         ScrollView {
-            VStack(spacing: DesignSystem.Spacing.lg) {
+            VStack(spacing: 24) {
                 if let agent = builderStore.currentAgent {
                     // System Prompt Section
                     systemPromptSection(agent: agent)
@@ -108,177 +108,213 @@ struct AgentBuilderView: View {
                     testPromptSection(agent: agent)
 
                 } else {
-                    // Loading state while agent is being created
-                    VStack(spacing: DesignSystem.Spacing.md) {
-                        ProgressView()
-                            .scaleEffect(1.2)
+                    // Loading state
+                    VStack(spacing: 12) {
+                        Text("···")
+                            .font(.system(size: 14, design: .monospaced))
+                            .foregroundStyle(Color.primary.opacity(0.3))
                         Text("Setting up agent...")
-                            .font(DesignSystem.Typography.body)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.primary.opacity(0.5))
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .padding(DesignSystem.Spacing.lg)
+            .padding(24)
         }
-        .background(VisualEffectBackground(material: .underWindowBackground))
     }
 
     private func systemPromptSection(agent: AgentConfiguration) -> some View {
-        GlassSection(
-            title: "System Prompt",
-            subtitle: "Define the agent's personality and behavior",
-            icon: "text.bubble.fill"
-        ) {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "text.bubble")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("System Prompt")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.8))
+                    Text("Define the agent's personality and behavior")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
+                }
+                Spacer()
+            }
+
+            // Editor
             TextEditor(text: Binding(
                 get: { agent.systemPrompt },
                 set: { builderStore.updateSystemPrompt($0) }
             ))
-            .font(.system(.body, design: .monospaced))
+            .font(.system(size: 12, design: .monospaced))
             .frame(minHeight: 120)
             .scrollContentBackground(.hidden)
-            .background(Color.clear)
+            .padding(12)
+            .background(Color.primary.opacity(0.03))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            )
         }
+        .padding(16)
+        .background(Color.primary.opacity(0.02))
+        .cornerRadius(12)
     }
 
     private func toolsPipelineSection(agent: AgentConfiguration) -> some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+        VStack(alignment: .leading, spacing: 12) {
             // Header
-            HStack(spacing: DesignSystem.Spacing.sm) {
+            HStack(spacing: 8) {
                 Image(systemName: "arrow.triangle.branch")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-
-                VStack(alignment: .leading, spacing: 4) {
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Tool Pipeline")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.8))
                     Text("Drag MCP Servers here")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
-
                 Spacer()
             }
 
             // Drop Zone
-            DropZone(
+            MinimalDropZone(
                 isActive: agent.enabledTools.isEmpty,
                 emptyIcon: "plus.circle.dashed",
                 emptyTitle: "Drop MCP Servers Here"
             ) {
                 if !agent.enabledTools.isEmpty {
                     LazyVGrid(
-                        columns: [
-                            GridItem(.adaptive(minimum: 140, maximum: 180), spacing: DesignSystem.Spacing.md)
-                        ],
-                        spacing: DesignSystem.Spacing.md
+                        columns: [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 12)],
+                        spacing: 12
                     ) {
                         ForEach(agent.enabledTools) { toolRef in
                             if let tool = builderStore.getTool(toolRef.name) {
-                                ToolCard(tool: tool) {
+                                MinimalToolCard(tool: tool) {
                                     builderStore.removeTool(toolRef.name)
                                 }
                             }
                         }
                     }
-                    .padding(DesignSystem.Spacing.md)
+                    .padding(12)
                 }
             }
             .onDrop(of: [.utf8PlainText], isTargeted: .constant(false)) { providers in
-                print("🎯 Tool drop zone activated")
-                let result = handleToolDrop(providers)
-                print("🔄 Tool drop handler returned: \(result)")
-                return result
+                handleToolDrop(providers)
             }
         }
-        .padding(DesignSystem.Spacing.lg)
-        .background(VisualEffectBackground(material: .sidebar))
+        .padding(16)
+        .background(Color.primary.opacity(0.02))
         .cornerRadius(12)
     }
 
     private func contextDataSection(agent: AgentConfiguration) -> some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+        VStack(alignment: .leading, spacing: 12) {
             // Header
-            HStack(spacing: DesignSystem.Spacing.sm) {
-                Image(systemName: "cylinder.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "cylinder")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Context Data")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.8))
                     Text("Drag products, locations, or customers here")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
-
                 Spacer()
             }
 
             // Drop Zone
-            DropZone(
+            MinimalDropZone(
                 isActive: agent.contextData.isEmpty,
                 emptyIcon: "square.dashed",
                 emptyTitle: "Drop Context Items Here"
             ) {
                 if !agent.contextData.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                    VStack(alignment: .leading, spacing: 8) {
                         ForEach(agent.contextData) { context in
-                            ContextDataCard(context: context) {
+                            MinimalContextCard(context: context) {
                                 builderStore.removeContext(context.id)
                             }
                         }
                     }
-                    .padding(DesignSystem.Spacing.md)
+                    .padding(12)
                 }
             }
             .onDrop(of: [.utf8PlainText], isTargeted: .constant(false)) { providers in
-                print("🎯 Context drop zone activated")
-                let result = handleContextDrop(providers)
-                print("🔄 Context drop handler returned: \(result)")
-                return result
+                handleContextDrop(providers)
             }
         }
-        .padding(DesignSystem.Spacing.lg)
-        .background(VisualEffectBackground(material: .sidebar))
+        .padding(16)
+        .background(Color.primary.opacity(0.02))
         .cornerRadius(12)
     }
 
     private func testPromptSection(agent: AgentConfiguration) -> some View {
-        GlassSection(
-            title: "Test Prompt",
-            subtitle: "Try your agent with a sample prompt",
-            icon: "play.circle.fill"
-        ) {
-            VStack(spacing: DesignSystem.Spacing.md) {
-                TextEditor(text: Binding(
-                    get: { builderStore.testPrompt },
-                    set: { builderStore.testPrompt = $0 }
-                ))
-                    .font(.system(.body, design: .monospaced))
-                    .frame(height: 80)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-
-                HStack {
-                    Spacer()
-
-                    Button {
-                        Task {
-                            await builderStore.runTest()
-                        }
-                    } label: {
-                        Label("Run Test", systemImage: "play.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(builderStore.testPrompt.isEmpty || builderStore.isRunningTest)
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "play.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Test Prompt")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.8))
+                    Text("Try your agent with a sample prompt")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
+                Spacer()
+            }
+
+            // Editor
+            TextEditor(text: Binding(
+                get: { builderStore.testPrompt },
+                set: { builderStore.testPrompt = $0 }
+            ))
+            .font(.system(size: 12, design: .monospaced))
+            .frame(height: 80)
+            .scrollContentBackground(.hidden)
+            .padding(12)
+            .background(Color.primary.opacity(0.03))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            )
+
+            // Run button
+            HStack {
+                Spacer()
+                Button {
+                    Task { await builderStore.runTest() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10))
+                        Text("Run Test")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(Color.primary.opacity(builderStore.testPrompt.isEmpty ? 0.3 : 0.8))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.primary.opacity(builderStore.testPrompt.isEmpty ? 0.03 : 0.08))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .disabled(builderStore.testPrompt.isEmpty || builderStore.isRunningTest)
             }
         }
+        .padding(16)
+        .background(Color.primary.opacity(0.02))
+        .cornerRadius(12)
     }
 
 
@@ -287,15 +323,26 @@ struct AgentBuilderView: View {
     private var inspectorPane: some View {
         VStack(spacing: 0) {
             // Inspector Header
-            HStack {
+            HStack(spacing: 8) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+
                 Text("Inspector")
-                    .font(DesignSystem.Typography.headline)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.7))
+
                 Spacer()
             }
-            .padding(DesignSystem.Spacing.md)
-            .background(VisualEffectBackground(material: .sidebar))
-
-            Divider()
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.02))
+            .overlay(
+                Rectangle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(height: 1),
+                alignment: .bottom
+            )
 
             // Inspector Content
             ScrollView {
@@ -306,31 +353,33 @@ struct AgentBuilderView: View {
                 }
             }
         }
-        .background(VisualEffectBackground(material: .sidebar))
+        .background(Color.primary.opacity(0.02))
     }
 
     private func inspectorContent(agent: AgentConfiguration) -> some View {
-        VStack(spacing: DesignSystem.Spacing.lg) {
+        VStack(spacing: 20) {
             // Basic Info
-            InspectorSection(title: "Basic Info") {
-                VStack(spacing: DesignSystem.Spacing.md) {
-                    InspectorField(label: "Name") {
+            MinimalInspectorSection(title: "Basic Info") {
+                VStack(spacing: 12) {
+                    MinimalInspectorField(label: "Name") {
                         TextField("Agent name", text: Binding(
                             get: { agent.name },
                             set: { builderStore.updateName($0) }
                         ))
                         .textFieldStyle(.plain)
+                        .font(.system(size: 12))
                     }
 
-                    InspectorField(label: "Description") {
+                    MinimalInspectorField(label: "Description") {
                         TextField("Brief description", text: Binding(
                             get: { agent.description ?? "" },
                             set: { builderStore.updateDescription($0) }
                         ))
                         .textFieldStyle(.plain)
+                        .font(.system(size: 12))
                     }
 
-                    InspectorField(label: "Category") {
+                    MinimalInspectorField(label: "Category") {
                         Picker("", selection: Binding(
                             get: { agent.category ?? "general" },
                             set: { builderStore.updateCategory($0) }
@@ -341,6 +390,7 @@ struct AgentBuilderView: View {
                             Text("Operations").tag("operations")
                         }
                         .pickerStyle(.menu)
+                        .font(.system(size: 12))
                     }
                 }
             }
@@ -348,9 +398,9 @@ struct AgentBuilderView: View {
             Divider()
 
             // Model Configuration
-            InspectorSection(title: "Model") {
-                VStack(spacing: DesignSystem.Spacing.md) {
-                    InspectorField(label: "Model") {
+            MinimalInspectorSection(title: "Model") {
+                VStack(spacing: 12) {
+                    MinimalInspectorField(label: "Model") {
                         Picker("", selection: Binding(
                             get: { agent.model ?? "claude-sonnet-4" },
                             set: { builderStore.updateModel($0) }
@@ -361,9 +411,10 @@ struct AgentBuilderView: View {
                             Text("Claude Sonnet 3.5").tag("claude-sonnet-3.5")
                         }
                         .pickerStyle(.menu)
+                        .font(.system(size: 12))
                     }
 
-                    InspectorField(label: "Temperature") {
+                    MinimalInspectorField(label: "Temperature") {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Slider(
@@ -373,21 +424,19 @@ struct AgentBuilderView: View {
                                     ),
                                     in: 0...1
                                 )
-
                                 Text(String(format: "%.2f", agent.temperature ?? 0.7))
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 35, alignment: .trailing)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(Color.primary.opacity(0.5))
+                                    .frame(width: 32, alignment: .trailing)
                             }
-
                             HStack {
                                 Text("Precise")
-                                    .font(DesignSystem.Typography.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color.primary.opacity(0.3))
                                 Spacer()
                                 Text("Creative")
-                                    .font(DesignSystem.Typography.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Color.primary.opacity(0.3))
                             }
                         }
                     }
@@ -397,9 +446,9 @@ struct AgentBuilderView: View {
             Divider()
 
             // Behavior Settings
-            InspectorSection(title: "Behavior") {
-                VStack(spacing: DesignSystem.Spacing.md) {
-                    InspectorField(label: "Tone") {
+            MinimalInspectorSection(title: "Behavior") {
+                VStack(spacing: 12) {
+                    MinimalInspectorField(label: "Tone") {
                         Picker("", selection: Binding(
                             get: { agent.personality?.tone ?? "professional" },
                             set: { builderStore.updateTone($0) }
@@ -410,31 +459,10 @@ struct AgentBuilderView: View {
                             Text("Casual").tag("casual")
                         }
                         .pickerStyle(.segmented)
+                        .font(.system(size: 11))
                     }
 
-                    InspectorField(label: "Creativity") {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Slider(
-                                value: Binding(
-                                    get: { Double(agent.personality?.creativity ?? 0.7) },
-                                    set: { builderStore.updateCreativity($0) }
-                                ),
-                                in: 0...1
-                            )
-
-                            HStack {
-                                Text("Conservative")
-                                    .font(DesignSystem.Typography.caption2)
-                                    .foregroundStyle(.tertiary)
-                                Spacer()
-                                Text("Creative")
-                                    .font(DesignSystem.Typography.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-
-                    InspectorField(label: "Verbosity") {
+                    MinimalInspectorField(label: "Verbosity") {
                         Picker("", selection: Binding(
                             get: { agent.personality?.verbosity ?? "moderate" },
                             set: { builderStore.updateVerbosity($0) }
@@ -444,6 +472,7 @@ struct AgentBuilderView: View {
                             Text("Detailed").tag("detailed")
                         }
                         .pickerStyle(.segmented)
+                        .font(.system(size: 11))
                     }
                 }
             }
@@ -451,196 +480,112 @@ struct AgentBuilderView: View {
             Divider()
 
             // Capabilities
-            InspectorSection(title: "Capabilities") {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+            MinimalInspectorSection(title: "Capabilities") {
+                VStack(alignment: .leading, spacing: 8) {
                     Toggle("Can Query Data", isOn: Binding(
                         get: { agent.capabilities.canQuery },
                         set: { builderStore.updateCanQuery($0) }
                     ))
+                    .font(.system(size: 12))
 
                     Toggle("Can Send Messages", isOn: Binding(
                         get: { agent.capabilities.canSend },
                         set: { builderStore.updateCanSend($0) }
                     ))
+                    .font(.system(size: 12))
 
                     Toggle("Can Modify Data", isOn: Binding(
                         get: { agent.capabilities.canModify },
                         set: { builderStore.updateCanModify($0) }
                     ))
-                }
-                .font(DesignSystem.Typography.body)
-            }
-
-            Divider()
-
-            // Limits
-            InspectorSection(title: "Limits") {
-                VStack(spacing: DesignSystem.Spacing.md) {
-                    InspectorField(label: "Max Tokens") {
-                        TextField("4096", value: Binding(
-                            get: { agent.maxTokensPerResponse ?? 4096 },
-                            set: { builderStore.updateMaxTokens($0) }
-                        ), format: .number)
-                        .textFieldStyle(.plain)
-                    }
-
-                    InspectorField(label: "Max Turns") {
-                        TextField("50", value: Binding(
-                            get: { agent.maxTurnsPerConversation ?? 50 },
-                            set: { builderStore.updateMaxTurns($0) }
-                        ), format: .number)
-                        .textFieldStyle(.plain)
-                    }
+                    .font(.system(size: 12))
                 }
             }
 
             Divider()
 
             // Statistics
-            InspectorSection(title: "Statistics") {
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
-                    StatRow(label: "Tools", value: "\(agent.enabledTools.count)")
-                    StatRow(label: "Context Items", value: "\(agent.contextData.count)")
-                    StatRow(label: "Prompt Length", value: "\(agent.systemPrompt.count) chars")
+            MinimalInspectorSection(title: "Statistics") {
+                VStack(alignment: .leading, spacing: 6) {
+                    MinimalStatRow(label: "Tools", value: "\(agent.enabledTools.count)")
+                    MinimalStatRow(label: "Context Items", value: "\(agent.contextData.count)")
+                    MinimalStatRow(label: "Prompt Length", value: "\(agent.systemPrompt.count) chars")
                 }
             }
         }
-        .padding(DesignSystem.Spacing.md)
+        .padding(16)
     }
 
     private var emptyInspectorState: some View {
-        VStack(spacing: DesignSystem.Spacing.md) {
+        VStack(spacing: 12) {
             Image(systemName: "info.circle")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 32))
+                .foregroundStyle(Color.primary.opacity(0.2))
 
             Text("No Selection")
-                .font(DesignSystem.Typography.headline)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.5))
 
             Text("Select an agent to view its properties")
-                .font(DesignSystem.Typography.caption1)
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.3))
                 .multilineTextAlignment(.center)
         }
-        .padding(DesignSystem.Spacing.xl)
+        .padding(40)
     }
 
     // MARK: - Drop Handlers
 
     private func handleToolDrop(_ providers: [NSItemProvider]) -> Bool {
-        print("🎯 Tool drop detected - checking providers: \(providers.count)")
-
-        guard let provider = providers.first else {
-            print("❌ No provider found")
-            return false
-        }
+        guard let provider = providers.first else { return false }
 
         provider.loadItem(forTypeIdentifier: UTType.utf8PlainText.identifier, options: nil) { data, error in
-            if let error = error {
-                print("❌ Error loading text data: \(error)")
-                return
-            }
-
             guard let data = data as? Data,
-                  let dragString = String(data: data, encoding: .utf8) else {
-                print("❌ Failed to decode text data")
-                return
-            }
-
-            print("📦 Received drag string: \(dragString)")
-
-            guard let decoded = DragItemType.decode(dragString),
-                  decoded.type == .mcpServer else {
-                print("❌ Not an MCP server drag item")
-                return
-            }
-
-            print("🔍 Looking for server with UUID: \(decoded.uuid)")
+                  let dragString = String(data: data, encoding: .utf8),
+                  let decoded = DragItemType.decode(dragString),
+                  decoded.type == .mcpServer else { return }
 
             DispatchQueue.main.async {
-                guard let server = self.editorStore.mcpServers.first(where: { $0.id == decoded.uuid }) else {
-                    print("❌ Server not found in store")
-                    return
-                }
-
-                print("✅ Found server: \(server.name)")
+                guard let server = self.editorStore.mcpServers.first(where: { $0.id == decoded.uuid }) else { return }
                 self.builderStore.addTool(server)
-                print("✅ Tool added to builder")
             }
         }
-
         return true
     }
 
     private func handleContextDrop(_ providers: [NSItemProvider]) -> Bool {
-        print("🎯 Context drop detected - checking providers: \(providers.count)")
-
-        guard let provider = providers.first else {
-            print("❌ No provider found")
-            return false
-        }
+        guard let provider = providers.first else { return false }
 
         provider.loadItem(forTypeIdentifier: UTType.utf8PlainText.identifier, options: nil) { data, error in
-            if let error = error {
-                print("❌ Error loading text data: \(error)")
-                return
-            }
-
             guard let data = data as? Data,
-                  let dragString = String(data: data, encoding: .utf8) else {
-                print("❌ Failed to decode text data")
-                return
-            }
-
-            print("📦 Received drag string: \(dragString)")
-
-            guard let decoded = DragItemType.decode(dragString) else {
-                print("❌ Failed to decode drag item")
-                return
-            }
-
-            print("✅ Decoded type: \(decoded.type), UUID: \(decoded.uuid)")
+                  let dragString = String(data: data, encoding: .utf8),
+                  let decoded = DragItemType.decode(dragString) else { return }
 
             DispatchQueue.main.async {
                 switch decoded.type {
                 case .product:
-                    print("➕ Adding products context")
                     self.builderStore.addContext(.products)
-                    print("✅ Products context added")
-
                 case .customer:
-                    print("➕ Adding customers context")
                     self.builderStore.addContext(.customers)
-                    print("✅ Customers context added")
-
                 case .location:
-                    guard let location = self.editorStore.locations.first(where: { $0.id == decoded.uuid }) else {
-                        print("❌ Location not found in store")
-                        return
-                    }
-                    print("✅ Found location: \(location.name)")
+                    guard let location = self.editorStore.locations.first(where: { $0.id == decoded.uuid }) else { return }
                     self.builderStore.addContext(.location(StoreLocation(
                         id: location.id,
                         name: location.name,
                         address: location.address
                     )))
-                    print("✅ Location context added")
-
                 case .mcpServer:
-                    print("⚠️ MCP server dropped in context area (should be in tool area)")
+                    break
                 }
             }
         }
-
         return true
     }
-
 }
 
 // MARK: - Supporting Views
 
-struct DropZone<Content: View>: View {
+private struct MinimalDropZone<Content: View>: View {
     let isActive: Bool
     let emptyIcon: String
     let emptyTitle: String
@@ -649,28 +594,27 @@ struct DropZone<Content: View>: View {
 
     var body: some View {
         ZStack {
-            // Empty state
             if isActive {
-                VStack(spacing: DesignSystem.Spacing.lg) {
+                VStack(spacing: 16) {
                     Image(systemName: emptyIcon)
-                        .font(.system(size: 48))
-                        .foregroundStyle(isTargeted ? .primary : .tertiary)
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.primary.opacity(isTargeted ? 0.5 : 0.2))
 
                     Text(emptyTitle)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(isTargeted ? .primary : .secondary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(isTargeted ? 0.7 : 0.4))
                 }
-                .frame(maxWidth: .infinity, minHeight: 200)
+                .frame(maxWidth: .infinity, minHeight: 160)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 8)
                         .strokeBorder(
-                            style: StrokeStyle(lineWidth: 2, dash: [8, 4])
+                            style: StrokeStyle(lineWidth: 1, dash: [6, 3])
                         )
-                        .foregroundStyle(isTargeted ? .blue : Color.gray.opacity(0.3))
+                        .foregroundStyle(Color.primary.opacity(isTargeted ? 0.3 : 0.1))
                 )
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isTargeted ? Color.blue.opacity(0.05) : Color.clear)
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.primary.opacity(isTargeted ? 0.03 : 0))
                 )
             } else {
                 content()
@@ -681,17 +625,174 @@ struct DropZone<Content: View>: View {
     }
 }
 
+private struct MinimalToolCard: View {
+    let tool: MCPServer
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "server.rack")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.primary.opacity(0.5))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tool.name)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.8))
+                    .lineLimit(1)
+                Text(tool.category)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+            }
+
+            Spacer()
+
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.3))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(6)
+    }
+}
+
+private struct MinimalContextCard: View {
+    let context: AgentContextData
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: iconForType(context.type))
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.5))
+
+            Text(context.title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.8))
+
+            Spacer()
+
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.3))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(6)
+    }
+
+    private func iconForType(_ type: String) -> String {
+        switch type {
+        case "products": return "leaf"
+        case "customers": return "person.2"
+        case "location": return "mappin"
+        default: return "cylinder"
+        }
+    }
+}
+
+private struct MinimalInspectorSection<Content: View>: View {
+    let title: String
+    let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.4))
+                .textCase(.uppercase)
+
+            content()
+        }
+    }
+}
+
+private struct MinimalInspectorField<Content: View>: View {
+    let label: String
+    let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
+
+            content()
+                .padding(8)
+                .background(Color.primary.opacity(0.03))
+                .cornerRadius(4)
+        }
+    }
+}
+
+private struct MinimalStatRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.5))
+            Spacer()
+            Text(value)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.7))
+        }
+    }
+}
+
+// MARK: - Legacy Support
+
+struct DropZone<Content: View>: View {
+    let isActive: Bool
+    let emptyIcon: String
+    let emptyTitle: String
+    @ViewBuilder let content: () -> Content
+    @State private var isTargeted = false
+
+    var body: some View {
+        ZStack {
+            if isActive {
+                VStack(spacing: 16) {
+                    Image(systemName: emptyIcon)
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.primary.opacity(isTargeted ? 0.5 : 0.2))
+                    Text(emptyTitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(isTargeted ? 0.7 : 0.4))
+                }
+                .frame(maxWidth: .infinity, minHeight: 160)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [6, 3]))
+                        .foregroundStyle(Color.primary.opacity(isTargeted ? 0.3 : 0.1))
+                )
+            } else {
+                content()
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
 struct InspectorSection<Content: View>: View {
     let title: String
     let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.4))
                 .textCase(.uppercase)
-
             content()
         }
     }
@@ -702,15 +803,14 @@ struct InspectorField<Content: View>: View {
     let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(DesignSystem.Typography.caption1)
-                .foregroundStyle(.secondary)
-
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
             content()
-                .padding(DesignSystem.Spacing.sm)
-                .background(DesignSystem.Colors.surfaceTertiary)
-                .cornerRadius(DesignSystem.Radius.sm)
+                .padding(8)
+                .background(Color.primary.opacity(0.03))
+                .cornerRadius(4)
         }
     }
 }
@@ -722,13 +822,12 @@ struct StatRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(DesignSystem.Typography.caption1)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.5))
             Spacer()
             Text(value)
-                .font(DesignSystem.Typography.caption1)
-                .foregroundStyle(.primary)
-                .fontWeight(.medium)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.7))
         }
     }
 }

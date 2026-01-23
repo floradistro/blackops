@@ -2,8 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // MARK: - Product Tree Item
-// Extracted from TreeItems.swift following Apple engineering standards
-// File size: ~47 lines (under Apple's 300 line "excellent" threshold)
+// Minimal monochromatic theme
 
 struct ProductTreeItem: View {
     let product: Product
@@ -18,46 +17,61 @@ struct ProductTreeItem: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "leaf.fill")
-                .font(.system(size: 13))
-                .foregroundStyle(DesignSystem.Colors.success)
-                .frame(width: 16)
+        HStack(spacing: 6) {
+            // Indentation
+            if indentLevel > 0 {
+                Color.clear.frame(width: CGFloat(indentLevel) * 14)
+            }
 
+            // Icon - monochromatic
+            Image(systemName: "leaf.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 14)
+
+            // Name
             Text(product.name)
-                .font(.system(size: 13))
-                .foregroundStyle(isActive ? .primary : .secondary)
+                .font(.system(size: 10.5))
+                .foregroundStyle(Color.primary.opacity(isActive ? 0.9 : 0.7))
                 .lineLimit(1)
 
             Spacer(minLength: 4)
 
+            // Price
             Text(product.displayPrice)
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.4))
 
+            // Stock status - monochromatic dot
             Circle()
-                .fill(product.stockStatusColor)
-                .frame(width: 6, height: 6)
+                .fill(Color.primary.opacity(stockOpacity))
+                .frame(width: 5, height: 5)
         }
-        .padding(.leading, 16 + CGFloat(indentLevel) * 16)
-        .padding(.trailing, 16)
-        .padding(.vertical, 6)
+        .frame(height: 24)
+        .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill((isActive || isMultiSelected) ? Color.accentColor.opacity(0.15) : Color.clear)
+            RoundedRectangle(cornerRadius: 4)
+                .fill((isActive || isMultiSelected) ? Color.primary.opacity(0.08) : Color.clear)
         )
         .contentShape(Rectangle())
         .onTapGesture {
             handleClick()
         }
         .onDrag {
-            print("🚀 Starting drag for product: \(product.name) (\(product.id))")
             let dragString = DragItemType.encode(.product, uuid: product.id)
-            print("🔑 Drag data: \(dragString)")
-
             let provider = NSItemProvider(object: dragString as NSString)
-            print("✅ NSItemProvider created successfully")
             return provider
+        }
+    }
+
+    private var stockOpacity: Double {
+        // Convert stock status to opacity
+        if product.stockQuantity == nil || product.stockQuantity == 0 {
+            return 0.2 // Out of stock
+        } else if (product.stockQuantity ?? 0) < 10 {
+            return 0.4 // Low stock
+        } else {
+            return 0.6 // In stock
         }
     }
 
@@ -65,17 +79,14 @@ struct ProductTreeItem: View {
         let modifiers = NSEvent.modifierFlags
 
         if modifiers.contains(.command) {
-            // Cmd+Click: Toggle in multi-select
             if editorStore.selectedProductIds.contains(product.id) {
                 editorStore.selectedProductIds.remove(product.id)
             } else {
                 editorStore.selectedProductIds.insert(product.id)
             }
         } else if modifiers.contains(.shift) {
-            // Shift+Click: Range select (simplified - just add to selection)
             editorStore.selectedProductIds.insert(product.id)
         } else {
-            // Regular click: Select only this item
             editorStore.selectedProductIds = [product.id]
             onSelect()
         }

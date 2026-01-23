@@ -12,7 +12,7 @@ struct SidebarMCPServersSection: View {
         VStack(alignment: .leading, spacing: 0) {
             // Section Header
             Button(action: {
-                withAnimation(DesignSystem.Animation.spring) {
+                withAnimation(.easeInOut(duration: 0.2)) {
                     store.sidebarMCPServersExpanded.toggle()
                 }
             }) {
@@ -70,7 +70,7 @@ struct SidebarMCPServersSection: View {
         VStack(alignment: .leading, spacing: 0) {
             // Category Header
             Button(action: {
-                withAnimation(DesignSystem.Animation.fast) {
+                withAnimation(.easeInOut(duration: 0.15)) {
                     if isExpanded {
                         expandedCategories.remove(category)
                     } else {

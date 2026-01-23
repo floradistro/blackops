@@ -416,9 +416,9 @@ private struct ChatEmptyStateView: View {
 
     var body: some View {
         Text(message)
-            .font(DesignSystem.Typography.caption1)
-            .foregroundColor(DesignSystem.Colors.textTertiary)
-            .padding(.horizontal, DesignSystem.Spacing.md)
-            .padding(.vertical, DesignSystem.Spacing.sm)
+            .font(.system(size: 10))
+            .foregroundStyle(Color.primary.opacity(0.4))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
     }
 }

@@ -127,7 +127,8 @@ extension EditorStore {
     }
 
     func ordersForLocation(_ locationId: UUID) -> [Order] {
-        orders.filter { $0.locationId == locationId || $0.pickupLocationId == locationId }
+        // Check both locationId and fulfillment delivery location
+        orders.filter { $0.locationId == locationId || $0.deliveryLocationId == locationId }
     }
 
     // MARK: - Locations

@@ -2,9 +2,8 @@ import SwiftUI
 import Supabase
 
 // MARK: - Editor Sidebar View
-// Extracted from EditorView.swift to improve file organization
-// Refactored following Apple engineering standards - components extracted to separate files
-// File size: ~114 lines (under Apple's 300 line "excellent" threshold)
+// Optimized for performance with smooth animations
+// Apple HIG compliant
 
 struct SidebarPanel: View {
     @ObservedObject var store: EditorStore
@@ -15,6 +14,10 @@ struct SidebarPanel: View {
     @State private var expandedCollectionIds: Set<UUID> = []
     @State private var expandedCategoryIds: Set<UUID> = []
     @FocusState private var isSearchFocused: Bool
+
+    // Animation constants - Apple-style springs
+    private let smoothSpring = Animation.spring(response: 0.35, dampingFraction: 0.85, blendDuration: 0)
+    private let quickSpring = Animation.spring(response: 0.25, dampingFraction: 0.9, blendDuration: 0)
 
     var filteredCreations: [Creation] {
         if debouncedSearchText.isEmpty { return store.creations }
@@ -34,16 +37,24 @@ struct SidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Ultra minimal header
+            // Traffic light spacer (for macOS window buttons)
+            Color.clear
+                .frame(height: 36)
+
+            // Ultra minimal header with search
             HStack(spacing: 6) {
                 SidebarSearchBar(searchText: $searchText, isSearchFocused: $isSearchFocused)
 
-                Button(action: { store.collapseAllSections() }) {
+                Button(action: {
+                    withAnimation(quickSpring) {
+                        store.collapseAllSections()
+                    }
+                }) {
                     Image(systemName: "line.3.horizontal.decrease")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color.primary.opacity(0.4))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SidebarButtonStyle())
                 .help("Collapse All (⌘⇧C)")
                 .keyboardShortcut("c", modifiers: [.command, .shift])
             }
@@ -54,145 +65,198 @@ struct SidebarPanel: View {
                 .fill(Color.primary.opacity(0.06))
                 .frame(height: 1)
 
-            // Content tree
+            // Content tree with optimized rendering
             if store.selectedStore == nil && store.stores.isEmpty {
                 SidebarEmptyState(onCreateStore: { store.showNewStoreSheet = true })
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
             } else if store.isLoading {
                 SidebarLoadingState()
+                    .transition(.opacity)
             } else {
                 sidebarContent
+                    .transition(.opacity)
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowSearch"))) { _ in
             isSearchFocused = true
         }
-        .task {
-            if store.selectedStore != nil {
-                if store.browserSessions.isEmpty {
-                    await store.loadBrowserSessions()
-                }
-                if store.orders.isEmpty {
-                    await store.loadOrders()
-                }
-                if store.locations.isEmpty {
-                    await store.loadLocations()
-                }
-                if store.emailTotalCount == 0 {
-                    await store.loadEmailCounts()
-                }
-                if store.aiAgents.isEmpty {
-                    await store.loadAIAgents()
-                }
-            }
-            if store.mcpServers.isEmpty {
-                await store.loadMCPServers()
-            }
+        .task(priority: .userInitiated) {
+            await loadInitialData()
         }
         .onChange(of: store.selectedStore?.id) { _, _ in
-            Task {
-                await store.loadBrowserSessions()
-                await store.loadOrders()
-                await store.loadLocations()
-                await store.loadEmailCounts()
-                await store.loadAIAgents()
+            Task(priority: .userInitiated) {
+                await loadStoreData()
             }
         }
         .onChange(of: searchText) { _, newValue in
-            // Cancel previous search task
-            searchTask?.cancel()
+            handleSearchChange(newValue)
+        }
+    }
 
-            // If empty, update immediately
-            if newValue.isEmpty {
+    // MARK: - Data Loading (Optimized)
+
+    private func loadInitialData() async {
+        guard store.selectedStore != nil else { return }
+
+        // Load in parallel for faster startup
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await store.loadBrowserSessions() }
+            group.addTask { await store.loadOrders() }
+            group.addTask { await store.loadLocations() }
+            group.addTask { await store.loadEmailCounts() }
+            group.addTask { await store.loadAIAgents() }
+            group.addTask { await store.loadMCPServers() }
+        }
+    }
+
+    private func loadStoreData() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await store.loadBrowserSessions() }
+            group.addTask { await store.loadOrders() }
+            group.addTask { await store.loadLocations() }
+            group.addTask { await store.loadEmailCounts() }
+            group.addTask { await store.loadAIAgents() }
+        }
+    }
+
+    private func handleSearchChange(_ newValue: String) {
+        searchTask?.cancel()
+
+        if newValue.isEmpty {
+            withAnimation(quickSpring) {
                 debouncedSearchText = ""
-                return
             }
+            return
+        }
 
-            // Otherwise, debounce for 300ms
-            searchTask = Task {
-                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
-                if !Task.isCancelled {
-                    debouncedSearchText = newValue
+        // Shorter debounce for snappier feel
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+            if !Task.isCancelled {
+                await MainActor.run {
+                    withAnimation(quickSpring) {
+                        debouncedSearchText = newValue
+                    }
                 }
             }
         }
     }
 
-    // MARK: - Sidebar Content
+    // MARK: - Sidebar Content (Optimized)
 
     @ViewBuilder
     private var sidebarContent: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                // WORKSPACE
-                Section {
-                    if !store.workspaceGroupCollapsed {
-                        SidebarQueuesSection(store: store)
-                        SidebarLocationsSection(store: store)
-                    }
-                } header: {
-                    SectionGroupHeader(
-                        title: SidebarGroup.workspace.rawValue,
-                        group: .workspace,
-                        isCollapsed: $store.workspaceGroupCollapsed
-                    )
-                }
-
-                // CONTENT
-                Section {
-                    if !store.contentGroupCollapsed {
-                        SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
-                        SidebarCreationsSection(
-                            store: store,
-                            expandedCollectionIds: $expandedCollectionIds,
-                            filteredOrphanCreations: filteredOrphanCreations,
-                            filteredCreationsForCollection: filteredCreationsForCollection
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    // WORKSPACE
+                    Section {
+                        if !store.workspaceGroupCollapsed {
+                            SidebarQueuesSection(store: store)
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .move(edge: .top)),
+                                    removal: .opacity
+                                ))
+                            SidebarLocationsSection(store: store)
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .move(edge: .top)),
+                                    removal: .opacity
+                                ))
+                        }
+                    } header: {
+                        SectionGroupHeader(
+                            title: SidebarGroup.workspace.rawValue,
+                            group: .workspace,
+                            isCollapsed: $store.workspaceGroupCollapsed
                         )
-                        SidebarTeamChatSection(store: store)
+                        .id("workspace")
                     }
-                } header: {
-                    SectionGroupHeader(
-                        title: SidebarGroup.content.rawValue,
-                        group: .content,
-                        isCollapsed: $store.contentGroupCollapsed
-                    )
-                }
 
-                // OPERATIONS
-                Section {
-                    if !store.operationsGroupCollapsed {
-                        SidebarBrowserSessionsSection(store: store)
+                    // CONTENT
+                    Section {
+                        if !store.contentGroupCollapsed {
+                            SidebarCatalogsSection(store: store, expandedCategoryIds: $expandedCategoryIds)
+                            SidebarCreationsSection(
+                                store: store,
+                                expandedCollectionIds: $expandedCollectionIds,
+                                filteredOrphanCreations: filteredOrphanCreations,
+                                filteredCreationsForCollection: filteredCreationsForCollection
+                            )
+                            SidebarTeamChatSection(store: store)
+                        }
+                    } header: {
+                        SectionGroupHeader(
+                            title: SidebarGroup.content.rawValue,
+                            group: .content,
+                            isCollapsed: $store.contentGroupCollapsed
+                        )
+                        .id("content")
                     }
-                } header: {
-                    SectionGroupHeader(
-                        title: SidebarGroup.operations.rawValue,
-                        group: .operations,
-                        isCollapsed: $store.operationsGroupCollapsed
-                    )
-                }
 
-                // INFRASTRUCTURE
-                Section {
-                    if !store.infrastructureGroupCollapsed {
-                        SidebarAgentsSection(store: store)
-                        SidebarAgentBuilderSection(store: store)
-                        SidebarMCPServersSection(store: store)
-                        SidebarResendSection(store: store)
+                    // OPERATIONS
+                    Section {
+                        if !store.operationsGroupCollapsed {
+                            SidebarBrowserSessionsSection(store: store)
+                        }
+                    } header: {
+                        SectionGroupHeader(
+                            title: SidebarGroup.operations.rawValue,
+                            group: .operations,
+                            isCollapsed: $store.operationsGroupCollapsed
+                        )
+                        .id("operations")
                     }
-                } header: {
-                    SectionGroupHeader(
-                        title: SidebarGroup.infrastructure.rawValue,
-                        group: .infrastructure,
-                        isCollapsed: $store.infrastructureGroupCollapsed
-                    )
-                }
 
-                Spacer().frame(height: 12)
+                    // INFRASTRUCTURE
+                    Section {
+                        if !store.infrastructureGroupCollapsed {
+                            SidebarAgentsSection(store: store)
+                            SidebarAgentBuilderSection(store: store)
+                            SidebarMCPServersSection(store: store)
+                            SidebarResendSection(store: store)
+                        }
+                    } header: {
+                        SectionGroupHeader(
+                            title: SidebarGroup.infrastructure.rawValue,
+                            group: .infrastructure,
+                            isCollapsed: $store.infrastructureGroupCollapsed
+                        )
+                        .id("infrastructure")
+                    }
+
+                    Spacer().frame(height: 12)
+                }
+                .padding(.vertical, 2)
             }
-            .padding(.vertical, 2)
+            .scrollContentBackground(.hidden)
+            .scrollIndicators(.automatic)
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollClipDisabled(false)
         }
-        .scrollContentBackground(.hidden)
-        .scrollIndicators(.automatic)
-        .scrollBounceBehavior(.always)
     }
 }
+
+// MARK: - Sidebar Button Style (Optimized hover/press states)
+
+struct SidebarButtonStyle: ButtonStyle {
+    @State private var isHovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.primary.opacity(isHovered ? 0.06 : 0))
+                    .padding(-4)
+            )
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.15), value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+}
+
+// SidebarLoadingState is defined in Sidebar/SidebarLoadingState.swift

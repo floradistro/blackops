@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Queues Section
-// Premium monochromatic design
+// Premium monochromatic design with smooth animations
 
 struct SidebarQueuesSection: View {
     @ObservedObject var store: EditorStore
@@ -15,24 +15,32 @@ struct SidebarQueuesSection: View {
             isExpanded: $store.sidebarQueuesExpanded,
             count: store.locations.count
         )
-        .padding(.top, DesignSystem.Spacing.xxs)
+        .padding(.top, 2)
 
         if store.sidebarQueuesExpanded {
-            ForEach(store.locations) { location in
-                LocationQueueRow(
-                    location: location,
-                    isExpanded: expandedLocationIds.contains(location.id),
-                    onToggleExpanded: {
-                        if expandedLocationIds.contains(location.id) {
-                            expandedLocationIds.remove(location.id)
-                        } else {
-                            expandedLocationIds.insert(location.id)
+            LazyVStack(spacing: 0) {
+                ForEach(store.locations) { location in
+                    LocationQueueRow(
+                        location: location,
+                        isExpanded: expandedLocationIds.contains(location.id),
+                        onToggleExpanded: {
+                            withAnimation(TreeAnimations.smoothSpring) {
+                                if expandedLocationIds.contains(location.id) {
+                                    expandedLocationIds.remove(location.id)
+                                } else {
+                                    expandedLocationIds.insert(location.id)
+                                }
+                            }
+                        },
+                        onSelectEntry: { queueEntry in
+                            store.openTab(.cart(queueEntry))
                         }
-                    },
-                    onSelectEntry: { queueEntry in
-                        store.openTab(.cart(queueEntry))
-                    }
-                )
+                    )
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
+                }
             }
 
             // Empty state
@@ -45,6 +53,7 @@ struct SidebarQueuesSection: View {
                     Spacer()
                 }
                 .padding(.vertical, 8)
+                .transition(.opacity)
             }
         }
     }
@@ -159,11 +168,14 @@ private struct LocationQueueRow: View {
     }
 }
 
-// MARK: - Queue Entry Row
+// MARK: - Queue Entry Row (Optimized with hover/press states)
 
 private struct QueueEntryRow: View {
     let entry: QueueEntry
     let onSelect: () -> Void
+
+    @State private var isHovered = false
+    @State private var isPressed = false
 
     private var customerName: String {
         if let firstName = entry.customerFirstName, let lastName = entry.customerLastName {
@@ -184,15 +196,16 @@ private struct QueueEntryRow: View {
                 // Double indent for entry level
                 Spacer().frame(width: 38)
 
-                // Status indicator
+                // Status indicator with pulse for items
                 Circle()
                     .fill(Color.primary.opacity(hasItems ? 0.4 : 0.15))
                     .frame(width: 5, height: 5)
+                    .modifier(hasItems ? PulseModifier() : PulseModifier())
 
                 // Customer name
                 Text(customerName)
                     .font(.system(size: 10))
-                    .foregroundStyle(Color.primary.opacity(0.8))
+                    .foregroundStyle(Color.primary.opacity(isHovered ? 0.9 : 0.8))
                     .lineLimit(1)
 
                 // Loyalty points badge (subtle)
@@ -215,14 +228,14 @@ private struct QueueEntryRow: View {
                 if hasItems {
                     HStack(spacing: 4) {
                         Text("\(entry.cartItemCount)")
-                            .font(.system(size: 9))
+                            .font(.system(size: 9, design: .monospaced))
                             .foregroundStyle(Color.primary.opacity(0.5))
 
                         Text("·")
                             .foregroundStyle(Color.primary.opacity(0.3))
 
                         Text(formatCurrency(entry.cartTotal))
-                            .font(.system(size: 9))
+                            .font(.system(size: 9, design: .monospaced))
                             .foregroundStyle(Color.primary.opacity(0.5))
                     }
                 } else {
@@ -233,8 +246,34 @@ private struct QueueEntryRow: View {
             }
             .frame(height: 24)
             .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.primary.opacity(
+                        isPressed ? 0.08 :
+                        isHovered ? 0.04 : 0
+                    ))
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) {
+                isHovered = hovering
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.easeOut(duration: 0.08)) {
+                        isPressed = true
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                        isPressed = false
+                    }
+                }
+        )
     }
 
     private func formatCurrency(_ amount: Decimal) -> String {

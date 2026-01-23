@@ -13,16 +13,23 @@ public final class OrderService {
     }
 
     // MARK: - Column Definitions
+    // Updated for Oracle+Apple schema: channel replaces order_type, fulfillments table replaces delivery_type/pickup_location_id
 
     private let orderSelectColumns = """
         id, order_number, customer_id, headless_customer_id, store_id, location_id, status,
-        payment_status, fulfillment_status, order_type,
+        payment_status, fulfillment_status, channel,
         subtotal, tax_amount, shipping_amount, discount_amount, total_amount,
         currency, customer_note, staff_notes, payment_method, payment_method_title,
-        delivery_type, pickup_location_id, shipping_name, shipping_city, shipping_state,
-        tracking_number, order_date, paid_date, completed_at, created_at, updated_at,
+        shipping_name, shipping_city, shipping_state,
+        tracking_number, tracking_url, order_date, paid_date, completed_at, created_at, updated_at,
         created_by_user_id, prepared_by_user_id, shipped_by_user_id, delivered_by_user_id,
-        employee_id, updated_by_user_id, prepared_at, shipped_at, delivered_at
+        employee_id, updated_by_user_id, prepared_at, shipped_at, delivered_at,
+        fulfillments(
+            id, order_id, type, status,
+            delivery_location_id, delivery_address,
+            carrier, tracking_number, tracking_url, shipping_cost,
+            created_at, shipped_at, delivered_at
+        )
     """
 
     // MARK: - Fetch Orders

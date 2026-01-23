@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Customer Detail Panel
-// Comprehensive CRM-style customer view following existing panel patterns
+// Minimal, monochromatic theme
 
 struct CustomerDetailPanel: View {
     let customer: Customer
@@ -16,236 +16,97 @@ struct CustomerDetailPanel: View {
     @State private var newNoteType = "general"
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // Header with customer info
-                CustomerHeader(customer: customer)
+        VStack(spacing: 0) {
+            // Inline toolbar
+            PanelToolbar(
+                title: customer.displayName,
+                icon: "person.circle",
+                subtitle: customer.loyaltyTier?.capitalized
+            ) {
+                ToolbarButton(
+                    icon: "arrow.clockwise",
+                    action: { Task { await loadCustomerDetails() } }
+                )
+                ToolbarButton(
+                    icon: "plus.bubble",
+                    action: { showAddNoteSheet = true }
+                )
+            }
 
-                Divider()
-                    .padding(.vertical, 8)
-
-                if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(40)
-                } else {
-                    // Stats Cards
-                    HStack(spacing: 12) {
-                        StatCard(
-                            title: "Total Spent",
-                            value: customer.formattedTotalSpent,
-                            icon: "dollarsign.circle.fill",
-                            color: .green
-                        )
-                        StatCard(
-                            title: "Orders",
-                            value: "\(customer.totalOrders ?? 0)",
-                            icon: "cart.fill",
-                            color: .blue
-                        )
-                    }
-                    .padding(.horizontal, 20)
-
-                    HStack(spacing: 12) {
-                        StatCard(
-                            title: "Loyalty Points",
-                            value: "\(customer.loyaltyPoints ?? 0)",
-                            icon: "star.fill",
-                            color: Color(customer.loyaltyTierColor)
-                        )
-                        StatCard(
-                            title: "Lifetime Value",
-                            value: customer.formattedLifetimeValue,
-                            icon: "chart.line.uptrend.xyaxis",
-                            color: .purple
-                        )
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header
+                    customerHeader
 
                     Divider()
                         .padding(.vertical, 8)
 
-                    // Contact Information
-                    CustomerSectionHeader(title: "Contact Information")
-                    VStack(spacing: 6) {
-                        if let email = customer.email {
-                            CustomerContactRow(icon: "envelope.fill", label: "Email", value: email)
-                        }
-                        if let phone = customer.phone {
-                            CustomerContactRow(icon: "phone.fill", label: "Phone", value: phone)
-                        }
-                        if customer.email == nil && customer.phone == nil {
-                            Text("No contact information")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 20)
+                    if isLoading {
+                        Text("···")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(Color.primary.opacity(0.3))
+                            .frame(maxWidth: .infinity)
+                            .padding(40)
+                    } else {
+                        // Stats
+                        statsSection
+
+                        Divider()
+                            .padding(.vertical, 8)
+
+                        // Contact Information
+                        SectionHeader(title: "Contact")
+                        contactSection
+
+                        // Address
+                        if customer.streetAddress != nil || customer.city != nil {
+                            Divider()
                                 .padding(.vertical, 8)
+                            SectionHeader(title: "Address")
+                            addressSection
                         }
-                    }
-                    .padding(.horizontal, 20)
 
-                    // Address Information
-                    if customer.streetAddress != nil || customer.city != nil {
+                        // Loyalty
+                        if let loyalty = customerLoyalty {
+                            Divider()
+                                .padding(.vertical, 8)
+                            SectionHeader(title: "Loyalty")
+                            loyaltySection(loyalty)
+                        }
+
+                        // Account Status
                         Divider()
                             .padding(.vertical, 8)
+                        SectionHeader(title: "Account")
+                        accountStatusSection
 
-                        CustomerSectionHeader(title: "Address")
-                        VStack(alignment: .leading, spacing: 4) {
-                            if let street = customer.streetAddress {
-                                Text(street)
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.primary)
-                            }
-                            HStack {
-                                if let city = customer.city {
-                                    Text(city)
-                                }
-                                if let state = customer.state {
-                                    Text(state)
-                                }
-                                if let zip = customer.postalCode {
-                                    Text(zip)
-                                }
-                            }
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                    }
-
-                    // Loyalty Details
-                    if let loyalty = customerLoyalty {
+                        // Orders
                         Divider()
                             .padding(.vertical, 8)
+                        ordersSection
 
-                        CustomerSectionHeader(title: "Loyalty Program")
-                        LoyaltyDetailsView(loyalty: loyalty)
-                            .padding(.horizontal, 20)
-                    }
-
-                    // Verification & Status
-                    Divider()
-                        .padding(.vertical, 8)
-
-                    CustomerSectionHeader(title: "Account Status")
-                    VStack(spacing: 6) {
-                        CustomerStatusRow(
-                            icon: customer.idVerified == true ? "checkmark.shield.fill" : "shield",
-                            label: "ID Verified",
-                            value: customer.idVerified == true ? "Yes" : "No",
-                            color: customer.idVerified == true ? .green : .gray
-                        )
-                        CustomerStatusRow(
-                            icon: customer.isActive == true ? "checkmark.circle.fill" : "xmark.circle.fill",
-                            label: "Account Status",
-                            value: customer.isActive == true ? "Active" : "Inactive",
-                            color: customer.isActive == true ? .green : .red
-                        )
-                        if customer.emailConsent == true || customer.smsConsent == true {
-                            CustomerStatusRow(
-                                icon: "bell.fill",
-                                label: "Marketing Consent",
-                                value: [
-                                    customer.emailConsent == true ? "Email" : nil,
-                                    customer.smsConsent == true ? "SMS" : nil
-                                ].compactMap { $0 }.joined(separator: ", "),
-                                color: .blue
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Recent Orders
-                    Divider()
-                        .padding(.vertical, 8)
-
-                    CustomerSectionHeader(title: "Recent Orders")
-                    if customerOrders.isEmpty {
-                        Text("No orders yet")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(customerOrders.prefix(10)) { order in
-                                CustomerOrderRow(order: order) {
-                                    store.openTab(.order(order))
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-
-                        if customerOrders.count > 10 {
-                            Button("View all \(customerOrders.count) orders") {
-                                // TODO: Filter orders view by customer
-                            }
-                            .font(.system(size: 12, weight: .medium))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                        }
-                    }
-
-                    // Customer Notes
-                    Divider()
-                        .padding(.vertical, 8)
-
-                    HStack {
-                        CustomerSectionHeader(title: "Notes")
-                        Spacer()
-                        Button(action: { showAddNoteSheet = true }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Add Note")
-                            }
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.blue)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 20)
-                    }
-
-                    if customerNotes.isEmpty {
-                        Text("No notes")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(customerNotes) { note in
-                                CustomerNoteCard(note: note)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
-
-                    // Metadata
-                    if let createdAt = customer.createdAt {
+                        // Notes
                         Divider()
                             .padding(.vertical, 8)
+                        notesSection
 
-                        CustomerSectionHeader(title: "Account Information")
-                        VStack(spacing: 6) {
-                            CustomerInfoRow(label: "Customer Since", value: formatDate(createdAt))
-                            if let updatedAt = customer.updatedAt {
-                                CustomerInfoRow(label: "Last Updated", value: formatDate(updatedAt))
-                            }
+                        // Metadata
+                        if let createdAt = customer.createdAt {
+                            Divider()
+                                .padding(.vertical, 8)
+                            SectionHeader(title: "Info")
+                            metadataSection(createdAt: createdAt)
                         }
-                        .padding(.horizontal, 20)
                     }
                 }
+                .padding(.vertical, 12)
             }
-            .padding(.vertical, 12)
         }
-        .background(VisualEffectBackground(material: .underWindowBackground))
         .task {
             await loadCustomerDetails()
         }
         .sheet(isPresented: $showAddNoteSheet) {
-            AddNoteSheet(
+            MinimalAddNoteSheet(
                 customerName: customer.displayName,
                 noteText: $newNoteText,
                 noteType: $newNoteType,
@@ -254,31 +115,274 @@ struct CustomerDetailPanel: View {
         }
     }
 
+    // MARK: - Header
+
+    private var customerHeader: some View {
+        HStack(spacing: 16) {
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 48, height: 48)
+                Text(customer.initials)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.6))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(customer.displayName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.9))
+                    if customer.idVerified == true {
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.primary.opacity(0.5))
+                    }
+                }
+
+                if let tier = customer.loyaltyTier {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star")
+                            .font(.system(size: 10))
+                        Text("\(tier.capitalized) Member")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                }
+
+                Text("ID: \(customer.id.uuidString.prefix(8))...")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color.primary.opacity(0.3))
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Stats
+
+    private var statsSection: some View {
+        HStack(spacing: 1) {
+            MinimalStatCell(title: "Spent", value: customer.formattedTotalSpent)
+            MinimalStatCell(title: "Orders", value: "\(customer.totalOrders ?? 0)")
+            MinimalStatCell(title: "Points", value: "\(customer.loyaltyPoints ?? 0)")
+            MinimalStatCell(title: "LTV", value: customer.formattedLifetimeValue)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Contact
+
+    private var contactSection: some View {
+        VStack(spacing: 6) {
+            if let email = customer.email {
+                MinimalInfoRow(label: "Email", value: email)
+            }
+            if let phone = customer.phone {
+                MinimalInfoRow(label: "Phone", value: phone)
+            }
+            if customer.email == nil && customer.phone == nil {
+                Text("No contact information")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.vertical, 8)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    // MARK: - Address
+
+    private var addressSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let street = customer.streetAddress {
+                Text(street)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.7))
+            }
+            HStack(spacing: 4) {
+                if let city = customer.city { Text(city) }
+                if let state = customer.state { Text(state) }
+                if let zip = customer.postalCode { Text(zip) }
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(Color.primary.opacity(0.5))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Loyalty
+
+    private func loyaltySection(_ loyalty: CustomerLoyalty) -> some View {
+        VStack(spacing: 6) {
+            MinimalInfoRow(label: "Tier", value: loyalty.currentTier ?? "None")
+            MinimalInfoRow(label: "Balance", value: "\(loyalty.pointsBalance ?? 0) pts")
+            MinimalInfoRow(label: "Earned", value: "\(loyalty.pointsLifetimeEarned ?? 0) pts")
+            MinimalInfoRow(label: "Redeemed", value: "\(loyalty.pointsLifetimeRedeemed ?? 0) pts")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Account Status
+
+    private var accountStatusSection: some View {
+        VStack(spacing: 6) {
+            MinimalStatusRow(
+                label: "ID Verified",
+                value: customer.idVerified == true ? "Yes" : "No",
+                isActive: customer.idVerified == true
+            )
+            MinimalStatusRow(
+                label: "Status",
+                value: customer.isActive == true ? "Active" : "Inactive",
+                isActive: customer.isActive == true
+            )
+            if customer.emailConsent == true || customer.smsConsent == true {
+                MinimalInfoRow(
+                    label: "Marketing",
+                    value: [
+                        customer.emailConsent == true ? "Email" : nil,
+                        customer.smsConsent == true ? "SMS" : nil
+                    ].compactMap { $0 }.joined(separator: ", ")
+                )
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    // MARK: - Orders
+
+    private var ordersSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                SectionHeader(title: "Recent Orders")
+                Spacer()
+                Text("\(customerOrders.count)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.trailing, 20)
+            }
+
+            if customerOrders.isEmpty {
+                Text("No orders yet")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 1) {
+                    ForEach(customerOrders.prefix(10)) { order in
+                        Button {
+                            store.openTab(.order(order))
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(order.displayTitle)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.primary.opacity(0.8))
+                                    if let date = order.createdAt {
+                                        Text(date, style: .relative)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(Color.primary.opacity(0.4))
+                                    }
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(order.displayTotal)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.primary.opacity(0.7))
+                                    Text(order.status?.capitalized ?? "Unknown")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(Color.primary.opacity(0.5))
+                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(Color.primary.opacity(0.3))
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.primary.opacity(0.02))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Notes
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                SectionHeader(title: "Notes")
+                Spacer()
+                Button(action: { showAddNoteSheet = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                        Text("Add")
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+            }
+
+            if customerNotes.isEmpty {
+                Text("No notes")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(customerNotes) { note in
+                        MinimalNoteCard(note: note)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    // MARK: - Metadata
+
+    private func metadataSection(createdAt: Date) -> some View {
+        VStack(spacing: 6) {
+            MinimalInfoRow(label: "Customer Since", value: createdAt.formatted(date: .abbreviated, time: .omitted))
+            if let updatedAt = customer.updatedAt {
+                MinimalInfoRow(label: "Last Updated", value: updatedAt.formatted(date: .abbreviated, time: .omitted))
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+    }
+
+    // MARK: - Data Loading
+
     private func loadCustomerDetails() async {
         isLoading = true
-
-        // Load orders for this customer
         let storeId = store.selectedStore?.id ?? store.defaultStoreId
-        if true {
-            do {
-                // Fetch all orders and filter by customer
-                let allOrders = try await store.supabase.fetchOrders(storeId: storeId, limit: 500)
-                customerOrders = allOrders.filter { order in
-                    order.customerId == customer.platformUserId || order.headlessCustomerId == customer.id
-                }
 
-                // Fetch notes
-                if let platformUserId = customer.platformUserId {
-                    customerNotes = try await store.supabase.fetchCustomerNotes(customerId: platformUserId, limit: 50)
-                }
-
-                // Fetch loyalty details
-                if let platformUserId = customer.platformUserId {
-                    customerLoyalty = try await store.supabase.fetchCustomerLoyalty(customerId: platformUserId, storeId: storeId)
-                }
-            } catch {
-                print("❌ Error loading customer details: \(error)")
+        do {
+            let allOrders = try await store.supabase.fetchOrders(storeId: storeId, limit: 500)
+            customerOrders = allOrders.filter { order in
+                order.customerId == customer.platformUserId || order.headlessCustomerId == customer.id
             }
+
+            if let platformUserId = customer.platformUserId {
+                customerNotes = try await store.supabase.fetchCustomerNotes(customerId: platformUserId, limit: 50)
+                customerLoyalty = try await store.supabase.fetchCustomerLoyalty(customerId: platformUserId, storeId: storeId)
+            }
+        } catch {
+            print("[CustomerDetail] Error: \(error)")
         }
 
         isLoading = false
@@ -299,94 +403,171 @@ struct CustomerDetailPanel: View {
             newNoteType = "general"
             showAddNoteSheet = false
         } catch {
-            print("❌ Error adding note: \(error)")
-            store.error = "Failed to add note: \(error.localizedDescription)"
+            print("[CustomerDetail] Error adding note: \(error)")
         }
-    }
-
-    private func formatCurrency(_ amount: Decimal?) -> String {
-        guard let amount = amount else { return "$0.00" }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: amount as NSDecimalNumber) ?? "$0.00"
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 
-// MARK: - Customer Header
+// MARK: - Minimal Supporting Views
 
-struct CustomerHeader: View {
-    let customer: Customer
+private struct MinimalStatCell: View {
+    let title: String
+    let value: String
 
     var body: some View {
-        HStack(spacing: 16) {
-            // Avatar
-            if let avatarUrl = customer.avatarUrl, let url = URL(string: avatarUrl) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Circle()
-                        .fill(Color(customer.statusColor).opacity(0.2))
-                        .overlay(
-                            Text(customer.initials)
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(Color(customer.statusColor))
-                        )
-                }
-                .frame(width: 60, height: 60)
-                .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(Color(customer.statusColor).opacity(0.2))
-                    .frame(width: 60, height: 60)
-                    .overlay(
-                        Text(customer.initials)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(Color(customer.statusColor))
-                    )
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(customer.displayName)
-                        .font(.system(size: 18, weight: .semibold))
-                    if customer.idVerified == true {
-                        Image(systemName: "checkmark.shield.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.green)
-                    }
-                }
-
-                if let tier = customer.loyaltyTier {
-                    HStack(spacing: 4) {
-                        Image(systemName: customer.loyaltyTierIcon)
-                            .font(.system(size: 11))
-                        Text("\(tier.capitalized) Member")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(Color(customer.loyaltyTierColor))
-                }
-
-                Text("ID: \(customer.id.uuidString.prefix(8))...")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-            }
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
+            Text(title)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
         }
-        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+        .background(Color.primary.opacity(0.03))
     }
 }
 
-// MARK: - Supporting Views
+private struct MinimalInfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 100, alignment: .leading)
+            Text(value)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.8))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct MinimalStatusRow: View {
+    let label: String
+    let value: String
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 100, alignment: .leading)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.primary.opacity(isActive ? 0.6 : 0.2))
+                    .frame(width: 6, height: 6)
+                Text(value)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.8 : 0.4))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct MinimalNoteCard: View {
+    let note: CustomerNote
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(note.noteType?.capitalized ?? "Note")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                Spacer()
+                if let date = note.createdAt {
+                    Text(date, style: .relative)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.3))
+                }
+            }
+
+            Text(note.note)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(6)
+    }
+}
+
+private struct MinimalAddNoteSheet: View {
+    let customerName: String
+    @Binding var noteText: String
+    @Binding var noteType: String
+    let onSave: () async -> Void
+
+    @Environment(\.dismiss) var dismiss
+
+    let noteTypes = ["general", "support", "billing", "fraud", "vip"]
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                Text("Add Note")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.8))
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                    .buttonStyle(.plain)
+            }
+
+            // Type picker
+            Picker("", selection: $noteType) {
+                ForEach(noteTypes, id: \.self) { type in
+                    Text(type.capitalized).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            // Note text
+            TextEditor(text: $noteText)
+                .font(.system(size: 12))
+                .frame(height: 100)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(Color.primary.opacity(0.03))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                )
+
+            // Save button
+            Button {
+                Task {
+                    await onSave()
+                    dismiss()
+                }
+            } label: {
+                Text("Save Note")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(noteText.isEmpty ? 0.3 : 0.8))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(noteText.isEmpty ? 0.03 : 0.08))
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .disabled(noteText.isEmpty)
+        }
+        .padding(16)
+        .frame(width: 360)
+    }
+}
+
+// MARK: - Legacy Support (keep for backward compatibility)
 
 struct StatCard: View {
     let title: String
@@ -398,23 +579,21 @@ struct StatCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundColor(color)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.primary.opacity(0.5))
                 Spacer()
             }
             Text(value)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
             Text(title)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(color.opacity(0.1))
-        )
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(8)
     }
 }
 
@@ -426,16 +605,16 @@ struct CustomerContactRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundColor(.blue)
-                .frame(width: 20)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.4))
+                .frame(width: 16)
             Text(label)
-                .foregroundStyle(.secondary)
-                .frame(width: 100, alignment: .leading)
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 80, alignment: .leading)
                 .font(.system(size: 12))
             Text(value)
                 .font(.system(size: 12))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.primary.opacity(0.7))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -450,16 +629,16 @@ struct CustomerStatusRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundColor(color)
-                .frame(width: 20)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.primary.opacity(0.4))
+                .frame(width: 16)
             Text(label)
-                .foregroundStyle(.secondary)
-                .frame(width: 120, alignment: .leading)
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 100, alignment: .leading)
                 .font(.system(size: 12))
             Text(value)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(color)
+                .foregroundStyle(Color.primary.opacity(0.7))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -472,12 +651,12 @@ struct CustomerInfoRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(label)
-                .foregroundStyle(.secondary)
-                .frame(width: 120, alignment: .leading)
+                .foregroundStyle(Color.primary.opacity(0.5))
+                .frame(width: 100, alignment: .leading)
                 .font(.system(size: 12))
             Text(value)
                 .font(.system(size: 12))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.primary.opacity(0.7))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -488,8 +667,8 @@ struct CustomerSectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.secondary)
+            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+            .foregroundStyle(Color.primary.opacity(0.4))
             .textCase(.uppercase)
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
@@ -503,39 +682,31 @@ struct CustomerOrderRow: View {
     var body: some View {
         Button(action: action) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(order.displayTitle)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.primary.opacity(0.8))
                     if let date = order.createdAt {
-                        Text(formatDate(date))
+                        Text(date, style: .relative)
                             .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
                     }
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: 2) {
                     Text(order.displayTotal)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.primary.opacity(0.7))
                     Text(order.status?.capitalized ?? "Unknown")
                         .font(.system(size: 10))
-                        .foregroundStyle(order.statusColor)
+                        .foregroundStyle(Color.primary.opacity(0.5))
                 }
             }
             .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.primary.opacity(0.03))
-            )
+            .background(Color.primary.opacity(0.02))
+            .cornerRadius(6)
         }
         .buttonStyle(.plain)
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
@@ -543,42 +714,27 @@ struct CustomerNoteCard: View {
     let note: CustomerNote
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: note.noteTypeIcon)
-                    .font(.system(size: 11))
-                    .foregroundColor(Color(note.noteTypeColor))
                 Text(note.noteType?.capitalized ?? "Note")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Color(note.noteTypeColor))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.5))
                 Spacer()
                 if let date = note.createdAt {
-                    Text(formatDate(date))
+                    Text(date, style: .relative)
                         .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Color.primary.opacity(0.3))
                 }
             }
 
             Text(note.note)
                 .font(.system(size: 12))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.primary.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(note.noteTypeColor).opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color(note.noteTypeColor).opacity(0.2), lineWidth: 1)
-        )
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(6)
     }
 }
 
@@ -587,13 +743,10 @@ struct LoyaltyDetailsView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            CustomerInfoRow(label: "Current Tier", value: loyalty.currentTier ?? "None")
-            CustomerInfoRow(label: "Points Balance", value: "\(loyalty.pointsBalance ?? 0)")
-            CustomerInfoRow(label: "Lifetime Earned", value: "\(loyalty.pointsLifetimeEarned ?? 0)")
-            CustomerInfoRow(label: "Lifetime Redeemed", value: "\(loyalty.pointsLifetimeRedeemed ?? 0)")
-            if let provider = loyalty.provider {
-                CustomerInfoRow(label: "Provider", value: provider.capitalized)
-            }
+            CustomerInfoRow(label: "Tier", value: loyalty.currentTier ?? "None")
+            CustomerInfoRow(label: "Balance", value: "\(loyalty.pointsBalance ?? 0) pts")
+            CustomerInfoRow(label: "Earned", value: "\(loyalty.pointsLifetimeEarned ?? 0) pts")
+            CustomerInfoRow(label: "Redeemed", value: "\(loyalty.pointsLifetimeRedeemed ?? 0) pts")
         }
         .padding(.vertical, 8)
     }
@@ -610,9 +763,15 @@ struct AddNoteSheet: View {
     let noteTypes = ["general", "support", "billing", "fraud", "vip"]
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Add Note for \(customerName)")
-                .font(.system(size: 16, weight: .semibold))
+        VStack(spacing: 16) {
+            HStack {
+                Text("Add Note for \(customerName)")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .font(.system(size: 12))
+                    .buttonStyle(.plain)
+            }
 
             Picker("Type", selection: $noteType) {
                 ForEach(noteTypes, id: \.self) { type in
@@ -622,33 +781,74 @@ struct AddNoteSheet: View {
             .pickerStyle(.segmented)
 
             TextEditor(text: $noteText)
-                .font(.system(size: 13))
-                .frame(height: 120)
+                .font(.system(size: 12))
+                .frame(height: 100)
+                .scrollContentBackground(.hidden)
                 .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
+                .background(Color.primary.opacity(0.03))
+                .cornerRadius(6)
 
-            HStack {
-                Button("Cancel") {
+            Button {
+                Task {
+                    await onSave()
                     dismiss()
                 }
-                .keyboardShortcut(.escape)
+            } label: {
+                Text("Save")
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.08))
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .disabled(noteText.isEmpty)
+        }
+        .padding(16)
+        .frame(width: 360)
+    }
+}
 
-                Spacer()
+struct CustomerHeader: View {
+    let customer: Customer
 
-                Button("Save") {
-                    Task {
-                        await onSave()
-                        dismiss()
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 48, height: 48)
+                Text(customer.initials)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.6))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(customer.displayName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.9))
+                    if customer.idVerified == true {
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.primary.opacity(0.5))
                     }
                 }
-                .keyboardShortcut(.return, modifiers: .command)
-                .disabled(noteText.isEmpty)
+
+                if let tier = customer.loyaltyTier {
+                    Text("\(tier.capitalized) Member")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.primary.opacity(0.5))
+                }
+
+                Text("ID: \(customer.id.uuidString.prefix(8))...")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color.primary.opacity(0.3))
             }
+
+            Spacer()
         }
-        .padding(20)
-        .frame(width: 400)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
 }

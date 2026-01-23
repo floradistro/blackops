@@ -1,299 +1,349 @@
 import SwiftUI
 
+// MARK: - Meta Campaign Detail Panel
+// Minimal, monochromatic theme
+
 struct MetaCampaignDetailPanel: View {
     let campaign: MetaCampaign
     @ObservedObject var store: EditorStore
     @State private var isRefreshing = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                headerSection
-
-                // Stats
-                statsSection
-
-                // Campaign Details
-                detailsSection
-
-                // Budget & Spending
-                budgetSection
-
-                // Performance Metrics
-                if campaign.impressions > 0 {
-                    performanceSection
-                }
+        VStack(spacing: 0) {
+            // Inline toolbar
+            PanelToolbar(
+                title: campaign.name,
+                icon: "megaphone",
+                subtitle: campaign.status
+            ) {
+                ToolbarButton(
+                    icon: isRefreshing ? "ellipsis" : "arrow.clockwise",
+                    action: {
+                        Task {
+                            isRefreshing = true
+                            await store.refreshMetaCampaign(campaign)
+                            isRefreshing = false
+                        }
+                    },
+                    disabled: isRefreshing
+                )
             }
-            .padding()
-        }
-        .background(Color(NSColor.windowBackgroundColor))
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button(action: {
-                    Task {
-                        isRefreshing = true
-                        await store.refreshMetaCampaign(campaign)
-                        isRefreshing = false
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header
+                    headerSection
+
+                    Divider()
+                        .padding(.vertical, 8)
+
+                    // Stats
+                    SectionHeader(title: "Performance")
+                    statsGrid
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
+
+                    Divider()
+                        .padding(.vertical, 8)
+
+                    // Budget
+                    SectionHeader(title: "Budget")
+                    budgetSection
+
+                    Divider()
+                        .padding(.vertical, 8)
+
+                    // Details
+                    SectionHeader(title: "Details")
+                    detailsSection
+
+                    // Performance Metrics
+                    if campaign.impressions > 0 {
+                        Divider()
+                            .padding(.vertical, 8)
+                        SectionHeader(title: "Metrics")
+                        metricsSection
                     }
-                }) {
-                    if isRefreshing {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
+
+                    Spacer(minLength: 20)
                 }
             }
         }
     }
+
+    // MARK: - Header
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 48, height: 48)
                 Image(systemName: "megaphone")
-                    .font(.title)
-                    .foregroundStyle(.pink)
-
-                VStack(alignment: .leading) {
-                    Text(campaign.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    if let objective = campaign.objective {
-                        Text(objective)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer()
-
-                if let status = campaign.status {
-                    MetaStatusBadge(status: status)
-                }
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.primary.opacity(0.6))
             }
 
-            if let effectiveStatus = campaign.effectiveStatus {
-                Text("Effective Status: \(effectiveStatus)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-    }
-
-    private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Performance")
-                .font(.headline)
-
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                GlassStatCard(
-                    title: "Impressions",
-                    value: formatNumber(campaign.impressions),
-                    icon: "eye",
-                    color: DesignSystem.Colors.blue
-                )
-
-                GlassStatCard(
-                    title: "Reach",
-                    value: formatNumber(campaign.reach),
-                    icon: "person.2",
-                    color: DesignSystem.Colors.purple
-                )
-
-                GlassStatCard(
-                    title: "Clicks",
-                    value: formatNumber(campaign.clicks),
-                    icon: "hand.tap",
-                    subtitle: String(format: "%.2f%% CTR", campaign.clickRate),
-                    color: DesignSystem.Colors.orange
-                )
-
-                GlassStatCard(
-                    title: "Spend",
-                    value: formatCurrency(campaign.spend),
-                    icon: "dollarsign.circle",
-                    color: DesignSystem.Colors.green
-                )
-
-                GlassStatCard(
-                    title: "CPC",
-                    value: formatCurrency(campaign.cpc ?? 0),
-                    icon: "chart.line.uptrend.xyaxis",
-                    color: DesignSystem.Colors.cyan
-                )
-
-                GlassStatCard(
-                    title: "CPM",
-                    value: formatCurrency(campaign.cpm ?? 0),
-                    icon: "chart.bar",
-                    color: DesignSystem.Colors.cyan
-                )
-            }
-        }
-    }
-
-    private var budgetSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Budget & Spending")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 8) {
-                if let dailyBudget = campaign.dailyBudget {
-                    BudgetRow(label: "Daily Budget", amount: dailyBudget)
-                }
-
-                if let lifetimeBudget = campaign.lifetimeBudget {
-                    BudgetRow(label: "Lifetime Budget", amount: lifetimeBudget)
-                }
-
-                if let budgetRemaining = campaign.budgetRemaining {
-                    BudgetRow(label: "Budget Remaining", amount: budgetRemaining)
-                }
-
-                BudgetRow(label: "Total Spend", amount: campaign.spend)
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
-        }
-    }
-
-    private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Campaign Details")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 8) {
-                CampaignDetailRow(label: "Meta Campaign ID", value: campaign.metaCampaignId)
-                CampaignDetailRow(label: "Ad Account", value: campaign.metaAccountId)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(campaign.name)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.9))
 
                 if let objective = campaign.objective {
-                    CampaignDetailRow(label: "Objective", value: objective)
+                    Text(objective)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.primary.opacity(0.5))
                 }
 
-                if let startTime = campaign.startTime {
-                    CampaignDetailRow(
-                        label: "Start Time",
-                        value: startTime.formatted(date: .abbreviated, time: .shortened)
-                    )
+                if let effectiveStatus = campaign.effectiveStatus {
+                    Text("Effective: \(effectiveStatus)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                 }
+            }
 
-                if let stopTime = campaign.stopTime {
-                    CampaignDetailRow(
-                        label: "Stop Time",
-                        value: stopTime.formatted(date: .abbreviated, time: .shortened)
-                    )
-                }
+            Spacer()
 
-                if let lastSynced = campaign.lastSyncedAt {
-                    CampaignDetailRow(
-                        label: "Last Synced",
-                        value: lastSynced.formatted(date: .abbreviated, time: .shortened)
-                    )
-                }
+            // Status badge
+            if let status = campaign.status {
+                MinimalStatusBadge(status: status)
+            }
+        }
+        .padding(20)
+    }
 
-                CampaignDetailRow(
-                    label: "Created",
-                    value: campaign.createdAt.formatted(date: .abbreviated, time: .shortened)
+    // MARK: - Stats Grid
+
+    private var statsGrid: some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 1) {
+            MinimalMetricCell(title: "Impressions", value: formatNumber(campaign.impressions))
+            MinimalMetricCell(title: "Reach", value: formatNumber(campaign.reach))
+            MinimalMetricCell(title: "Clicks", value: formatNumber(campaign.clicks), subtitle: String(format: "%.2f%% CTR", campaign.clickRate))
+            MinimalMetricCell(title: "Spend", value: formatCurrency(campaign.spend))
+            MinimalMetricCell(title: "CPC", value: formatCurrency(campaign.cpc ?? 0))
+            MinimalMetricCell(title: "CPM", value: formatCurrency(campaign.cpm ?? 0))
+        }
+    }
+
+    // MARK: - Budget
+
+    private var budgetSection: some View {
+        VStack(spacing: 6) {
+            if let dailyBudget = campaign.dailyBudget {
+                MinimalBudgetRow(label: "Daily Budget", value: formatCurrency(dailyBudget))
+            }
+            if let lifetimeBudget = campaign.lifetimeBudget {
+                MinimalBudgetRow(label: "Lifetime Budget", value: formatCurrency(lifetimeBudget))
+            }
+            if let budgetRemaining = campaign.budgetRemaining {
+                MinimalBudgetRow(label: "Remaining", value: formatCurrency(budgetRemaining))
+            }
+            MinimalBudgetRow(label: "Total Spend", value: formatCurrency(campaign.spend))
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Details
+
+    private var detailsSection: some View {
+        VStack(spacing: 6) {
+            InfoRow(label: "Campaign ID", value: String(campaign.metaCampaignId.prefix(16)) + "...")
+            InfoRow(label: "Ad Account", value: campaign.metaAccountId)
+
+            if let objective = campaign.objective {
+                InfoRow(label: "Objective", value: objective)
+            }
+
+            if let startTime = campaign.startTime {
+                InfoRow(label: "Start", value: startTime.formatted(date: .abbreviated, time: .shortened))
+            }
+
+            if let stopTime = campaign.stopTime {
+                InfoRow(label: "Stop", value: stopTime.formatted(date: .abbreviated, time: .shortened))
+            }
+
+            if let lastSynced = campaign.lastSyncedAt {
+                InfoRow(label: "Synced", value: lastSynced.formatted(date: .abbreviated, time: .shortened))
+            }
+
+            InfoRow(label: "Created", value: campaign.createdAt.formatted(date: .abbreviated, time: .shortened))
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Metrics
+
+    private var metricsSection: some View {
+        VStack(spacing: 12) {
+            if campaign.conversions > 0 {
+                MinimalMetricRow(
+                    label: "Conversions",
+                    value: "\(campaign.conversions)",
+                    subtitle: "Value: \(formatCurrency(campaign.conversionValue))"
                 )
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
-        }
-    }
 
-    private var performanceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Performance Metrics")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 16) {
-                if campaign.conversions > 0 {
-                    MetricCard(
-                        label: "Conversions",
-                        value: "\(campaign.conversions)",
-                        subtitle: "Value: \(formatCurrency(campaign.conversionValue))"
-                    )
-                }
-
-                if let roas = campaign.roas, roas > 0 {
-                    MetricCard(
-                        label: "ROAS",
-                        value: String(format: "%.2fx", NSDecimalNumber(decimal: roas).doubleValue),
-                        subtitle: "Return on Ad Spend"
-                    )
-                }
-
-                if let ctr = campaign.ctr, ctr > 0 {
-                    MetricCard(
-                        label: "CTR",
-                        value: String(format: "%.2f%%", NSDecimalNumber(decimal: ctr).doubleValue),
-                        subtitle: "Click-Through Rate"
-                    )
-                }
+            if let roas = campaign.roas, roas > 0 {
+                MinimalMetricRow(
+                    label: "ROAS",
+                    value: String(format: "%.2fx", NSDecimalNumber(decimal: roas).doubleValue),
+                    subtitle: "Return on Ad Spend"
+                )
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
+
+            if let ctr = campaign.ctr, ctr > 0 {
+                MinimalMetricRow(
+                    label: "CTR",
+                    value: String(format: "%.2f%%", NSDecimalNumber(decimal: ctr).doubleValue),
+                    subtitle: "Click-Through Rate"
+                )
+            }
         }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
     }
+
+    // MARK: - Helpers
 
     private func formatNumber(_ number: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: number)) ?? "\(number)"
+        if number >= 1_000_000 {
+            return String(format: "%.1fM", Double(number) / 1_000_000)
+        } else if number >= 1_000 {
+            return String(format: "%.1fK", Double(number) / 1_000)
+        }
+        return "\(number)"
     }
 
     private func formatCurrency(_ amount: Decimal) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
-        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$\(amount)"
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
     }
 }
+
+// MARK: - Supporting Views
+
+private struct MinimalStatusBadge: View {
+    let status: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color.primary.opacity(statusOpacity))
+                .frame(width: 6, height: 6)
+            Text(status.capitalized)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.7))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.primary.opacity(0.05))
+        .clipShape(Capsule())
+    }
+
+    private var statusOpacity: Double {
+        switch status.uppercased() {
+        case "ACTIVE": return 0.7
+        case "PAUSED": return 0.4
+        default: return 0.3
+        }
+    }
+}
+
+private struct MinimalMetricCell: View {
+    let title: String
+    let value: String
+    var subtitle: String? = nil
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
+            Text(title)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
+            if let subtitle = subtitle {
+                Text(subtitle)
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.primary.opacity(0.3))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color.primary.opacity(0.03))
+    }
+}
+
+private struct MinimalBudgetRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.5))
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
+        }
+    }
+}
+
+private struct MinimalMetricRow: View {
+    let label: String
+    let value: String
+    let subtitle: String
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.3))
+            }
+            Spacer()
+            Text(value)
+                .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
+        }
+        .padding(12)
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(6)
+    }
+}
+
+// MARK: - Legacy Support
 
 struct MetaStatusBadge: View {
     let status: String
 
     var body: some View {
-        Text(status)
-            .font(.caption)
-            .fontWeight(.semibold)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(statusColor)
-            )
-    }
-
-    var statusColor: Color {
-        switch status.uppercased() {
-        case "ACTIVE": return .green
-        case "PAUSED": return .orange
-        case "DRAFT": return .gray
-        case "ARCHIVED": return .secondary
-        default: return .blue
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color.primary.opacity(0.5))
+                .frame(width: 6, height: 6)
+            Text(status.capitalized)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.7))
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.primary.opacity(0.05))
+        .clipShape(Capsule())
     }
 }
 
@@ -304,14 +354,12 @@ struct BudgetRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.5))
             Spacer()
-
             Text(formatCurrency(amount))
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
         }
     }
 
@@ -319,7 +367,7 @@ struct BudgetRow: View {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
-        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$\(amount)"
+        return formatter.string(from: NSDecimalNumber(decimal: amount)) ?? "$0.00"
     }
 }
 
@@ -331,16 +379,14 @@ struct MetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
             Text(value)
-                .font(.title)
-                .fontWeight(.bold)
-
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.primary.opacity(0.8))
             Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.4))
         }
     }
 }

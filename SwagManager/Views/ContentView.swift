@@ -4,12 +4,19 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var appState: AppState
 
+    // Toggle to switch between old and new navigation (for testing)
+    @AppStorage("useNativeNavigation") private var useNativeNavigation = true
+
     var body: some View {
         Group {
             if authManager.isLoading {
                 loadingView
             } else if authManager.isAuthenticated {
-                EditorView()
+                if useNativeNavigation {
+                    NativeEditorView()
+                } else {
+                    EditorView()
+                }
             } else {
                 AuthView()
             }

@@ -137,13 +137,15 @@ actor ImageCache {
     }
 }
 
-// MARK: - Cached Async Image
+// MARK: - Cached Async Image (Optimized with smooth fade-in)
 
 struct CachedAsyncImage: View {
     let url: URL?
+    var showPlaceholder: Bool = true
 
     @State private var image: NSImage?
     @State private var loadState: LoadState = .idle
+    @State private var opacity: Double = 0
 
     private enum LoadState {
         case idle
@@ -153,19 +155,27 @@ struct CachedAsyncImage: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
+            // Placeholder/loading state
+            if showPlaceholder && image == nil {
+                if loadState == .loading {
+                    // Shimmer effect during loading
+                    ShimmerView()
+                } else {
+                    Color.primary.opacity(0.05)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundStyle(Color.primary.opacity(0.15))
+                                .font(.system(size: 24))
+                        )
+                }
+            }
+
+            // Loaded image with fade-in
             if let image {
                 Image(nsImage: image)
                     .resizable()
-            } else if loadState == .loading {
-                Color.black.opacity(0.3)
-            } else {
-                Color.black.opacity(0.3)
-                    .overlay(
-                        Image(systemName: "photo")
-                            .foregroundStyle(.white.opacity(0.15))
-                            .font(.system(size: 24))
-                    )
+                    .opacity(opacity)
             }
         }
         .task(id: url) {
@@ -183,6 +193,8 @@ struct CachedAsyncImage: View {
         if let cached = await ImageCache.shared.cachedImage(for: url) {
             image = cached
             loadState = .loaded
+            // Instant display for cached images
+            opacity = 1
             return
         }
 
@@ -196,8 +208,46 @@ struct CachedAsyncImage: View {
         if let loadedImage = await ImageCache.shared.image(for: url) {
             image = loadedImage
             loadState = .loaded
+            // Smooth fade-in for newly loaded images
+            withAnimation(.easeOut(duration: 0.25)) {
+                opacity = 1
+            }
         } else {
             loadState = .failed
+        }
+    }
+}
+
+// MARK: - Shimmer Loading Effect
+
+private struct ShimmerView: View {
+    @State private var shimmerOffset: CGFloat = -1
+
+    var body: some View {
+        GeometryReader { geometry in
+            Color.primary.opacity(0.05)
+                .overlay(
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .clear,
+                                    Color.primary.opacity(0.08),
+                                    .clear
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * 0.5)
+                        .offset(x: shimmerOffset * geometry.size.width)
+                )
+                .clipped()
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                shimmerOffset = 1.5
+            }
         }
     }
 }

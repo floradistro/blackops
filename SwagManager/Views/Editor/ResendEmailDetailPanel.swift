@@ -17,8 +17,26 @@ struct ResendEmailDetailPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab Bar
-            tabBar
+            // Inline toolbar
+            PanelToolbar(
+                title: email.subject,
+                icon: "envelope",
+                subtitle: email.status.capitalized
+            ) {
+                // Tab picker in toolbar
+                Picker("", selection: $selectedTab) {
+                    ForEach(EmailTab.allCases, id: \.self) { tab in
+                        Text(tab.rawValue).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 140)
+
+                ToolbarButton(
+                    icon: "arrow.clockwise",
+                    action: { Task { await store.refreshEmails() } }
+                )
+            }
 
             // Content based on selected tab
             TabView(selection: $selectedTab) {
@@ -27,45 +45,6 @@ struct ResendEmailDetailPanel: View {
             }
             .tabViewStyle(.automatic)
         }
-    }
-
-    @ViewBuilder
-    private var tabBar: some View {
-        HStack(spacing: 0) {
-            ForEach(EmailTab.allCases, id: \.self) { tab in
-                Button(action: { selectedTab = tab }) {
-                    Text(tab.rawValue)
-                        .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
-                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
-                }
-                .buttonStyle(.plain)
-            }
-
-            Spacer()
-
-            // Refresh button
-            Button(action: {
-                Task {
-                    await store.refreshEmails()
-                }
-            }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.clockwise")
-                    Text("Refresh")
-                }
-                .font(.system(size: 12))
-                .foregroundStyle(.blue)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, DesignSystem.Spacing.md)
-        .padding(.vertical, DesignSystem.Spacing.xs)
-        .background(Color.primary.opacity(0.03))
     }
 
     // MARK: - Details Tab

@@ -13,11 +13,11 @@ struct MinimalTabBar: View {
         HStack(spacing: 0) {
             // Traffic light spacer (70pt for macOS window buttons)
             Color.clear
-                .frame(width: 70)
+                .frame(width: 78, height: 36)
 
             // Tabs
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
+                HStack(spacing: 1) {
                     ForEach(store.openTabs) { tab in
                         MinimalTab(
                             tab: tab,
@@ -30,15 +30,14 @@ struct MinimalTabBar: View {
                         )
                     }
                 }
+                .padding(.trailing, 20)
             }
-
-            Spacer(minLength: 0)
         }
         .frame(height: 36)
         .background(Color(nsColor: .windowBackgroundColor))
         .overlay(
             Rectangle()
-                .fill(Color.primary.opacity(0.08))
+                .fill(Color.primary.opacity(0.1))
                 .frame(height: 1),
             alignment: .bottom
         )
@@ -69,42 +68,54 @@ struct MinimalTab: View {
         Button {
             onSelect()
         } label: {
-            HStack(spacing: 3) {
-                // Close/unsaved indicator
-                ZStack {
-                    if hasUnsavedChanges && !isHovering {
-                        Circle()
-                            .fill(Color.primary.opacity(0.4))
-                            .frame(width: 4, height: 4)
-                    } else if isHovering {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 6, weight: .bold))
-                            .foregroundStyle(Color.primary.opacity(0.4))
-                            .onTapGesture { onClose() }
-                    }
-                }
-                .frame(width: 10, height: 10)
-
+            HStack(spacing: 6) {
                 // Icon
                 Image(systemName: tab.icon)
-                    .font(.system(size: 8))
-                    .foregroundStyle(Color.primary.opacity(isActive ? 0.7 : 0.35))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.8 : 0.5))
 
                 // Title
                 Text(tab.name)
-                    .font(.system(size: 10, weight: isActive ? .medium : .regular))
-                    .foregroundStyle(Color.primary.opacity(isActive ? 0.85 : 0.45))
+                    .font(.system(size: 12, weight: isActive ? .medium : .regular))
+                    .foregroundStyle(Color.primary.opacity(isActive ? 0.9 : 0.6))
                     .lineLimit(1)
+
+                // Close button / unsaved indicator
+                ZStack {
+                    if hasUnsavedChanges && !isHovering {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 8, height: 8)
+                    } else if isHovering || isActive {
+                        Button {
+                            onClose()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(Color.primary.opacity(0.5))
+                                .frame(width: 16, height: 16)
+                                .background(isHovering ? Color.primary.opacity(0.1) : Color.clear)
+                                .cornerRadius(3)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(width: 16, height: 16)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(isActive ? Color.primary.opacity(0.05) : Color.clear)
+            .padding(.horizontal, 12)
+            .frame(height: 36)
+            .background(
+                isActive
+                    ? Color.primary.opacity(0.08)
+                    : (isHovering ? Color.primary.opacity(0.04) : Color.clear)
+            )
             .overlay(
                 Rectangle()
-                    .fill(Color.primary.opacity(0.08))
+                    .fill(Color.primary.opacity(0.1))
                     .frame(width: 1),
                 alignment: .trailing
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }

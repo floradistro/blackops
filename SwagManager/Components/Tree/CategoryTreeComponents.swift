@@ -1,9 +1,7 @@
 import SwiftUI
 
 // MARK: - Category Tree Components
-// Extracted from TreeItems.swift following Apple engineering standards
-// Contains: CategoryHierarchyView, CategoryTreeItem
-// File size: ~148 lines (under Apple's 300 line "excellent" threshold)
+// Minimal monochromatic theme
 
 // MARK: - Category Hierarchy View (Recursive)
 
@@ -41,7 +39,7 @@ struct CategoryHierarchyView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Category header row
             Button {
-                withAnimation(DesignSystem.Animation.fast) {
+                withAnimation(.easeInOut(duration: 0.15)) {
                     if expandedCategoryIds.contains(category.id) {
                         expandedCategoryIds.remove(category.id)
                     } else {
@@ -50,35 +48,49 @@ struct CategoryHierarchyView: View {
                 }
                 store.selectCategory(category)
             } label: {
-                HStack(spacing: 8) {
-                    // Chevron
-                    if hasChildren {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: 16)
-                    } else {
-                        Spacer().frame(width: 16)
+                HStack(spacing: 6) {
+                    // Indentation
+                    if indentLevel > 0 {
+                        Color.clear.frame(width: CGFloat(indentLevel) * 14)
                     }
 
+                    // Chevron
+                    if hasChildren {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(Color.primary.opacity(0.4))
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .frame(width: 10)
+                    } else {
+                        Spacer().frame(width: 10)
+                    }
+
+                    // Icon
+                    Image(systemName: category.icon ?? "folder")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.primary.opacity(0.5))
+                        .frame(width: 14)
+
+                    // Name
                     Text(category.name)
-                        .font(.system(size: 13))
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Color.primary.opacity(isSelected ? 0.9 : 0.75))
                         .lineLimit(1)
 
                     Spacer(minLength: 4)
 
+                    // Count
                     if totalCount > 0 {
                         Text("\(totalCount)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(Color.primary.opacity(0.35))
                     }
                 }
-                .padding(.leading, 16 + CGFloat(indentLevel) * 16)
-                .padding(.trailing, 16)
-                .padding(.vertical, 6)
+                .frame(height: 24)
+                .padding(.horizontal, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isSelected ? Color.primary.opacity(0.08) : Color.clear)
                 )
                 .contentShape(Rectangle())
             }
@@ -125,32 +137,42 @@ struct CategoryTreeItem: View {
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(spacing: DesignSystem.TreeSpacing.iconSpacing) {
-            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: DesignSystem.TreeSpacing.chevronSize))
-                .foregroundStyle(.tertiary)
+        HStack(spacing: 6) {
+            // Indentation
+            if indentLevel > 0 {
+                Color.clear.frame(width: CGFloat(indentLevel) * 14)
+            }
+
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.4))
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 .frame(width: 10)
 
+            // Icon
             Image(systemName: category.icon ?? (isExpanded ? "folder.fill" : "folder"))
-                .font(.system(size: DesignSystem.TreeSpacing.iconSize))
-                .foregroundStyle(.green)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.primary.opacity(0.5))
                 .frame(width: 14)
 
+            // Name
             Text(category.name)
-                .font(.system(size: DesignSystem.TreeSpacing.primaryTextSize))
+                .font(.system(size: 10.5))
+                .foregroundStyle(Color.primary.opacity(0.75))
                 .lineLimit(1)
 
-            Spacer(minLength: DesignSystem.TreeSpacing.elementSpacing)
+            Spacer(minLength: 4)
 
+            // Count
             if itemCount > 0 {
                 Text("\(itemCount)")
-                    .font(.system(size: DesignSystem.TreeSpacing.secondaryTextSize))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.primary.opacity(0.35))
             }
         }
-        .frame(height: DesignSystem.TreeSpacing.itemHeight)
-        .padding(.leading, DesignSystem.TreeSpacing.itemPaddingHorizontal + CGFloat(indentLevel) * DesignSystem.TreeSpacing.indentPerLevel)
-        .padding(.trailing, DesignSystem.TreeSpacing.itemPaddingHorizontal)
+        .frame(height: 24)
+        .padding(.horizontal, 12)
         .contentShape(Rectangle())
         .onTapGesture { onToggle() }
     }

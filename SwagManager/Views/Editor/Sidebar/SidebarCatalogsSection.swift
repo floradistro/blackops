@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Sidebar Catalogs Section
-// Premium monochromatic design
+// Minimal monochromatic theme
 
 struct SidebarCatalogsSection: View {
     @ObservedObject var store: EditorStore
@@ -16,15 +16,15 @@ struct SidebarCatalogsSection: View {
             count: store.catalogs.count,
             isLoading: store.isLoadingCatalogs
         )
-        .padding(.top, DesignSystem.TreeSpacing.sectionPaddingTop)
+        .padding(.top, 2)
 
         if store.sidebarCatalogExpanded {
             if store.catalogs.isEmpty {
                 Text("No catalogs")
-                    .font(DesignSystem.Typography.caption1)
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .padding(.horizontal, DesignSystem.Spacing.md)
-                    .padding(.vertical, DesignSystem.Spacing.xxs)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
             } else {
                 ForEach(store.catalogs) { catalog in
                     let isExpanded = store.selectedCatalog?.id == catalog.id

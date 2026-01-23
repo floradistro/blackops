@@ -85,7 +85,9 @@ final class RealtimeEventBus: ObservableObject {
 
     // MARK: - Private State
 
-    private let eventSubject = PassthroughSubject<RealtimeEvent, Never>()
+    // nonisolated(unsafe) allows capturing in concurrent code for Swift 6
+    // Safe because we only call send() on MainActor
+    nonisolated(unsafe) private let eventSubject = PassthroughSubject<RealtimeEvent, Never>()
     private var activeChannels: [UUID: ChannelState] = [:]
     private var reconnectTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -231,27 +233,27 @@ final class RealtimeEventBus: ObservableObject {
         let channelName = "location-\(locationId.uuidString)"
         let channel = supabase.realtimeV2.channel(channelName)
 
-        // MIGRATION: When you migrate, change table name here:
-        // "location_queue" → "queues"
+        // Subscribe to location_queue changes for this location
         let queueChanges = channel.postgresChange(
             AnyAction.self,
-            table: "location_queue",  // MIGRATION: Change to "queues"
+            table: "location_queue",
             filter: .eq("location_id", value: locationId.uuidString)
         )
 
-        // MIGRATION: Update "carts" table name if changed
+        // Subscribe to carts changes for this location
         let cartChanges = channel.postgresChange(
             AnyAction.self,
-            table: "carts",  // MIGRATION: Update if table renamed
+            table: "carts",
             filter: .eq("location_id", value: locationId.uuidString)
         )
 
-        // MIGRATION: Update "cart_items" table name if changed
+        // Subscribe to cart_items changes (no filter - can't filter by location directly)
         let cartItemChanges = channel.postgresChange(
             AnyAction.self,
-            table: "cart_items"  // MIGRATION: Update if table renamed
+            table: "cart_items"
         )
 
+        // Subscribe to inventory changes for this location
         let inventoryChanges = channel.postgresChange(
             AnyAction.self,
             table: "inventory",
@@ -260,8 +262,9 @@ final class RealtimeEventBus: ObservableObject {
 
         try await channel.subscribeWithError()
 
-        // Capture eventSubject to avoid capturing self in concurrent code
+        // Capture values to avoid capturing self in concurrent code
         let eventSubject = self.eventSubject
+        let capturedLocationId = locationId
 
         // Listen to changes and broadcast events - subscribers refetch their own data
         let task = Task {
@@ -269,28 +272,28 @@ final class RealtimeEventBus: ObservableObject {
                 // Queue changes
                 group.addTask {
                     for await _ in queueChanges {
-                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: capturedLocationId)) }
                     }
                 }
 
                 // Cart changes - broadcast location update so all carts at this location refetch
                 group.addTask {
                     for await _ in cartChanges {
-                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: capturedLocationId)) }
                     }
                 }
 
                 // Cart item changes - same
                 group.addTask {
                     for await _ in cartItemChanges {
-                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.queueUpdated(locationId: capturedLocationId)) }
                     }
                 }
 
                 // Inventory changes - notify product grids to refetch
                 group.addTask {
                     for await _ in inventoryChanges {
-                        await MainActor.run { eventSubject.send(.inventoryUpdated(locationId: locationId)) }
+                        await MainActor.run { eventSubject.send(.inventoryUpdated(locationId: capturedLocationId)) }
                     }
                 }
             }

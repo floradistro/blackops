@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: - Agent Test Sheet
 // Modal sheet for testing agents with live execution
+// Minimal monochromatic theme
 
 struct AgentTestSheet: View {
     let agent: AgentConfiguration
@@ -12,7 +13,14 @@ struct AgentTestSheet: View {
     @State private var messages: [TestMessage] = []
 
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // Header
+            sheetHeader
+
+            Divider()
+                .opacity(0.3)
+
+            // Content
             VSplitView {
                 // Top: Conversation
                 conversationView
@@ -22,30 +30,77 @@ struct AgentTestSheet: View {
                 inputView
                     .frame(height: 150)
             }
-            .navigationTitle("Test: \(agent.name)")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        messages = []
-                    } label: {
-                        Label("Clear", systemImage: "trash")
-                    }
-                    .disabled(messages.isEmpty)
-                }
-            }
         }
+        .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 800, height: 600)
     }
 
+    // MARK: - Header
+
+    private var sheetHeader: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(width: 32, height: 32)
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Test: \(agent.name)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.9))
+                Text("Live execution mode")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.4))
+            }
+
+            Spacer()
+
+            // Clear button
+            Button {
+                messages = []
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Clear")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(Color.primary.opacity(messages.isEmpty ? 0.3 : 0.5))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(messages.isEmpty ? 0.02 : 0.05))
+                .cornerRadius(5)
+            }
+            .buttonStyle(.plain)
+            .disabled(messages.isEmpty)
+
+            // Done button
+            Button {
+                dismiss()
+            } label: {
+                Text("Done")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.7))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 5)
+                    .background(Color.primary.opacity(0.08))
+                    .cornerRadius(5)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Conversation View
+
     private var conversationView: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: DesignSystem.Spacing.lg) {
+            LazyVStack(alignment: .leading, spacing: 12) {
                 if messages.isEmpty {
                     emptyState
                 } else {
@@ -54,75 +109,94 @@ struct AgentTestSheet: View {
                     }
                 }
             }
-            .padding(DesignSystem.Spacing.xl)
+            .padding(16)
         }
-        .background(VisualEffectBackground(material: .underWindowBackground))
+        .background(Color.primary.opacity(0.02))
     }
 
     private var emptyState: some View {
-        VStack(spacing: DesignSystem.Spacing.md) {
+        VStack(spacing: 12) {
             Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 36))
+                .foregroundStyle(Color.primary.opacity(0.2))
 
             Text("Start Testing")
-                .font(DesignSystem.Typography.headline)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.primary.opacity(0.5))
 
             Text("Enter a prompt below to test your agent")
-                .font(DesignSystem.Typography.caption1)
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary.opacity(0.35))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Input View
+
     private var inputView: some View {
         VStack(spacing: 0) {
             Divider()
+                .opacity(0.3)
 
-            VStack(spacing: DesignSystem.Spacing.md) {
+            VStack(spacing: 10) {
                 // Tool info
                 if !agent.enabledTools.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: DesignSystem.Spacing.sm) {
-                            Image(systemName: "wrench.and.screwdriver.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.primary.opacity(0.4))
 
                             ForEach(agent.enabledTools) { tool in
                                 Text(tool.name)
-                                    .font(.system(size: 11))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(DesignSystem.Colors.surfaceTertiary)
-                                    .cornerRadius(4)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(Color.primary.opacity(0.5))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color.primary.opacity(0.05))
+                                    .cornerRadius(3)
                             }
                         }
                     }
                 }
 
                 // Input field
-                HStack(spacing: DesignSystem.Spacing.md) {
+                HStack(spacing: 10) {
                     TextEditor(text: $testPrompt)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .scrollContentBackground(.hidden)
-                        .background(DesignSystem.Colors.surfaceTertiary)
-                        .cornerRadius(DesignSystem.Radius.md)
+                        .foregroundStyle(Color.primary.opacity(0.8))
+                        .padding(8)
+                        .background(Color.primary.opacity(0.04))
+                        .cornerRadius(6)
 
+                    // Send button - sleek minimal
                     Button {
                         sendMessage()
                     } label: {
-                        Image(systemName: isRunning ? "stop.fill" : "paperplane.fill")
-                            .font(.system(size: 18))
+                        ZStack {
+                            Circle()
+                                .fill(Color.primary.opacity(canSend ? 0.1 : 0.04))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: isRunning ? "stop.fill" : "paperplane.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.primary.opacity(canSend ? 0.7 : 0.25))
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(testPrompt.isEmpty && !isRunning)
+                    .buttonStyle(.plain)
+                    .disabled(!canSend)
                 }
             }
-            .padding(DesignSystem.Spacing.lg)
-            .background(VisualEffectBackground(material: .sidebar))
+            .padding(12)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
     }
+
+    private var canSend: Bool {
+        !testPrompt.isEmpty || isRunning
+    }
+
+    // MARK: - Actions
 
     private func sendMessage() {
         guard !testPrompt.isEmpty else { return }
@@ -206,47 +280,49 @@ struct TestMessageView: View {
     let message: TestMessage
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignSystem.Spacing.md) {
-            // Icon
-            Image(systemName: message.icon)
-                .font(.system(size: 18))
-                .foregroundStyle(message.color)
-                .frame(width: 32, height: 32)
-                .background(message.color.opacity(0.1))
-                .cornerRadius(8)
+        HStack(alignment: .top, spacing: 10) {
+            // Icon - monochromatic
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(width: 28, height: 28)
+                Image(systemName: message.icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(message.iconOpacity))
+            }
 
             // Content
-            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(message.roleLabel)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(message.color)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.7))
 
                     Spacer()
 
                     Text(message.timestamp, style: .time)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.primary.opacity(0.35))
                 }
 
                 if let toolName = message.toolName {
                     Text(toolName)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Color.primary.opacity(0.5))
+                        .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(DesignSystem.Colors.surfaceTertiary)
-                        .cornerRadius(4)
+                        .background(Color.primary.opacity(0.05))
+                        .cornerRadius(3)
                 }
 
                 Text(message.content)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primary.opacity(0.8))
             }
         }
-        .padding(DesignSystem.Spacing.md)
-        .background(DesignSystem.Colors.surfaceTertiary)
-        .cornerRadius(DesignSystem.Radius.lg)
+        .padding(10)
+        .background(Color.primary.opacity(0.04))
+        .cornerRadius(8)
     }
 }
 
@@ -272,18 +348,19 @@ struct TestMessage: Identifiable {
         case .user: return "person.circle.fill"
         case .assistant: return "brain.head.profile"
         case .system: return "info.circle.fill"
-        case .tool: return "wrench.and.screwdriver.fill"
+        case .tool: return "wrench.and.screwdriver"
         case .toolResult: return "checkmark.circle.fill"
         }
     }
 
-    var color: Color {
+    // Monochromatic opacity based on role
+    var iconOpacity: Double {
         switch role {
-        case .user: return .blue
-        case .assistant: return .green
-        case .system: return .gray
-        case .tool: return .orange
-        case .toolResult: return .green
+        case .user: return 0.6
+        case .assistant: return 0.7
+        case .system: return 0.4
+        case .tool: return 0.5
+        case .toolResult: return 0.6
         }
     }
 

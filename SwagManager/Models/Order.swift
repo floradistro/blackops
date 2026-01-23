@@ -115,7 +115,7 @@ public struct OrderFulfillment: Codable, Identifiable, Hashable {
     var type: FulfillmentType
     var status: FulfillmentStatusEnum
     var deliveryLocationId: UUID?
-    var deliveryAddress: [String: AnyCodableValue]?
+    var deliveryAddressJson: String?  // JSONB stored as string for simplicity
     var carrier: String?
     var trackingNumber: String?
     var trackingUrl: String?
@@ -129,7 +129,7 @@ public struct OrderFulfillment: Codable, Identifiable, Hashable {
         case orderId = "order_id"
         case type, status
         case deliveryLocationId = "delivery_location_id"
-        case deliveryAddress = "delivery_address"
+        case deliveryAddressJson = "delivery_address"
         case carrier
         case trackingNumber = "tracking_number"
         case trackingUrl = "tracking_url"
@@ -137,6 +137,32 @@ public struct OrderFulfillment: Codable, Identifiable, Hashable {
         case createdAt = "created_at"
         case shippedAt = "shipped_at"
         case deliveredAt = "delivered_at"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        orderId = try container.decode(UUID.self, forKey: .orderId)
+        type = try container.decode(FulfillmentType.self, forKey: .type)
+        status = try container.decode(FulfillmentStatusEnum.self, forKey: .status)
+        deliveryLocationId = try container.decodeIfPresent(UUID.self, forKey: .deliveryLocationId)
+        carrier = try container.decodeIfPresent(String.self, forKey: .carrier)
+        trackingNumber = try container.decodeIfPresent(String.self, forKey: .trackingNumber)
+        trackingUrl = try container.decodeIfPresent(String.self, forKey: .trackingUrl)
+        shippingCost = try container.decodeIfPresent(Decimal.self, forKey: .shippingCost)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        shippedAt = try container.decodeIfPresent(Date.self, forKey: .shippedAt)
+        deliveredAt = try container.decodeIfPresent(Date.self, forKey: .deliveredAt)
+
+        // Handle delivery_address which can be JSONB object or null
+        if let addressData = try? container.decodeIfPresent(Data.self, forKey: .deliveryAddressJson) {
+            deliveryAddressJson = String(data: addressData, encoding: .utf8)
+        } else if let addressString = try? container.decodeIfPresent(String.self, forKey: .deliveryAddressJson) {
+            deliveryAddressJson = addressString
+        } else {
+            // Try to decode as dictionary and convert to JSON string
+            deliveryAddressJson = nil
+        }
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -347,6 +373,16 @@ public struct Order: Codable, Identifiable, Hashable {
         } else {
             return fulfillmentType.label
         }
+    }
+
+    /// Icon for order type (backward compatibility alias)
+    var orderTypeIcon: String {
+        displayIcon
+    }
+
+    /// Label for order type (backward compatibility alias)
+    var orderTypeLabel: String {
+        displayTypeLabel
     }
 
     /// Tracking number from fulfillment (or legacy field)
@@ -766,40 +802,4 @@ public struct OrderWithDetails {
     }
 }
 
-// MARK: - AnyCodableValue Helper
-
-public enum AnyCodableValue: Codable, Hashable {
-    case string(String)
-    case int(Int)
-    case double(Double)
-    case bool(Bool)
-    case null
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self = .null
-        } else if let bool = try? container.decode(Bool.self) {
-            self = .bool(bool)
-        } else if let int = try? container.decode(Int.self) {
-            self = .int(int)
-        } else if let double = try? container.decode(Double.self) {
-            self = .double(double)
-        } else if let string = try? container.decode(String.self) {
-            self = .string(string)
-        } else {
-            self = .null
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .string(let v): try container.encode(v)
-        case .int(let v): try container.encode(v)
-        case .double(let v): try container.encode(v)
-        case .bool(let v): try container.encode(v)
-        case .null: try container.encodeNil()
-        }
-    }
-}
+// Note: AnyCodableValue is defined in MCPServer.swift

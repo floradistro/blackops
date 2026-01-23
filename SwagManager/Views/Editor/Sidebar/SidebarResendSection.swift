@@ -65,7 +65,7 @@ struct SidebarResendSection: View {
 
     private var sectionHeader: some View {
         Button(action: {
-            withAnimation(DesignSystem.Animation.spring) {
+            withAnimation(.easeInOut(duration: 0.2)) {
                 store.sidebarEmailsExpanded.toggle()
             }
         }) {
@@ -215,10 +215,10 @@ struct SidebarResendSection: View {
                             .scaleEffect(0.7)
                         Text("Loading \(groupCount) emails...")
                             .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
                         Spacer()
                     }
-                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .padding(.vertical, 4)
                 }
             }
         }
@@ -308,10 +308,10 @@ struct SidebarResendSection: View {
                             .scaleEffect(0.7)
                         Text("Loading \(count) emails...")
                             .font(.system(size: 9))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundStyle(Color.primary.opacity(0.4))
                         Spacer()
                     }
-                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .padding(.vertical, 4)
                 }
             }
         }
@@ -330,15 +330,15 @@ struct SidebarResendSection: View {
     private var loadingState: some View {
         HStack {
             Spacer()
-            VStack(spacing: DesignSystem.Spacing.xs) {
+            VStack(spacing: 4) {
                 ProgressView()
                 Text("Loading emails...")
-                    .font(DesignSystem.Typography.caption1)
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.4))
             }
             Spacer()
         }
-        .padding(.vertical, DesignSystem.Spacing.md)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Empty State
@@ -346,20 +346,20 @@ struct SidebarResendSection: View {
     private var emptyState: some View {
         HStack {
             Spacer()
-            VStack(spacing: DesignSystem.Spacing.xxs) {
+            VStack(spacing: 4) {
                 Text("No emails yet")
-                    .font(DesignSystem.Typography.caption1)
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.primary.opacity(0.4))
             }
             Spacer()
         }
-        .padding(.vertical, DesignSystem.Spacing.sm)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Actions
 
     private func toggleGroup(_ group: EmailCategory.Group) {
-        withAnimation(DesignSystem.Animation.fast) {
+        withAnimation(.easeInOut(duration: 0.15)) {
             if expandedGroups.contains(group) {
                 expandedGroups.remove(group)
             } else {
