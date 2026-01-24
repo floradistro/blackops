@@ -2,36 +2,38 @@
 //  LabelPrinterSettings.swift
 //  SwagManager (macOS)
 //
-//  Label printer settings - ported from iOS Whale app.
-//  Manages printer selection, auto-print preferences, and label position.
+//  Label printer settings - stores register/printer preferences.
 //
 
 import Foundation
-import AppKit
-import Combine
 
 // MARK: - Label Printer Settings
 
-@MainActor
-final class LabelPrinterSettings: ObservableObject {
+final class LabelPrinterSettings {
     static let shared = LabelPrinterSettings()
 
-    @Published var isAutoPrintEnabled: Bool = false {
-        didSet { UserDefaults.standard.set(isAutoPrintEnabled, forKey: "labelAutoPrintEnabled") }
+    var isAutoPrintEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "labelAutoPrintEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "labelAutoPrintEnabled") }
     }
 
-    @Published var printerName: String? = nil {
-        didSet { UserDefaults.standard.set(printerName, forKey: "labelPrinterName") }
+    var printerName: String? {
+        get { UserDefaults.standard.string(forKey: "labelPrinterName") }
+        set { UserDefaults.standard.set(newValue, forKey: "labelPrinterName") }
     }
 
-    @Published var startPosition: Int = 0 {
-        didSet { UserDefaults.standard.set(startPosition, forKey: "labelStartPosition") }
+    var startPosition: Int {
+        get { UserDefaults.standard.integer(forKey: "labelStartPosition") }
+        set { UserDefaults.standard.set(newValue, forKey: "labelStartPosition") }
     }
 
-    // Selected register for this POS session
-    @Published var selectedRegisterId: UUID? = nil {
-        didSet {
-            if let id = selectedRegisterId {
+    var selectedRegisterId: UUID? {
+        get {
+            guard let str = UserDefaults.standard.string(forKey: "posSelectedRegisterId") else { return nil }
+            return UUID(uuidString: str)
+        }
+        set {
+            if let id = newValue {
                 UserDefaults.standard.set(id.uuidString, forKey: "posSelectedRegisterId")
             } else {
                 UserDefaults.standard.removeObject(forKey: "posSelectedRegisterId")
@@ -39,33 +41,20 @@ final class LabelPrinterSettings: ObservableObject {
         }
     }
 
-    @Published var selectedRegisterName: String? = nil {
-        didSet { UserDefaults.standard.set(selectedRegisterName, forKey: "posSelectedRegisterName") }
-    }
-
-    var isReadyToAutoPrint: Bool {
-        isAutoPrintEnabled && printerName != nil
+    var selectedRegisterName: String? {
+        get { UserDefaults.standard.string(forKey: "posSelectedRegisterName") }
+        set { UserDefaults.standard.set(newValue, forKey: "posSelectedRegisterName") }
     }
 
     var isPrinterConfigured: Bool {
         printerName != nil
     }
 
-    var autoPrintEnabled: Bool {
-        isAutoPrintEnabled
+    var isReadyToAutoPrint: Bool {
+        isAutoPrintEnabled && printerName != nil
     }
 
-    private init() {
-        // Load from UserDefaults
-        self.isAutoPrintEnabled = UserDefaults.standard.bool(forKey: "labelAutoPrintEnabled")
-        self.printerName = UserDefaults.standard.string(forKey: "labelPrinterName")
-        self.startPosition = UserDefaults.standard.integer(forKey: "labelStartPosition")
-
-        if let registerIdString = UserDefaults.standard.string(forKey: "posSelectedRegisterId") {
-            self.selectedRegisterId = UUID(uuidString: registerIdString)
-        }
-        self.selectedRegisterName = UserDefaults.standard.string(forKey: "posSelectedRegisterName")
-    }
+    private init() {}
 
     func selectRegister(_ register: Register) {
         selectedRegisterId = register.id
