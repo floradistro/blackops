@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import AppKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -6,7 +7,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // CRITICAL FIX: Set activation policy to regular (not daemon/background)
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        print("✅ App activation policy set to .regular")
 
         // Configure URLCache for persistent image caching (survives app restart)
         // Apple's approach: aggressive disk caching for images
@@ -14,8 +14,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let diskCapacity = 1024 * 1024 * 1024    // 1 GB disk (persistent)
         let cache = URLCache(memoryCapacity: memoryCapacity, diskCapacity: diskCapacity)
         URLCache.shared = cache
-        print("✅ URLCache configured: \(memoryCapacity/1024/1024)MB memory, \(diskCapacity/1024/1024)MB disk")
-        print("✅ Images will persist across app launches")
+
+        // Start local agent server for AI chat with local file tools
+        AgentProcessManager.shared.start()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Stop the agent server when app quits
+        AgentProcessManager.shared.stop()
     }
 }
 
@@ -25,16 +31,38 @@ struct SwagManagerApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var appState = AppState.shared
 
+    // SwiftData container for local persistence
+    let modelContainer: ModelContainer
+
+    init() {
+        do {
+            let schema = Schema([
+                SDOrder.self,
+                SDLocation.self,
+                SDCustomer.self
+            ])
+            let modelConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                allowsSave: true
+            )
+            modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not initialize ModelContainer: \(error)")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(appState)
+                .modelContainer(modelContainer)
                 .frame(minWidth: 900, minHeight: 600)
         }
-        // Native toolbar with unified title bar - sleek and minimal
-        .windowStyle(.titleBar)
-        .windowToolbarStyle(.unified(showsTitle: false))
+        // Translucent toolbar matching sidebar vibrancy
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Store...") {
@@ -164,36 +192,6 @@ struct SwagManagerApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("BrowserForward"), object: nil)
                 }
                 .keyboardShortcut("]", modifiers: .command)
-            }
-
-            // MCP Server commands
-            CommandMenu("MCP") {
-                Button("New MCP Server...") {
-                    NotificationCenter.default.post(name: NSNotification.Name("NewMCPServer"), object: nil)
-                }
-                .keyboardShortcut("m", modifiers: [.command, .control])
-
-                Divider()
-
-                Button("Show MCP Servers") {
-                    NotificationCenter.default.post(name: NSNotification.Name("ShowMCPServers"), object: nil)
-                }
-                .keyboardShortcut("m", modifiers: [.command, .shift])
-
-                Button("Refresh MCP Servers") {
-                    NotificationCenter.default.post(name: NSNotification.Name("RefreshMCPServers"), object: nil)
-                }
-                .keyboardShortcut("m", modifiers: [.command, .option])
-
-                Button("Monitor MCP Servers") {
-                    NotificationCenter.default.post(name: NSNotification.Name("MonitorMCPServers"), object: nil)
-                }
-
-                Divider()
-
-                Button("MCP Server Documentation...") {
-                    NotificationCenter.default.post(name: NSNotification.Name("ShowMCPDocs"), object: nil)
-                }
             }
 
             // File commands
