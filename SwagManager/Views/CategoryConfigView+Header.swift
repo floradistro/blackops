@@ -60,9 +60,24 @@ extension CategoryConfigView {
         RoundedRectangle(cornerRadius: 8)
             .fill(DesignSystem.Colors.surfaceElevated)
             .overlay(
-                Image(systemName: "folder.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.tertiary)
+                Group {
+                    if let icon = category.icon, !icon.isEmpty {
+                        // Check if it's an SF Symbol or emoji
+                        if NSImage(systemSymbolName: icon, accessibilityDescription: nil) != nil {
+                            Image(systemName: icon)
+                                .font(.system(size: 20))
+                                .foregroundStyle(.blue)
+                        } else {
+                            // Treat as emoji or text
+                            Text(icon)
+                                .font(.system(size: 24))
+                        }
+                    } else {
+                        Image(systemName: "tag.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.blue)
+                    }
+                }
             )
     }
 

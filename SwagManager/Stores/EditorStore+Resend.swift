@@ -104,7 +104,6 @@ extension EditorStore {
     /// Load email counts by category (uses SQL COUNT - no row limits)
     func loadEmailCounts() async {
         guard !isLoadingEmails else {
-            NSLog("[EditorStore] ⚠️ Already loading email counts")
             return
         }
 
@@ -113,7 +112,6 @@ extension EditorStore {
                 self.isLoadingEmails = true
             }
 
-            NSLog("[EditorStore] 📊 Loading email counts using pagination...")
 
             struct EmailCategory: Codable {
                 let category: String?
@@ -125,8 +123,6 @@ extension EditorStore {
 
             // Pagination loop to get ALL categories (ALL STORES - no filter)
             while true {
-                NSLog("[EditorStore] 📊 Fetching batch at offset \(offset)...")
-                NSLog("[EditorStore] 📊 Querying ALL email_sends (ignoring store filter to get true total)")
 
                 let batch: [EmailCategory] = try await supabase.client
                     .from("email_sends")
@@ -136,26 +132,21 @@ extension EditorStore {
                     .execute()
                     .value
 
-                NSLog("[EditorStore] 📊 Received batch: \(batch.count) rows")
 
                 if batch.isEmpty {
-                    NSLog("[EditorStore] 📊 Empty batch - stopping pagination")
                     break
                 }
 
                 allCategories.append(contentsOf: batch)
                 offset += batchSize
 
-                NSLog("[EditorStore] 📊 Total categories loaded: \(allCategories.count)")
 
                 // Safety break if batch not full (last batch)
                 if batch.count < batchSize {
-                    NSLog("[EditorStore] 📊 Last batch (size: \(batch.count)) - stopping")
                     break
                 }
             }
 
-            NSLog("[EditorStore] 📊 Pagination complete. Total categories: \(allCategories.count)")
 
             // Count by category
             var categoryCounts: [String: Int] = [:]
@@ -171,10 +162,7 @@ extension EditorStore {
                 self.emailTotalCount = allCategories.count
                 self.emailCategoryCounts = categoryCounts
                 self.isLoadingEmails = false
-                NSLog("[EditorStore] ✅ Loaded counts for \(allCategories.count) emails across \(categoryCounts.count) categories")
-                NSLog("[EditorStore] 📊 Category breakdown:")
                 for (category, count) in categoryCounts.sorted(by: { $0.value > $1.value }) {
-                    NSLog("[EditorStore]   - \(category): \(count)")
                 }
             }
 
@@ -182,14 +170,9 @@ extension EditorStore {
             await MainActor.run {
                 self.error = "Failed to load email counts: \(error.localizedDescription)"
                 self.isLoadingEmails = false
-                NSLog("[EditorStore] ❌ Error loading counts: \(error)")
-                NSLog("[EditorStore] ❌ Error details: \(String(describing: error))")
 
                 // Print stack trace if available
                 if let error = error as NSError? {
-                    NSLog("[EditorStore] ❌ Error domain: \(error.domain)")
-                    NSLog("[EditorStore] ❌ Error code: \(error.code)")
-                    NSLog("[EditorStore] ❌ Error userInfo: \(error.userInfo)")
                 }
             }
         }
@@ -202,12 +185,10 @@ extension EditorStore {
         // Check if already loaded
         let categoryKey = category ?? "uncategorized"
         if loadedCategories.contains(categoryKey) {
-            NSLog("[EditorStore] ℹ️ Category '\(categoryKey)' already loaded")
             return
         }
 
         do {
-            NSLog("[EditorStore] 📧 Loading emails for category: \(categoryKey)")
 
             // Load ALL emails for category (no store filter - get everything)
             let response: [ResendEmail]
@@ -242,13 +223,11 @@ extension EditorStore {
                 self.emails.append(contentsOf: response)
                 self.loadedCategories.insert(categoryKey)
 
-                NSLog("[EditorStore] ✅ Loaded \(response.count) emails for '\(categoryKey)'")
             }
 
         } catch {
             await MainActor.run {
                 self.error = "Failed to load emails for category: \(error.localizedDescription)"
-                NSLog("[EditorStore] ❌ Error loading category '\(categoryKey)': \(error)")
             }
         }
     }

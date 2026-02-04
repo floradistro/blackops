@@ -13,7 +13,7 @@ import WebKit
 
 struct BrowserSessionView: View {
     let session: BrowserSession
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
     @State private var isRefreshing = false
     @State private var autoRefresh = false  // Disabled for interactive mode
     @State private var refreshTimer: Timer?
@@ -161,7 +161,6 @@ struct BrowserSessionView: View {
 
         webView.evaluateJavaScript(darkModeScript) { result, error in
             if let error = error {
-                print("Dark mode toggle error: \(error)")
             }
         }
     }

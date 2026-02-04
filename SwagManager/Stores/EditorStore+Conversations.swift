@@ -9,7 +9,6 @@ extension EditorStore {
 
     func loadConversations() async {
         guard let store = selectedStore else {
-            NSLog("[EditorStore] No store selected, cannot load conversations")
             return
         }
 
@@ -17,25 +16,37 @@ extension EditorStore {
 
         do {
             // Load locations first
-            NSLog("[EditorStore] Loading locations for store: \(store.id)")
             let fetchedLocations = try await supabase.fetchLocations(storeId: store.id)
-            NSLog("[EditorStore] Loaded \(fetchedLocations.count) locations")
 
             // Load conversations
-            NSLog("[EditorStore] Loading conversations for store: \(store.id)")
             let fetchedConversations = try await supabase.fetchAllConversationsForStoreLocations(storeId: store.id, fetchLocations: { [weak self] storeId in
                 guard let self = self else { return [] }
                 return try await self.supabase.fetchLocations(storeId: storeId)
             })
-            NSLog("[EditorStore] Loaded \(fetchedConversations.count) conversations")
+
+            // Filter out empty conversations (no messages) - reduces spam
+            let nonEmptyConversations = fetchedConversations.filter { conversation in
+                // Keep if has messages OR is a special channel type
+                let hasMessages = (conversation.messageCount ?? 0) > 0
+                let isSpecialChannel = ["team", "alerts", "bugs"].contains(conversation.chatType ?? "")
+                return hasMessages || isSpecialChannel
+            }
+
+            let filteredCount = fetchedConversations.count - nonEmptyConversations.count
+            if filteredCount > 0 {
+            }
 
             await MainActor.run {
                 locations = fetchedLocations
-                conversations = fetchedConversations
+                conversations = nonEmptyConversations
                 isLoadingConversations = false
             }
+
+            // Auto-cleanup old empty conversations in background
+            Task {
+                await cleanupEmptyConversations(storeId: store.id)
+            }
         } catch {
-            NSLog("[EditorStore] Failed to load conversations: \(error)")
             await MainActor.run {
                 self.error = "Failed to load conversations: \(error.localizedDescription)"
                 isLoadingConversations = false
@@ -71,6 +82,27 @@ extension EditorStore {
                 updatedAt: Date()
             )
             openConversation(virtualConvo)
+        }
+    }
+
+    // MARK: - Auto-Cleanup
+
+    /// Deletes empty conversations older than 1 hour (reduces database spam)
+    private func cleanupEmptyConversations(storeId: UUID) async {
+        do {
+            // Delete conversations with 0 messages that are older than 1 hour
+            // Excludes special channel types (team, alerts, bugs)
+            try await supabase.client
+                .from("conversations")
+                .delete()
+                .eq("store_id", value: storeId.uuidString.lowercased())
+                .eq("message_count", value: 0)
+                .lt("created_at", value: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3600)))
+                .not("chat_type", operator: .in, value: "(team,alerts,bugs)")
+                .execute()
+
+        } catch {
+            // Non-critical, just log
         }
     }
 }

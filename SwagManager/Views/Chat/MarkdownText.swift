@@ -92,7 +92,6 @@ struct MarkdownText: View, Equatable {
             }
 
             let message = greet(name: "World")
-            print(message)
             ```
 
             ## Lists

@@ -6,18 +6,63 @@ import Foundation
 struct AIAgent: Codable, Identifiable, Hashable {
     let id: UUID
     let storeId: UUID?
-    let name: String?
-    let description: String?
-    let icon: String?
-    let accentColor: String?
-    let systemPrompt: String?
-    let model: String?
-    let maxToolCalls: Int?
-    let maxTokens: Int?
-    let version: Int?
-    let isActive: Bool
+    var name: String?
+    var description: String?
+    var icon: String?
+    var accentColor: String?
+    var systemPrompt: String?
+    var model: String?
+    var maxToolCalls: Int?
+    var maxTokens: Int?
+    var version: Int?
+    var isActive: Bool
     let createdAt: Date?
-    let updatedAt: Date?
+    var updatedAt: Date?
+
+    // Deployment status
+    var status: String?  // draft, published, archived
+    var publishedAt: Date?
+    var publishedBy: UUID?
+
+    // Agent Builder fields
+    var enabledTools: [String]?  // Array of tool IDs (UUIDs as strings)
+    var contextConfig: ContextConfig?
+    var temperature: Double?
+    var tone: String?
+    var verbosity: String?
+    var canQuery: Bool?
+    var canSend: Bool?
+    var canModify: Bool?
+    var apiKey: String?  // Anthropic API key for this agent
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case storeId = "store_id"
+        case name
+        case description
+        case icon
+        case accentColor = "accent_color"
+        case systemPrompt = "system_prompt"
+        case model
+        case maxToolCalls = "max_tool_calls"
+        case maxTokens = "max_tokens"
+        case version
+        case isActive = "is_active"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case status
+        case publishedAt = "published_at"
+        case publishedBy = "published_by"
+        case enabledTools = "enabled_tools"
+        case contextConfig = "context_config"
+        case temperature
+        case tone
+        case verbosity
+        case canQuery = "can_query"
+        case canSend = "can_send"
+        case canModify = "can_modify"
+        case apiKey = "api_key"
+    }
 
     // Memberwise initializer
     init(
@@ -34,7 +79,18 @@ struct AIAgent: Codable, Identifiable, Hashable {
         isActive: Bool,
         version: Int?,
         createdAt: Date?,
-        updatedAt: Date?
+        updatedAt: Date?,
+        status: String? = "draft",
+        publishedAt: Date? = nil,
+        publishedBy: UUID? = nil,
+        enabledTools: [String]? = nil,
+        contextConfig: ContextConfig? = nil,
+        temperature: Double? = 0.7,
+        tone: String? = "professional",
+        verbosity: String? = "moderate",
+        canQuery: Bool? = true,
+        canSend: Bool? = false,
+        canModify: Bool? = false
     ) {
         self.id = id
         self.storeId = storeId
@@ -50,22 +106,42 @@ struct AIAgent: Codable, Identifiable, Hashable {
         self.version = version
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.status = status
+        self.publishedAt = publishedAt
+        self.publishedBy = publishedBy
+        self.enabledTools = enabledTools
+        self.contextConfig = contextConfig
+        self.temperature = temperature
+        self.tone = tone
+        self.verbosity = verbosity
+        self.canQuery = canQuery
+        self.canSend = canSend
+        self.canModify = canModify
     }
 
-    // Display name - use stored name or parse from prompt
+    // Computed properties for status
+    var isDraft: Bool {
+        status == "draft" || status == nil
+    }
+
+    var isPublished: Bool {
+        status == "published"
+    }
+
+    var isArchived: Bool {
+        status == "archived"
+    }
+
+    var statusDisplayName: String {
+        (status ?? "draft").capitalized
+    }
+
+    // Display name - use stored name only
     var displayName: String {
         if let name = name, !name.isEmpty {
             return name
         }
-        // Fallback: parse from system prompt
-        if let prompt = systemPrompt?.lowercased() {
-            if prompt.contains("you are lisa") {
-                return "Lisa"
-            } else if prompt.contains("you are wilson") {
-                return "Wilson"
-            }
-        }
-        return "AI Agent"
+        return "Untitled Agent"
     }
 
     // Display icon
@@ -81,5 +157,32 @@ struct AIAgent: Codable, Identifiable, Hashable {
     // Short description
     var shortDescription: String {
         description ?? "AI Agent"
+    }
+}
+
+// MARK: - Context Configuration
+
+struct ContextConfig: Codable, Hashable {
+    var includeProducts: Bool?
+    var productCategories: [String]?
+    var includeLocations: Bool?
+    var locationIds: [String]?
+    var includeCustomers: Bool?
+    var customerSegments: [String]?
+
+    init(
+        includeProducts: Bool? = nil,
+        productCategories: [String]? = nil,
+        includeLocations: Bool? = nil,
+        locationIds: [String]? = nil,
+        includeCustomers: Bool? = nil,
+        customerSegments: [String]? = nil
+    ) {
+        self.includeProducts = includeProducts
+        self.productCategories = productCategories
+        self.includeLocations = includeLocations
+        self.locationIds = locationIds
+        self.includeCustomers = includeCustomers
+        self.customerSegments = customerSegments
     }
 }

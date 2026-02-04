@@ -16,7 +16,6 @@ struct AuthView: View {
                     if let window = NSApp.windows.first(where: { $0.isVisible }) {
                         window.makeKeyAndOrderFront(nil)
                         NSApp.activate(ignoringOtherApps: true)
-                        print("🖱️ Background clicked - activating window")
                     }
                 }
 
@@ -64,7 +63,6 @@ struct AuthView: View {
                         window.makeMain()
                         NSApp.activate(ignoringOtherApps: true)
 
-                        print("🪟 Attempt \(delay): Window isKeyWindow: \(window.isKeyWindow), isMainWindow: \(window.isMainWindow)")
                     }
                 }
             }
@@ -72,7 +70,6 @@ struct AuthView: View {
     }
 
     private func login() {
-        print("🔐 Login attempt: \(email)")
         errorMessage = ""
 
         Task {
@@ -80,7 +77,6 @@ struct AuthView: View {
                 try await authManager.signIn(email: email, password: password)
             } catch {
                 errorMessage = error.localizedDescription
-                print("❌ Login error: \(error.localizedDescription)")
             }
         }
     }

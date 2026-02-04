@@ -25,7 +25,6 @@ class AuthManager: ObservableObject {
 
     private func checkSession() async {
         isLoading = true
-        print("🔐 AuthManager: Checking session...")
 
         do {
             // Add timeout to prevent hanging
@@ -33,15 +32,12 @@ class AuthManager: ObservableObject {
                 self.session = try await self.supabase.auth.session
                 self.currentUser = self.session?.user
                 self.isAuthenticated = self.session != nil
-                print("🔐 AuthManager: Session check complete. Authenticated: \(self.isAuthenticated)")
             }
         } catch {
             // No active session or timeout
-            print("🔐 AuthManager: No session or timeout - \(error.localizedDescription)")
             isAuthenticated = false
         }
         isLoading = false
-        print("🔐 AuthManager: Loading complete. isLoading = false")
     }
 
     private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {

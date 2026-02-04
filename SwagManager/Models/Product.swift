@@ -31,8 +31,8 @@ struct Product: Identifiable, Hashable {
     var productVisibility: String?
     var customFields: [String: AnyCodable]?  // Maps to custom_fields in database
     var pricingSchemaId: UUID?
-    var pricingSchema: PricingSchema?  // Embedded pricing schema with tiers (from PostgREST join)
-    var pricingData: AnyCodable?  // Pricing tiers array (ONLY pricing system)
+    var pricingSchema: PricingSchema?  // PRIMARY: Embedded pricing schema with tiers (from PostgREST join)
+    var pricingData: AnyCodable?  // DEPRECATED: Legacy copy - use pricingSchema.tiers instead
     var createdAt: String?
     var updatedAt: String?
 
@@ -121,39 +121,31 @@ struct Product: Identifiable, Hashable {
 
     // Computed properties
     var displayPrice: String {
-        // Get price from first pricing tier
-        guard let pricingData = pricingData else {
-            return "$0.00"
+        // SINGLE SOURCE OF TRUTH: Use JOINed pricingSchema first (Apple/Oracle best practice)
+        if let schema = pricingSchema, !schema.tiers.isEmpty {
+            let firstTier = schema.tiers.first!
+            return firstTier.formattedPrice
         }
 
-        // Extract first tier price
-        if let tiersArray = pricingData.value as? [[String: Any]],
-           let firstTier = tiersArray.first {
-            // Try default_price first
-            if let price = firstTier["default_price"] as? Double {
-                return String(format: "$%.2f", price)
-            }
-            if let price = firstTier["default_price"] as? Decimal {
-                return String(format: "$%.2f", NSDecimalNumber(decimal: price).doubleValue)
-            }
-            // Try price field
-            if let price = firstTier["price"] as? Double {
-                return String(format: "$%.2f", price)
-            }
-            if let price = firstTier["price"] as? Decimal {
-                return String(format: "$%.2f", NSDecimalNumber(decimal: price).doubleValue)
-            }
-        }
-
-        // Handle object format with "tiers" property
-        if let pricingObject = pricingData.value as? [String: Any],
-           let tiersArray = pricingObject["tiers"] as? [[String: Any]],
-           let firstTier = tiersArray.first {
-            if let price = firstTier["default_price"] as? Double {
-                return String(format: "$%.2f", price)
-            }
-            if let price = firstTier["default_price"] as? Decimal {
-                return String(format: "$%.2f", NSDecimalNumber(decimal: price).doubleValue)
+        // FALLBACK: Legacy pricing_data for backwards compatibility
+        if let pricingData = pricingData {
+            // Extract first tier price from array format
+            if let tiersArray = pricingData.value as? [[String: Any]],
+               let firstTier = tiersArray.first {
+                // Try default_price first
+                if let price = firstTier["default_price"] as? Double {
+                    return String(format: "$%.2f", price)
+                }
+                if let price = firstTier["default_price"] as? Int {
+                    return String(format: "$%.2f", Double(price))
+                }
+                // Try price field
+                if let price = firstTier["price"] as? Double {
+                    return String(format: "$%.2f", price)
+                }
+                if let price = firstTier["price"] as? Int {
+                    return String(format: "$%.2f", Double(price))
+                }
             }
         }
 

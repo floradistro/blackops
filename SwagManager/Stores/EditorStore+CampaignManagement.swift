@@ -26,7 +26,6 @@ extension EditorStore {
         do {
             emailCampaigns = try await campaignService.loadEmailCampaigns(storeId: storeId)
         } catch {
-            print("Error loading email campaigns: \(error)")
             self.error = "Failed to load email campaigns: \(error.localizedDescription)"
         }
     }
@@ -35,7 +34,6 @@ extension EditorStore {
         do {
             metaCampaigns = try await campaignService.loadMetaCampaigns(storeId: storeId)
         } catch {
-            print("Error loading meta campaigns: \(error)")
             self.error = "Failed to load meta campaigns: \(error.localizedDescription)"
         }
     }
@@ -44,7 +42,6 @@ extension EditorStore {
         do {
             metaIntegrations = try await campaignService.loadMetaIntegrations(storeId: storeId)
         } catch {
-            print("Error loading meta integrations: \(error)")
             self.error = "Failed to load meta integrations: \(error.localizedDescription)"
         }
     }
@@ -53,7 +50,6 @@ extension EditorStore {
         do {
             marketingCampaigns = try await campaignService.loadMarketingCampaigns(storeId: storeId)
         } catch {
-            print("Error loading marketing campaigns: \(error)")
             self.error = "Failed to load marketing campaigns: \(error.localizedDescription)"
         }
     }
@@ -64,10 +60,8 @@ extension EditorStore {
         } catch {
             // SMS campaigns table uses different RLS approach - skip for now
             if error.localizedDescription.contains("app.current_store_id") {
-                print("SMS campaigns require custom RLS configuration - skipping")
                 smsCampaigns = []
             } else {
-                print("Error loading SMS campaigns: \(error)")
                 self.error = "Failed to load SMS campaigns: \(error.localizedDescription)"
             }
         }
@@ -109,7 +103,6 @@ extension EditorStore {
                 }
             }
         } catch {
-            print("Error refreshing email campaign: \(error)")
             self.error = "Failed to refresh campaign: \(error.localizedDescription)"
         }
     }
@@ -131,7 +124,6 @@ extension EditorStore {
                 }
             }
         } catch {
-            print("Error refreshing meta campaign: \(error)")
             self.error = "Failed to refresh campaign: \(error.localizedDescription)"
         }
     }

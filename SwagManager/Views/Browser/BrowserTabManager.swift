@@ -54,13 +54,11 @@ class BrowserTab: Identifiable, ObservableObject {
         if isDarkMode {
             webView.evaluateJavaScript(InteractiveBrowserView.darkModeScript) { _, error in
                 if let error = error {
-                    NSLog("[DarkMode] Failed to enable: \(error.localizedDescription)")
                 }
             }
         } else {
             webView.evaluateJavaScript(InteractiveBrowserView.removeDarkModeScript) { _, error in
                 if let error = error {
-                    NSLog("[DarkMode] Failed to disable: \(error.localizedDescription)")
                 }
             }
         }
@@ -79,13 +77,11 @@ class BrowserTabManager: ObservableObject {
     // Get or create a tab manager for a session
     static func forSession(_ sessionId: UUID) -> BrowserTabManager {
         if let existing = sessionManagers[sessionId] {
-            NSLog("[BrowserTabManager] Reusing existing manager for session \(sessionId.uuidString.prefix(8)) with \(existing.tabs.count) tabs")
             return existing
         }
 
         let manager = BrowserTabManager()
         sessionManagers[sessionId] = manager
-        NSLog("[BrowserTabManager] Created new manager for session \(sessionId.uuidString.prefix(8))")
         return manager
     }
 
@@ -98,12 +94,10 @@ class BrowserTabManager: ObservableObject {
         let tab = BrowserTab(url: url)
         tabs.append(tab)
         selectTab(tab)
-        NSLog("[BrowserTabManager] Created new tab \(tab.id.uuidString.prefix(8)), now have \(tabs.count) tabs")
     }
 
     func selectTab(_ tab: BrowserTab) {
         activeTab = tab
-        NSLog("[BrowserTabManager] Selected tab \(tab.id.uuidString.prefix(8)), URL: \(tab.currentURL ?? "none")")
     }
 
     func closeTab(_ tab: BrowserTab) {

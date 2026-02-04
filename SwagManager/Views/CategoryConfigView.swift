@@ -11,7 +11,7 @@ import SwiftUI
 
 struct CategoryConfigView: View {
     let category: Category
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
 
     @State internal var assignedFieldSchemas: [FieldSchema] = []
     @State internal var assignedPricingSchemas: [PricingSchema] = []
@@ -61,6 +61,7 @@ struct CategoryConfigView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignSystem.Materials.thin)
+        .navigationTitle("Category Settings")
         .task { await loadData() }
         .onChange(of: category.id) { _, _ in Task { await loadData() } }
         .sheet(item: $editingFieldSchema) { schema in
@@ -86,9 +87,9 @@ struct CategoryConfigView: View {
     }
 }
 
-// MARK: - Detail Row (Small Helper - Kept in main file)
+// MARK: - Category Detail Row (Used by extensions)
 
-internal struct DetailRow: View {
+struct CategoryDetailRow: View {
     let label: String
     let value: String
     var mono: Bool = false

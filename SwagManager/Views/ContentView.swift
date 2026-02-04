@@ -1,22 +1,16 @@
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var appState: AppState
-
-    // Toggle to switch between old and new navigation (for testing)
-    @AppStorage("useNativeNavigation") private var useNativeNavigation = true
 
     var body: some View {
         Group {
             if authManager.isLoading {
                 loadingView
             } else if authManager.isAuthenticated {
-                if useNativeNavigation {
-                    NativeEditorView()
-                } else {
-                    EditorView()
-                }
+                AppleContentView()
             } else {
                 AuthView()
             }
@@ -41,4 +35,5 @@ struct ContentView: View {
     ContentView()
         .environmentObject(AuthManager.shared)
         .environmentObject(AppState.shared)
+        .modelContainer(for: [SDOrder.self, SDLocation.self, SDCustomer.self], inMemory: true)
 }

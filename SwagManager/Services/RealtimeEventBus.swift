@@ -100,7 +100,6 @@ final class RealtimeEventBus: ObservableObject {
     // MARK: - Initialization
 
     private init() {
-        NSLog("📡 RealtimeEventBus initialized")
     }
 
     // MARK: - Public API
@@ -117,7 +116,6 @@ final class RealtimeEventBus: ObservableObject {
     func connect(to locationId: UUID) async {
         // Already connected?
         guard activeChannels[locationId] == nil else {
-            NSLog("📡 RealtimeEventBus: Already connected to %@", locationId.uuidString)
             return
         }
 
@@ -132,11 +130,9 @@ final class RealtimeEventBus: ObservableObject {
             activeChannels[locationId] = channelState
             updateConnectionState()
 
-            NSLog("✅ RealtimeEventBus: Connected to location %@", locationId.uuidString)
         } catch {
             let errorMsg = error.localizedDescription
             connectionState = .error(errorMsg)
-            NSLog("❌ RealtimeEventBus: Failed to connect: %@", errorMsg)
 
             // Schedule retry with exponential backoff
             scheduleReconnect(to: locationId)
@@ -158,7 +154,6 @@ final class RealtimeEventBus: ObservableObject {
         }
 
         updateConnectionState()
-        NSLog("📡 RealtimeEventBus: Disconnected from %@", locationId.uuidString)
     }
 
     /// Get all events (unfiltered)
@@ -308,7 +303,6 @@ final class RealtimeEventBus: ObservableObject {
         let attempts = activeChannels[locationId]?.reconnectAttempts ?? 0
         let delay = min(pow(2.0, Double(attempts)), 32.0)  // Max 32 seconds
 
-        NSLog("🔄 RealtimeEventBus: Reconnecting to %@ in %.0fs (attempt %d)", locationId.uuidString, delay, attempts + 1)
 
         let task = Task {
             try? await Task.sleep(for: .seconds(delay))

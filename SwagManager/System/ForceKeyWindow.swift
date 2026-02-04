@@ -14,12 +14,10 @@ class ForceKeyWindow: NSWindow {
     }
 
     override func becomeKey() {
-        print("✅ ForceKeyWindow became key window")
         super.becomeKey()
     }
 
     override func resignKey() {
-        print("⚠️ ForceKeyWindow resigned key")
         super.resignKey()
     }
 }

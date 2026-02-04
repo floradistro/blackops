@@ -17,7 +17,6 @@ final class StoreLocationService {
         // SECURITY: Must query via users table to ensure user has access (matches iOS implementation)
         // Get authenticated user ID
         guard let session = try? await client.auth.session else {
-            NSLog("[StoreLocationService] ❌ No authenticated session - cannot fetch stores")
             return []
         }
 
@@ -39,7 +38,6 @@ final class StoreLocationService {
 
         // Extract stores from joined data
         let stores = rows.compactMap { $0.stores }
-        NSLog("[StoreLocationService] ✅ Loaded \(stores.count) store(s) for authenticated user")
         return stores.sorted { $0.storeName < $1.storeName }
     }
 
@@ -64,7 +62,6 @@ final class StoreLocationService {
     // MARK: - Locations
 
     func fetchLocations(storeId: UUID) async throws -> [Location] {
-        NSLog("[SupabaseService] Fetching locations for store: \(storeId)")
         return try await client.from("locations")
             .select("*")
             .eq("store_id", value: storeId)

@@ -25,7 +25,6 @@ extension EditorStore {
                 .execute()
 
             guard let json = try? JSONSerialization.jsonObject(with: response.data) as? [String: Any] else {
-                NSLog("[EditorStore] RPC returned invalid JSON")
                 return data
             }
 
@@ -48,11 +47,8 @@ extension EditorStore {
                     return (name, qty)
                 }
             }
-
-            NSLog("[EditorStore] Loaded product editor data via RPC: %d schemas, %d locations",
-                  data.fieldSchemas.count, data.stockByLocation.count)
         } catch {
-            NSLog("[EditorStore] Error loading product editor data: %@", String(describing: error))
+            // Error loading product data
         }
 
         return data
@@ -80,5 +76,52 @@ extension EditorStore {
 
         // Reload products to reflect changes
         await loadCatalogData()
+    }
+
+    // MARK: - Bulk Product Operations
+
+    /// Updates status for multiple products (archive, publish, draft)
+    @MainActor
+    func bulkUpdateProductStatus(ids: [UUID], status: String) async {
+        guard !ids.isEmpty else {
+            print("⚠️ bulkUpdateProductStatus called with empty ids")
+            return
+        }
+
+        struct StatusUpdate: Encodable {
+            let status: String
+        }
+
+        print("🔄 Updating \(ids.count) products to status: \(status)")
+        print("   IDs: \(ids.map { $0.uuidString })")
+
+        do {
+            // Update all products with matching IDs
+            let response = try await supabase.client
+                .from("products")
+                .update(StatusUpdate(status: status))
+                .in("id", values: ids.map { $0.uuidString })
+                .execute()
+
+            print("✅ Supabase response status: \(response.status)")
+
+            // Reload products to reflect changes
+            await loadCatalogData()
+            print("✅ Catalog data reloaded. Product count: \(products.count)")
+        } catch {
+            print("❌ Failed to bulk update products: \(error)")
+        }
+    }
+
+    /// Archives multiple products
+    @MainActor
+    func bulkArchiveProducts(ids: [UUID]) async {
+        await bulkUpdateProductStatus(ids: ids, status: "archived")
+    }
+
+    /// Restores archived products to published status
+    @MainActor
+    func bulkRestoreProducts(ids: [UUID]) async {
+        await bulkUpdateProductStatus(ids: ids, status: "published")
     }
 }

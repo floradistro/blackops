@@ -99,17 +99,14 @@ final class LocationQueueStore: ObservableObject {
         switch event {
         case .queueUpdated(let locationId):
             guard locationId == self.locationId else { return }
-            NSLog("🔔 Queue updated for location \(locationId)")
             await loadQueue()
 
         case .queueCustomerAdded(let locationId, let customerId):
             guard locationId == self.locationId else { return }
-            NSLog("🔔 Customer \(customerId) added to queue")
             await loadQueue()
 
         case .queueCustomerRemoved(let locationId, let customerId):
             guard locationId == self.locationId else { return }
-            NSLog("🔔 Customer \(customerId) removed from queue")
             await loadQueue()
 
         default:
@@ -145,7 +142,6 @@ final class LocationQueueStore: ObservableObject {
             isLoading = false
             // Post notification for UI updates
             NotificationCenter.default.post(name: .queueDidChange, object: locationId)
-            NSLog("[LocationQueueStore] Queue updated with \(entries.count) entries")
         } catch {
             self.error = error.localizedDescription
             isLoading = false
@@ -170,10 +166,8 @@ final class LocationQueueStore: ObservableObject {
             selectedCartId = cartId
             // Post notification for UI updates
             NotificationCenter.default.post(name: .queueDidChange, object: locationId)
-            NSLog("[LocationQueueStore] Added to queue, now \(entries.count) entries")
         } catch {
             self.error = error.localizedDescription
-            NSLog("[LocationQueueStore] Failed to add to queue: \(error)")
         }
     }
 
@@ -192,7 +186,6 @@ final class LocationQueueStore: ObservableObject {
             }
             // Post notification for UI updates
             NotificationCenter.default.post(name: .queueDidChange, object: locationId)
-            NSLog("[LocationQueueStore] Removed from queue, now \(entries.count) entries")
         } catch {
             self.error = error.localizedDescription
         }
@@ -229,14 +222,12 @@ final class LocationQueueStore: ObservableObject {
     /// Subscribe to realtime updates for this location's queue
     func subscribeToRealtime() {
         // EventBus subscription is set up in init - no-op for compatibility
-        NSLog("[LocationQueueStore] Using EventBus for realtime (legacy call ignored)")
     }
 
 
     /// Unsubscribe from realtime updates
     func unsubscribeFromRealtime() {
         // EventBus manages connection lifecycle - no-op for compatibility
-        NSLog("[LocationQueueStore] EventBus manages connection (legacy call ignored)")
     }
 
 

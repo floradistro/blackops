@@ -122,7 +122,6 @@ final class CatalogService {
 
         // RPC returns the count of updated categories
         if let count = try? JSONDecoder().decode(Int.self, from: response.data) {
-            NSLog("[CatalogService] Assigned %d categories to catalog via RPC", count)
             return count
         }
 

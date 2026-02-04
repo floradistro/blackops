@@ -17,11 +17,17 @@ import SwiftUI
 public enum OrderChannel: String, Codable, CaseIterable {
     case online
     case retail
+    case invoice
+    case pos
+    case wholesale
 
     var label: String {
         switch self {
         case .online: return "Online"
         case .retail: return "In-Store"
+        case .invoice: return "Invoice"
+        case .pos: return "POS"
+        case .wholesale: return "Wholesale"
         }
     }
 
@@ -29,6 +35,9 @@ public enum OrderChannel: String, Codable, CaseIterable {
         switch self {
         case .online: return "globe"
         case .retail: return "storefront"
+        case .invoice: return "doc.text"
+        case .pos: return "creditcard"
+        case .wholesale: return "shippingbox"
         }
     }
 
@@ -36,6 +45,9 @@ public enum OrderChannel: String, Codable, CaseIterable {
         switch self {
         case .online: return .blue
         case .retail: return .green
+        case .invoice: return .orange
+        case .pos: return .purple
+        case .wholesale: return .cyan
         }
     }
 }
@@ -802,4 +814,3 @@ public struct OrderWithDetails {
     }
 }
 
-// Note: AnyCodableValue is defined in MCPServer.swift

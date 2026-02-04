@@ -152,6 +152,19 @@ struct TextBlockView: View, Equatable {
         var remaining = text[...]
 
         while !remaining.isEmpty {
+            // Bold **text**
+            if remaining.hasPrefix("**") {
+                let afterStars = remaining.dropFirst(2)
+                if let endRange = afterStars.range(of: "**") {
+                    let boldText = String(afterStars[..<endRange.lowerBound])
+                    var boldAttr = AttributedString(boldText)
+                    boldAttr.font = .system(size: 14, weight: .semibold)
+                    result += boldAttr
+                    remaining = afterStars[endRange.upperBound...]
+                    continue
+                }
+            }
+
             // Inline code `code`
             if remaining.hasPrefix("`") {
                 if let endIdx = remaining.dropFirst().firstIndex(of: "`") {

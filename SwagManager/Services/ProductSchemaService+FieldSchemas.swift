@@ -28,26 +28,40 @@ extension ProductSchemaService {
     }
 
     func fetchFieldSchemasForCategory(categoryId: UUID) async throws -> [FieldSchema] {
-        // First try to get assigned schemas from junction table
-        struct CategoryFieldSchemaJoin: Codable {
+        // Step 1: Get the field_schema_ids assigned to this category
+        struct CategoryFieldSchemaRow: Codable {
             let fieldSchemaId: UUID
-            let fieldSchema: FieldSchema
 
             enum CodingKeys: String, CodingKey {
                 case fieldSchemaId = "field_schema_id"
-                case fieldSchema = "field_schemas"
             }
         }
 
-        let joins: [CategoryFieldSchemaJoin] = try await client.from("category_field_schemas")
-            .select("field_schema_id, field_schemas(*)")
+        let assignments: [CategoryFieldSchemaRow] = try await client.from("category_field_schemas")
+            .select("field_schema_id")
             .eq("category_id", value: categoryId)
             .eq("is_active", value: true)
             .order("sort_order", ascending: true)
             .execute()
             .value
 
-        return joins.map { $0.fieldSchema }
+        let schemaIds = assignments.map { $0.fieldSchemaId }
+
+        guard !schemaIds.isEmpty else {
+            return []
+        }
+
+        // Step 2: Fetch the actual field schemas by their IDs
+        let schemas: [FieldSchema] = try await client.from("field_schemas")
+            .select("*")
+            .in("id", values: schemaIds)
+            .eq("is_active", value: true)
+            .execute()
+            .value
+
+        // Step 3: Sort by the original order from assignments
+        let schemaDict = Dictionary(uniqueKeysWithValues: schemas.map { ($0.id, $0) })
+        return schemaIds.compactMap { schemaDict[$0] }
     }
 
     /// Fetches available field schemas using backend RPC (single filtered query)
@@ -68,7 +82,6 @@ extension ProductSchemaService {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         let schemas = try decoder.decode([FieldSchema].self, from: response.data)
 
-        NSLog("[ProductSchemaService] Fetched \(schemas.count) field schemas via RPC for catalog \(catalogId?.uuidString ?? "nil"), category \(categoryName ?? "nil")")
         return schemas
     }
 

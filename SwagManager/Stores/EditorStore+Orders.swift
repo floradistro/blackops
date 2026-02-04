@@ -3,25 +3,76 @@ import Foundation
 // MARK: - EditorStore Orders & Locations
 // Extracted following Apple engineering standards
 
+// MARK: - Cached Order Counts
+// Lightweight struct to avoid recalculating filters on every access
+struct OrderCountsCache {
+    let pending: Int
+    let processing: Int
+    let ready: Int
+    let shipped: Int
+    let completed: Int
+    let cancelled: Int
+    let total: Int
+
+    init(orders: [Order]) {
+        var p = 0, pr = 0, r = 0, s = 0, c = 0, ca = 0
+        for order in orders {
+            switch order.status {
+            case "pending": p += 1
+            case "confirmed", "preparing", "packing", "packed": pr += 1
+            case "ready", "ready_to_ship": r += 1
+            case "shipped", "in_transit", "out_for_delivery": s += 1
+            case "delivered", "completed": c += 1
+            case "cancelled": ca += 1
+            default: break
+            }
+        }
+        self.pending = p
+        self.processing = pr
+        self.ready = r
+        self.shipped = s
+        self.completed = c
+        self.cancelled = ca
+        self.total = orders.count
+    }
+}
+
 extension EditorStore {
+    // MARK: - Cached Order Counts (invalidated when orders change)
+
+    private static var _orderCountsCache: OrderCountsCache?
+    private static var _orderCountsCacheId: Int = 0
+
+    /// Get cached order counts - only recalculates when orders array changes
+    var orderCounts: OrderCountsCache {
+        let currentId = orders.count  // Simple cache key based on count
+        if EditorStore._orderCountsCache == nil || EditorStore._orderCountsCacheId != currentId {
+            EditorStore._orderCountsCache = OrderCountsCache(orders: orders)
+            EditorStore._orderCountsCacheId = currentId
+        }
+        return EditorStore._orderCountsCache!
+    }
+
+    /// Call this when orders array is modified to invalidate cache
+    func invalidateOrderCache() {
+        EditorStore._orderCountsCache = nil
+    }
+
     // MARK: - Orders
 
     func loadOrders() async {
         guard let store = selectedStore else {
-            NSLog("[EditorStore] No store selected, cannot load orders")
             return
         }
 
         await MainActor.run { isLoadingOrders = true }
 
         do {
-            NSLog("[EditorStore] Loading orders for store: \(store.id)")
             let fetchedOrders = try await supabase.fetchOrders(storeId: store.id)
             await MainActor.run {
                 orders = fetchedOrders
                 isLoadingOrders = false
             }
-            NSLog("[EditorStore] Loaded \(fetchedOrders.count) orders")
 
             // Gate realtime subscription until UI is idle (reduces input system churn)
             try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
@@ -29,7 +80,6 @@ extension EditorStore {
             // Start realtime subscription
             await subscribeToOrders()
         } catch {
-            NSLog("[EditorStore] Failed to load orders: \(error)")
             await MainActor.run {
                 self.error = "Failed to load orders: \(error.localizedDescription)"
                 isLoadingOrders = false
@@ -43,7 +93,6 @@ extension EditorStore {
         do {
             orders = try await supabase.fetchOrdersByStatus(storeId: store.id, status: status)
         } catch {
-            NSLog("[EditorStore] Failed to load orders by status: \(error)")
             self.error = "Failed to load orders: \(error.localizedDescription)"
         }
     }
@@ -81,7 +130,6 @@ extension EditorStore {
                 activeTab = .order(updated)
             }
         } catch {
-            NSLog("[EditorStore] Failed to refresh order: \(error)")
         }
     }
 
@@ -95,7 +143,6 @@ extension EditorStore {
             )
             await refreshOrder(order)
         } catch {
-            NSLog("[EditorStore] Failed to update order status: \(error)")
             self.error = "Failed to update status: \(error.localizedDescription)"
         }
     }
@@ -135,22 +182,18 @@ extension EditorStore {
 
     func loadLocations() async {
         guard let store = selectedStore else {
-            NSLog("[EditorStore] No store selected, cannot load locations")
             return
         }
 
         await MainActor.run { isLoadingLocations = true }
 
         do {
-            NSLog("[EditorStore] Loading locations for store: \(store.id)")
             let fetchedLocations = try await supabase.fetchLocations(storeId: store.id)
             await MainActor.run {
                 locations = fetchedLocations
                 isLoadingLocations = false
             }
-            NSLog("[EditorStore] Loaded \(fetchedLocations.count) locations")
         } catch {
-            NSLog("[EditorStore] Failed to load locations: \(error)")
             await MainActor.run {
                 self.error = "Failed to load locations: \(error.localizedDescription)"
                 isLoadingLocations = false

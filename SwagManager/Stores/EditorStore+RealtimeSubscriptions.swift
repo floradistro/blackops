@@ -7,9 +7,32 @@ import Realtime
 // File size: ~50 lines (under Apple's 300 line "excellent" threshold)
 
 extension EditorStore {
+    // Channel reference for cleanup
+    private static var _realtimeChannel: RealtimeChannelV2?
+
+    // MARK: - Realtime Cleanup
+
+    /// Stop all realtime subscriptions - call on store switch or app close
+    func stopRealtimeSubscription() {
+        realtimeTask?.cancel()
+        realtimeTask = nil
+
+        // Unsubscribe from channel
+        if let channel = EditorStore._realtimeChannel {
+            let channelToCleanup = channel
+            EditorStore._realtimeChannel = nil
+            Task.detached {
+                await channelToCleanup.unsubscribe()
+            }
+        }
+    }
+
     // MARK: - Realtime Subscriptions
 
     func startRealtimeSubscription() {
+        // Clean up any existing subscription first
+        stopRealtimeSubscription()
+
         realtimeTask = Task { [weak self] in
             guard let self = self else { return }
 
@@ -17,6 +40,7 @@ extension EditorStore {
 
             // Subscribe to all changes on one channel
             let channel = client.realtimeV2.channel("swag-manager-changes")
+            EditorStore._realtimeChannel = channel
 
             // Creations table
             let creationsInserts = channel.postgresChange(InsertAction.self, table: "creations")
@@ -39,9 +63,7 @@ extension EditorStore {
 
             do {
                 try await channel.subscribeWithError()
-                NSLog("[EditorStore] Realtime: Successfully subscribed to channel")
             } catch {
-                NSLog("[EditorStore] Realtime: Failed to subscribe - \(error.localizedDescription)")
                 return // Don't try to use the channel if subscription failed
             }
 

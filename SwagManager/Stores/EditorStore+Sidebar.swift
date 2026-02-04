@@ -23,7 +23,6 @@ extension EditorStore {
             sidebarLocationsExpanded = false
             sidebarQueuesExpanded = false
             sidebarBrowserExpanded = false
-            sidebarMCPServersExpanded = false
             sidebarEmailsExpanded = false
             sidebarOrdersExpanded = false
             sidebarCustomersExpanded = false
@@ -47,7 +46,6 @@ extension EditorStore {
         if sidebarLocationsExpanded { count += 1 }
         if sidebarQueuesExpanded { count += 1 }
         if sidebarBrowserExpanded { count += 1 }
-        if sidebarMCPServersExpanded { count += 1 }
         if sidebarEmailsExpanded { count += 1 }
         return count
     }
@@ -77,9 +75,6 @@ extension EditorStore {
             if justExpanded != .browser && !workspaceSections.contains(.browser) {
                 sidebarBrowserExpanded = false
             }
-            if justExpanded != .mcpServers && !workspaceSections.contains(.mcpServers) {
-                sidebarMCPServersExpanded = false
-            }
             if justExpanded != .emails && !workspaceSections.contains(.emails) {
                 sidebarEmailsExpanded = false
             }
@@ -105,8 +100,6 @@ extension EditorStore {
             sidebarQueuesExpanded = true
         case .browser:
             sidebarBrowserExpanded = true
-        case .mcpServers:
-            sidebarMCPServersExpanded = true
         case .emails:
             sidebarEmailsExpanded = true
         case .orders:
@@ -129,7 +122,6 @@ enum SidebarSection {
     case locations
     case queues
     case browser
-    case mcpServers
     case emails
     case orders
     case customers

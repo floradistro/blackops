@@ -34,7 +34,6 @@ struct SimpleWebView: NSViewRepresentable {
             existingWebView.uiDelegate = context.coordinator
             existingWebView.allowsMagnification = true
             existingWebView.magnification = zoomLevel
-            NSLog("[SimpleWebView] Reusing existing WebView for tab \(tab.id.uuidString.prefix(8)), URL: \(tab.currentURL ?? "none")")
             return existingWebView
         }
 
@@ -71,14 +70,11 @@ struct SimpleWebView: NSViewRepresentable {
         context.coordinator.webView = webView
         context.coordinator.zoomLevel = zoomLevel
 
-        NSLog("[SimpleWebView] Created NEW WebView for tab \(tab.id.uuidString.prefix(8))")
 
         // Load URL only for new WebViews
         if let urlString = tab.currentURL, let url = URL(string: urlString) {
-            NSLog("[SimpleWebView] Loading URL: \(urlString)")
             webView.load(URLRequest(url: url))
         } else {
-            NSLog("[SimpleWebView] Loading default Google")
             if let url = URL(string: "https://www.google.com") {
                 webView.load(URLRequest(url: url))
             }
@@ -127,7 +123,6 @@ struct SimpleWebView: NSViewRepresentable {
                 if self.tab.isDarkMode {
                     webView.evaluateJavaScript(InteractiveBrowserView.darkModeScript) { _, error in
                         if let error = error {
-                            NSLog("[DarkMode] Failed to re-apply on navigation: \(error.localizedDescription)")
                         }
                     }
                 }

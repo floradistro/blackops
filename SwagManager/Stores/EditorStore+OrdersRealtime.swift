@@ -48,7 +48,6 @@ extension EditorStore {
 
     func subscribeToOrders() async {
         guard let store = selectedStore else {
-            NSLog("[EditorStore] Cannot subscribe - no store selected")
             return
         }
 
@@ -56,7 +55,6 @@ extension EditorStore {
 
         // Skip if already subscribed or currently subscribing
         guard ordersRealtimeChannel == nil else {
-            NSLog("[EditorStore] Already subscribed to orders, skipping")
             return
         }
 
@@ -66,14 +64,12 @@ extension EditorStore {
         // Create a unique channel name with timestamp to ensure fresh channel
         let channelName = "swagmanager-orders-\(storeId.uuidString.prefix(8))-\(UInt64(Date().timeIntervalSince1970 * 1000))"
 
-        NSLog("[EditorStore] 🔌 Creating orders realtime channel: \(channelName)")
 
         // Capture supabase client before detaching
         let client = supabase.client
 
         // Mark as loading orders
         isLoadingOrders = true
-        objectWillChange.send()
 
         // Do ALL channel setup in background to avoid any main thread blocking
         Task.detached { [weak self] in
@@ -101,8 +97,6 @@ extension EditorStore {
                 guard let self else { return }
                 self.ordersRealtimeConnected = true
                 self.isLoadingOrders = false
-                self.objectWillChange.send()
-                NSLog("[EditorStore] ✅ Subscribed to orders realtime successfully")
             }
 
             // Start listening for changes
@@ -113,7 +107,6 @@ extension EditorStore {
                 }
                 await MainActor.run { [weak self] in
                     self?.ordersRealtimeConnected = false
-                    self?.objectWillChange.send()
                 }
             }
 
@@ -130,7 +123,6 @@ extension EditorStore {
 
         // Unsubscribe and remove channel in background to avoid blocking
         if let channel = ordersRealtimeChannel {
-            NSLog("[EditorStore] Cleaning up orders realtime channel")
             let channelToCleanup = channel
             ordersRealtimeChannel = nil
 
@@ -143,7 +135,6 @@ extension EditorStore {
         }
 
         ordersRealtimeConnected = false
-        objectWillChange.send()
     }
 
     // MARK: - Event Handling
@@ -170,7 +161,6 @@ extension EditorStore {
         }.value
 
         guard let basicOrder = basicOrder else {
-            NSLog("[EditorStore] ⚠️ Failed to decode order insert")
             return
         }
 
@@ -181,23 +171,15 @@ extension EditorStore {
             // Fetch the complete order with all data
             let completeOrder = try await supabase.fetchOrder(id: basicOrder.id)
 
-            NSLog("[EditorStore] 🆕 New order received: #\(completeOrder.orderNumber)")
 
             // Use mutation lock to prevent race conditions
             await withOrderMutationLock {
                 // Add to beginning of array (most recent first)
                 self.orders.insert(completeOrder, at: 0)
 
-                NSLog("[EditorStore] Orders count now: \(self.orders.count)")
-            }
-
-            // Update UI
-            await MainActor.run {
-                self.objectWillChange.send()
             }
 
         } catch {
-            NSLog("[EditorStore] ❌ Failed to fetch complete order: \(error)")
         }
     }
 
@@ -210,7 +192,6 @@ extension EditorStore {
         }.value
 
         guard let basicOrder = basicOrder else {
-            NSLog("[EditorStore] ⚠️ Failed to decode order update")
             return
         }
 
@@ -218,7 +199,6 @@ extension EditorStore {
             // Fetch the complete order with all data
             let completeOrder = try await supabase.fetchOrder(id: basicOrder.id)
 
-            NSLog("[EditorStore] 🔄 Order updated: #\(completeOrder.orderNumber)")
 
             // Use mutation lock to prevent race conditions
             await withOrderMutationLock {
@@ -227,13 +207,7 @@ extension EditorStore {
                 }
             }
 
-            // Update UI
-            await MainActor.run {
-                self.objectWillChange.send()
-            }
-
         } catch {
-            NSLog("[EditorStore] ❌ Failed to fetch updated order: \(error)")
         }
     }
 
@@ -243,16 +217,10 @@ extension EditorStore {
         if let idString = action.oldRecord["id"]?.stringValue,
            let id = UUID(uuidString: idString) {
 
-            NSLog("[EditorStore] 🗑️ Order deleted: \(idString)")
 
             // Use mutation lock to prevent race conditions
             await withOrderMutationLock {
                 self.orders.removeAll { $0.id == id }
-            }
-
-            // Update UI
-            await MainActor.run {
-                self.objectWillChange.send()
             }
         }
     }
@@ -268,7 +236,6 @@ extension EditorStore {
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(Order.self, from: data)
         } catch {
-            NSLog("[EditorStore] Failed to decode realtime order - \(error)")
             return nil
         }
     }

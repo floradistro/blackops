@@ -5,7 +5,7 @@ import SwiftUI
 
 struct EmailCampaignDetailPanel: View {
     let campaign: EmailCampaign
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
     @State private var isRefreshing = false
 
     var body: some View {

@@ -9,8 +9,11 @@ enum SupabaseConfig {
     static let url = URL(string: "https://uaednwpxursknmwdeejn.supabase.co")!
 
     // Anon key - safe for client-side use (RLS protects data)
-    // SECURITY: Never use service_role key in client apps
     static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTcyMzMsImV4cCI6MjA3NjU3MzIzM30.N8jPwlyCBB5KJB5I-XaK6m-mq88rSR445AWFJJmwRCg"
+
+    // Service role key - for local agent server only (bypasses RLS)
+    // NOTE: This runs locally, not exposed to network
+    static let serviceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk5NzIzMywiZXhwIjoyMDc2NTczMjMzfQ.l0NvBbS2JQWPObtWeVD2M2LD866A2tgLmModARYNnbI"
 }
 
 // MARK: - UserDefaults Auth Storage (avoids Keychain prompts during development)
@@ -45,6 +48,10 @@ class SupabaseService {
 
     let client: SupabaseClient
 
+    // Admin client - uses service role key for privileged operations (bypasses RLS)
+    // ONLY use for local admin operations, NEVER expose to network
+    let adminClient: SupabaseClient
+
     // Service instances
     private(set) lazy var creations = CreationService(client: client)
     private(set) lazy var catalogs = CatalogService(client: client)
@@ -67,6 +74,13 @@ class SupabaseService {
                     autoRefreshToken: true
                 )
             )
+        )
+
+        // Admin client with service role key - bypasses RLS
+        // Used for agent config and other admin operations that run locally
+        adminClient = SupabaseClient(
+            supabaseURL: SupabaseConfig.url,
+            supabaseKey: SupabaseConfig.serviceRoleKey
         )
     }
 
@@ -389,6 +403,31 @@ class SupabaseService {
 
     func fetchOrderCounts(storeId: UUID) async throws -> [String: Int] {
         try await orders.fetchOrderCounts(storeId: storeId)
+    }
+
+    // Order Tree (Lazy Loading)
+    func fetchTotalOrderCount(storeId: UUID) async throws -> Int {
+        try await orders.fetchTotalOrderCount(storeId: storeId)
+    }
+
+    func fetchOrderCountsByYear(storeId: UUID) async throws -> [Int: Int] {
+        try await orders.fetchOrderCountsByYear(storeId: storeId)
+    }
+
+    func fetchOrderCountsByMonth(storeId: UUID, year: Int) async throws -> [Int: Int] {
+        try await orders.fetchOrderCountsByMonth(storeId: storeId, year: year)
+    }
+
+    func fetchOrderCountsByDay(storeId: UUID, year: Int, month: Int) async throws -> [Int: Int] {
+        try await orders.fetchOrderCountsByDay(storeId: storeId, year: year, month: month)
+    }
+
+    func fetchOrdersForDate(storeId: UUID, year: Int, month: Int, day: Int) async throws -> [Order] {
+        try await orders.fetchOrdersForDate(storeId: storeId, year: year, month: month, day: day)
+    }
+
+    func fetchActiveOrders(storeId: UUID) async throws -> [Order] {
+        try await orders.fetchActiveOrders(storeId: storeId)
     }
 
     func fetchOrderItems(orderId: UUID) async throws -> [OrderItem] {

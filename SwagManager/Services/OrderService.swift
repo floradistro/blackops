@@ -50,11 +50,27 @@ public final class OrderService {
                 query = query.eq("status", value: status)
             }
 
-            let batch: [Order] = try await query
+            let response = try await query
                 .order("created_at", ascending: false)
                 .range(from: offset, to: offset + batchSize - 1)
                 .execute()
-                .value
+
+            // Order has explicit CodingKeys, so DON'T use convertFromSnakeCase
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .custom { decoder in
+                let container = try decoder.singleValueContainer()
+                if container.decodeNil() {
+                    throw DecodingError.valueNotFound(Date.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Date is null"))
+                }
+                let dateString = try container.decode(String.self)
+                let iso8601 = ISO8601DateFormatter()
+                iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let date = iso8601.date(from: dateString) { return date }
+                iso8601.formatOptions = [.withInternetDateTime]
+                if let date = iso8601.date(from: dateString) { return date }
+                throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Cannot decode date: \(dateString)"))
+            }
+            let batch = try decoder.decode([Order].self, from: response.data)
 
             allOrders.append(contentsOf: batch)
 
@@ -178,10 +194,15 @@ public final class OrderService {
 
     // MARK: - Order Counts
 
+    /// Minimal struct for fast count queries
+    private struct OrderStatusOnly: Codable {
+        let status: String?
+    }
+
     func fetchOrderCounts(storeId: UUID) async throws -> [String: Int] {
-        // Fetch orders and count by status locally
-        let orders: [Order] = try await client.from("orders")
-            .select("id, status")
+        // Fetch ONLY status field (minimal data transfer)
+        let orders: [OrderStatusOnly] = try await client.from("orders")
+            .select("status")
             .eq("store_id", value: storeId)
             .execute()
             .value
@@ -192,6 +213,137 @@ public final class OrderService {
             counts[status, default: 0] += 1
         }
         return counts
+    }
+
+    // MARK: - Order Tree Queries (Lazy Loading)
+
+    /// Minimal order data for tree aggregation (fast query)
+    struct OrderDateInfo: Codable {
+        let id: UUID
+        let createdAt: Date?
+        let status: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case createdAt = "created_at"
+            case status
+        }
+    }
+
+    /// Get total order count for a store (very fast)
+    func fetchTotalOrderCount(storeId: UUID) async throws -> Int {
+        let response = try await client.from("orders")
+            .select("id", head: true, count: .exact)
+            .eq("store_id", value: storeId)
+            .execute()
+        return response.count ?? 0
+    }
+
+    /// Get order counts grouped by year
+    func fetchOrderCountsByYear(storeId: UUID) async throws -> [Int: Int] {
+        // Fetch minimal data: just id and created_at
+        let orders: [OrderDateInfo] = try await client.from("orders")
+            .select("id, created_at, status")
+            .eq("store_id", value: storeId)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        var yearCounts: [Int: Int] = [:]
+        let calendar = Calendar.current
+
+        for order in orders {
+            guard let date = order.createdAt else { continue }
+            let year = calendar.component(.year, from: date)
+            yearCounts[year, default: 0] += 1
+        }
+
+        return yearCounts
+    }
+
+    /// Get order counts grouped by month for a specific year
+    func fetchOrderCountsByMonth(storeId: UUID, year: Int) async throws -> [Int: Int] {
+        let calendar = Calendar.current
+        let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1))!
+        let endOfYear = calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1))!
+
+        let formatter = ISO8601DateFormatter()
+
+        let orders: [OrderDateInfo] = try await client.from("orders")
+            .select("id, created_at, status")
+            .eq("store_id", value: storeId)
+            .gte("created_at", value: formatter.string(from: startOfYear))
+            .lt("created_at", value: formatter.string(from: endOfYear))
+            .execute()
+            .value
+
+        var monthCounts: [Int: Int] = [:]
+
+        for order in orders {
+            guard let date = order.createdAt else { continue }
+            let month = calendar.component(.month, from: date)
+            monthCounts[month, default: 0] += 1
+        }
+
+        return monthCounts
+    }
+
+    /// Get order counts grouped by day for a specific year/month
+    func fetchOrderCountsByDay(storeId: UUID, year: Int, month: Int) async throws -> [Int: Int] {
+        let calendar = Calendar.current
+        let startOfMonth = calendar.date(from: DateComponents(year: year, month: month, day: 1))!
+        let endOfMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)!
+
+        let formatter = ISO8601DateFormatter()
+
+        let orders: [OrderDateInfo] = try await client.from("orders")
+            .select("id, created_at, status")
+            .eq("store_id", value: storeId)
+            .gte("created_at", value: formatter.string(from: startOfMonth))
+            .lt("created_at", value: formatter.string(from: endOfMonth))
+            .execute()
+            .value
+
+        var dayCounts: [Int: Int] = [:]
+
+        for order in orders {
+            guard let date = order.createdAt else { continue }
+            let day = calendar.component(.day, from: date)
+            dayCounts[day, default: 0] += 1
+        }
+
+        return dayCounts
+    }
+
+    /// Fetch actual orders for a specific date (lazy load when day is expanded)
+    func fetchOrdersForDate(storeId: UUID, year: Int, month: Int, day: Int) async throws -> [Order] {
+        let calendar = Calendar.current
+        let startOfDay = calendar.date(from: DateComponents(year: year, month: month, day: day))!
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let formatter = ISO8601DateFormatter()
+
+        return try await client.from("orders")
+            .select(orderSelectColumns)
+            .eq("store_id", value: storeId)
+            .gte("created_at", value: formatter.string(from: startOfDay))
+            .lt("created_at", value: formatter.string(from: endOfDay))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+    }
+
+    /// Fetch active orders (pending, processing, ready) - for quick sidebar access
+    func fetchActiveOrders(storeId: UUID) async throws -> [Order] {
+        let activeStatuses = ["pending", "confirmed", "preparing", "packing", "packed", "ready", "ready_to_ship"]
+
+        return try await client.from("orders")
+            .select(orderSelectColumns)
+            .eq("store_id", value: storeId)
+            .in("status", values: activeStatuses)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
     }
 
     // MARK: - Order Items

@@ -18,7 +18,6 @@ extension EditorStore {
                 customers = firstBatch
                 isLoadingCustomers = false
             }
-            print("✅ Loaded initial \(customers.count) customers")
 
             // Load stats in background
             Task {
@@ -41,10 +40,8 @@ extension EditorStore {
 
                     if batch.count < batchSize { break }
                 }
-                print("✅ Loaded all \(customers.count) customers")
             }
         } catch {
-            print("❌ Error loading customers: \(error)")
             await MainActor.run {
                 self.error = "Failed to load customers: \(error.localizedDescription)"
                 isLoadingCustomers = false
@@ -65,9 +62,7 @@ extension EditorStore {
             customerSearchQuery = query
             let results = try await supabase.searchCustomers(storeId: storeId, query: query, limit: 100)
             customers = results
-            print("✅ Found \(customers.count) customers matching '\(query)'")
         } catch {
-            print("❌ Error searching customers: \(error)")
             self.error = "Failed to search customers: \(error.localizedDescription)"
         }
         isLoading = false
@@ -80,9 +75,7 @@ extension EditorStore {
             isLoading = true
             let vipCustomers = try await supabase.fetchVIPCustomers(storeId: storeId, limit: 100)
             customers = vipCustomers
-            print("✅ Loaded \(customers.count) VIP customers")
         } catch {
-            print("❌ Error loading VIP customers: \(error)")
             self.error = "Failed to load VIP customers: \(error.localizedDescription)"
         }
         isLoading = false
@@ -95,9 +88,7 @@ extension EditorStore {
             isLoading = true
             let tierCustomers = try await supabase.fetchCustomersByTier(storeId: storeId, tier: tier, limit: 100)
             customers = tierCustomers
-            print("✅ Loaded \(customers.count) \(tier) tier customers")
         } catch {
-            print("❌ Error loading tier customers: \(error)")
             self.error = "Failed to load tier customers: \(error.localizedDescription)"
         }
         isLoading = false
@@ -145,9 +136,7 @@ extension EditorStore {
                 }
             }
 
-            print("✅ Refreshed customer: \(customer.displayName)")
         } catch {
-            print("❌ Error refreshing customer: \(error)")
             self.error = "Failed to refresh customer: \(error.localizedDescription)"
         }
     }

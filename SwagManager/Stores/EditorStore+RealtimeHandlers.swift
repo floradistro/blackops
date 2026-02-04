@@ -27,15 +27,12 @@ extension EditorStore {
             // Handle creations inserts
             group.addTask {
                 for await insert in creationsInserts {
-                    NSLog("[EditorStore] Realtime: creation INSERT received")
                     await MainActor.run {
                         if let creation = try? insert.decodeRecord(as: Creation.self, decoder: JSONDecoder.supabaseDecoder) {
                             if !self.creations.contains(where: { $0.id == creation.id }) {
                                 self.creations.insert(creation, at: 0)
-                                NSLog("[EditorStore] Realtime: Added creation '\(creation.name)'")
                             }
                         } else {
-                            NSLog("[EditorStore] Realtime: Failed to decode creation, reloading all")
                             Task { await self.loadCreations() }
                         }
                     }
@@ -45,12 +42,10 @@ extension EditorStore {
             // Handle creations updates
             group.addTask {
                 for await update in creationsUpdates {
-                    NSLog("[EditorStore] Realtime: creation UPDATE received")
                     await MainActor.run {
                         if let creation = try? update.decodeRecord(as: Creation.self, decoder: JSONDecoder.supabaseDecoder) {
                             if let idx = self.creations.firstIndex(where: { $0.id == creation.id }) {
                                 self.creations[idx] = creation
-                                NSLog("[EditorStore] Realtime: Updated creation '\(creation.name)'")
                                 if self.selectedCreation?.id == creation.id {
                                     self.selectedCreation = creation
                                     // Don't overwrite editedCode if user has local changes
@@ -68,7 +63,6 @@ extension EditorStore {
             // Handle creations deletes
             group.addTask {
                 for await delete in creationsDeletes {
-                    NSLog("[EditorStore] Realtime: creation DELETE received")
                     await MainActor.run {
                         let oldRecord = delete.oldRecord
                         if let idString = oldRecord["id"]?.stringValue,
@@ -79,7 +73,6 @@ extension EditorStore {
                                 self.selectedCreation = nil
                                 self.editedCode = nil
                             }
-                            NSLog("[EditorStore] Realtime: Removed creation \(idString)")
                         }
                     }
                 }
@@ -88,15 +81,12 @@ extension EditorStore {
             // Handle collections inserts
             group.addTask {
                 for await insert in collectionsInserts {
-                    NSLog("[EditorStore] Realtime: collection INSERT received")
                     await MainActor.run {
                         if let collection = try? insert.decodeRecord(as: CreationCollection.self, decoder: JSONDecoder.supabaseDecoder) {
                             if !self.collections.contains(where: { $0.id == collection.id }) {
                                 self.collections.insert(collection, at: 0)
-                                NSLog("[EditorStore] Realtime: Added collection '\(collection.name)'")
                             }
                         } else {
-                            NSLog("[EditorStore] Realtime: Failed to decode collection, reloading")
                             Task {
                                 self.collections = try await self.supabase.fetchCollections()
                             }
@@ -108,12 +98,10 @@ extension EditorStore {
             // Handle collections updates
             group.addTask {
                 for await update in collectionsUpdates {
-                    NSLog("[EditorStore] Realtime: collection UPDATE received")
                     await MainActor.run {
                         if let collection = try? update.decodeRecord(as: CreationCollection.self, decoder: JSONDecoder.supabaseDecoder) {
                             if let idx = self.collections.firstIndex(where: { $0.id == collection.id }) {
                                 self.collections[idx] = collection
-                                NSLog("[EditorStore] Realtime: Updated collection '\(collection.name)'")
                             }
                         }
                     }
@@ -123,14 +111,12 @@ extension EditorStore {
             // Handle collections deletes
             group.addTask {
                 for await delete in collectionsDeletes {
-                    NSLog("[EditorStore] Realtime: collection DELETE received")
                     await MainActor.run {
                         let oldRecord = delete.oldRecord
                         if let idString = oldRecord["id"]?.stringValue,
                            let id = UUID(uuidString: idString) {
                             self.collections.removeAll { $0.id == id }
                             self.collectionItems.removeValue(forKey: id)
-                            NSLog("[EditorStore] Realtime: Removed collection \(idString)")
                         }
                     }
                 }
@@ -139,7 +125,6 @@ extension EditorStore {
             // Handle collection items inserts
             group.addTask {
                 for await insert in collectionItemsInserts {
-                    NSLog("[EditorStore] Realtime: collection_item INSERT received")
                     await MainActor.run {
                         let record = insert.record
                         if let collectionIdStr = record["collection_id"]?.stringValue,
@@ -151,7 +136,6 @@ extension EditorStore {
                             }
                             if !self.collectionItems[collectionId]!.contains(creationId) {
                                 self.collectionItems[collectionId]!.append(creationId)
-                                NSLog("[EditorStore] Realtime: Added item to collection")
                             }
                         }
                     }
@@ -161,7 +145,6 @@ extension EditorStore {
             // Handle collection items deletes
             group.addTask {
                 for await delete in collectionItemsDeletes {
-                    NSLog("[EditorStore] Realtime: collection_item DELETE received")
                     await MainActor.run {
                         let oldRecord = delete.oldRecord
                         if let collectionIdStr = oldRecord["collection_id"]?.stringValue,
@@ -169,7 +152,6 @@ extension EditorStore {
                            let collectionId = UUID(uuidString: collectionIdStr),
                            let creationId = UUID(uuidString: creationIdStr) {
                             self.collectionItems[collectionId]?.removeAll { $0 == creationId }
-                            NSLog("[EditorStore] Realtime: Removed item from collection")
                         }
                     }
                 }
@@ -178,18 +160,15 @@ extension EditorStore {
             // Handle browser sessions inserts
             group.addTask {
                 for await insert in browserSessionsInserts {
-                    NSLog("[EditorStore] Realtime: browser_session INSERT received")
                     await MainActor.run {
                         if let session = try? insert.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder) {
                             // Only add if it belongs to current store
                             if session.storeId == self.selectedStore?.id {
                                 if !self.browserSessions.contains(where: { $0.id == session.id }) {
                                     self.browserSessions.insert(session, at: 0)
-                                    NSLog("[EditorStore] Realtime: Added browser session '\(session.displayName)'")
                                 }
                             }
                         } else {
-                            NSLog("[EditorStore] Realtime: Failed to decode browser session")
                         }
                     }
                 }
@@ -198,12 +177,10 @@ extension EditorStore {
             // Handle browser sessions updates
             group.addTask {
                 for await update in browserSessionsUpdates {
-                    NSLog("[EditorStore] Realtime: browser_session UPDATE received")
                     await MainActor.run {
                         if let session = try? update.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder) {
                             if let idx = self.browserSessions.firstIndex(where: { $0.id == session.id }) {
                                 self.browserSessions[idx] = session
-                                NSLog("[EditorStore] Realtime: Updated browser session '\(session.displayName)'")
                                 // Update selected if this is the selected one
                                 if self.selectedBrowserSession?.id == session.id {
                                     self.selectedBrowserSession = session
@@ -227,7 +204,6 @@ extension EditorStore {
             // Handle browser sessions deletes
             group.addTask {
                 for await delete in browserSessionsDeletes {
-                    NSLog("[EditorStore] Realtime: browser_session DELETE received")
                     await MainActor.run {
                         let oldRecord = delete.oldRecord
                         if let idString = oldRecord["id"]?.stringValue,
@@ -244,7 +220,6 @@ extension EditorStore {
                             if case .browserSession(let s) = self.activeTab, s.id == id {
                                 self.activeTab = self.openTabs.first
                             }
-                            NSLog("[EditorStore] Realtime: Removed browser session \(idString)")
                         }
                     }
                 }

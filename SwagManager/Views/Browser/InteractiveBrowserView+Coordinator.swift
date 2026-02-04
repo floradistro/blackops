@@ -39,14 +39,12 @@ extension InteractiveBrowserView {
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             DispatchQueue.main.async {
                 self.parent.isLoading = false
-                NSLog("[InteractiveBrowser] Navigation failed: \(error.localizedDescription)")
             }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             DispatchQueue.main.async {
                 self.parent.isLoading = false
-                NSLog("[InteractiveBrowser] Provisional navigation failed: \(error.localizedDescription)")
             }
         }
 
@@ -62,7 +60,6 @@ extension InteractiveBrowserView {
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             // Handle web process crashes
-            NSLog("[InteractiveBrowser] Web content process terminated - reloading")
             DispatchQueue.main.async {
                 self.parent.isLoading = false
                 webView.reload()

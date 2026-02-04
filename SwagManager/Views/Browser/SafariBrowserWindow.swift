@@ -19,7 +19,6 @@ struct SafariBrowserWindow: View {
         self.sessionId = sessionId
         // Get or create a unique tab manager for this session
         self.tabManager = BrowserTabManager.forSession(sessionId)
-        NSLog("[SafariBrowserWindow] Initialized for session \(sessionId.uuidString.prefix(8))")
     }
 
     var body: some View {

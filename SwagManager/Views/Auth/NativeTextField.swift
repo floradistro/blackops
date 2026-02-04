@@ -25,7 +25,6 @@ struct NativeTextField: NSViewRepresentable {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             if let window = textField.window {
                 window.makeFirstResponder(textField)
-                print("✏️ TextField requested first responder status")
             }
         }
 
@@ -50,7 +49,6 @@ struct NativeTextField: NSViewRepresentable {
         func controlTextDidChange(_ obj: Notification) {
             guard let textField = obj.object as? NSTextField else { return }
             parent.text = textField.stringValue
-            print("✏️ Text changed to: '\(textField.stringValue)'")
         }
 
         func controlTextDidEndEditing(_ obj: Notification) {
@@ -100,7 +98,6 @@ struct NativeSecureField: NSViewRepresentable {
         func controlTextDidChange(_ obj: Notification) {
             guard let textField = obj.object as? NSSecureTextField else { return }
             parent.text = textField.stringValue
-            print("🔒 Password changed: \(textField.stringValue.count) chars")
         }
 
         func controlTextDidEndEditing(_ obj: Notification) {

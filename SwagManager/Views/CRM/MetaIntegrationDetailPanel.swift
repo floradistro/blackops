@@ -5,7 +5,7 @@ import SwiftUI
 
 struct MetaIntegrationDetailPanel: View {
     let integration: MetaIntegration
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
     @State private var isRefreshing = false
 
     var body: some View {

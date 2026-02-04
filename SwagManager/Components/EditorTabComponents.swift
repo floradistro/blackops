@@ -4,10 +4,37 @@ import SwiftUI
 // Extracted from EditorView.swift to reduce file size and improve organization
 // These components handle the tab UI for the editor
 
+// MARK: - Editor Tab Enum
+
+enum EditorTab: String, CaseIterable {
+    case preview = "Preview"
+    case code = "Code"
+    case details = "Details"
+    case settings = "Settings"
+
+    var icon: String {
+        switch self {
+        case .preview: return "play.display"
+        case .code: return "chevron.left.forwardslash.chevron.right"
+        case .details: return "info.circle"
+        case .settings: return "gear"
+        }
+    }
+
+    var terminalLabel: String {
+        switch self {
+        case .preview: return "▶"
+        case .code: return "</>"
+        case .details: return "ℹ"
+        case .settings: return "⚙"
+        }
+    }
+}
+
 // MARK: - Minimal Tab Bar (VS Code / Terminal style)
 
 struct MinimalTabBar: View {
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
 
     var body: some View {
         HStack(spacing: 0) {
@@ -134,7 +161,7 @@ struct MinimalTab: View {
 // MARK: - Toolbar Tab Strip (Legacy)
 
 struct ToolbarTabStrip: View {
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
 
     var body: some View {
         HStack(spacing: 0) {
@@ -291,7 +318,7 @@ struct EditorModeStrip: View {
 // MARK: - Open Tab Bar (Legacy - kept for reference)
 
 struct OpenTabBar: View {
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {

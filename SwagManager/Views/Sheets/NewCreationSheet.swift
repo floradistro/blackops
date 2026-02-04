@@ -4,7 +4,7 @@ import SwiftUI
 // Minimal monochromatic theme
 
 struct NewCreationSheet: View {
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""

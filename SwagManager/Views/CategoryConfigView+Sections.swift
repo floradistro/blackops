@@ -133,14 +133,19 @@ extension CategoryConfigView {
             .background(DesignSystem.Colors.surfaceHover)
 
             VStack(spacing: 0) {
-                DetailRow(label: "Name", value: category.name)
-                DetailRow(label: "Slug", value: category.slug, mono: true)
-                if let desc = category.description, !desc.isEmpty {
-                    DetailRow(label: "Description", value: desc)
+                CategoryDetailRow(label: "Name", value: category.name)
+                CategoryDetailRow(label: "Slug", value: category.slug, mono: true)
+                if let icon = category.icon, !icon.isEmpty {
+                    CategoryDetailRow(label: "Icon", value: icon)
                 }
-                DetailRow(label: "Order", value: "\(category.displayOrder ?? 0)")
-                DetailRow(label: "Status", value: category.isActive ?? true ? "Active" : "Inactive",
+                if let desc = category.description, !desc.isEmpty {
+                    CategoryDetailRow(label: "Description", value: desc)
+                }
+                CategoryDetailRow(label: "Order", value: "\(category.displayOrder ?? 0)")
+                CategoryDetailRow(label: "Status", value: category.isActive ?? true ? "Active" : "Inactive",
                          color: category.isActive ?? true ? .green : .secondary)
+                CategoryDetailRow(label: "Featured", value: category.featured ?? false ? "Yes" : "No",
+                         color: category.featured ?? false ? .blue : .secondary)
             }
             .padding(.vertical, 4)
         }

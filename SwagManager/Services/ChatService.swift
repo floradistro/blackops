@@ -14,7 +14,6 @@ final class ChatService {
     // MARK: - Conversations
 
     func fetchConversations(storeId: UUID, chatType: String? = nil) async throws -> [Conversation] {
-        NSLog("[SupabaseService] Fetching conversations for store: \(storeId), chatType: \(chatType ?? "all")")
         if let chatType = chatType {
             return try await client.from("lisa_conversations")
                 .select("*")
@@ -44,7 +43,6 @@ final class ChatService {
     }
 
     func fetchConversationsByLocation(locationId: UUID) async throws -> [Conversation] {
-        NSLog("[SupabaseService] Fetching conversations for location: \(locationId)")
         return try await client.from("lisa_conversations")
             .select("*")
             .eq("location_id", value: locationId)
@@ -56,7 +54,6 @@ final class ChatService {
     /// Fetches all conversations for a store and its locations using backend RPC
     /// This replaces the previous N+1 query pattern with a single database call
     func fetchAllConversationsForStoreLocations(storeId: UUID, fetchLocations: @escaping (UUID) async throws -> [Location]) async throws -> [Conversation] {
-        NSLog("[ChatService] Fetching all conversations via RPC for store: \(storeId)")
 
         // Use the backend RPC - single query handles all logic
         let response = try await client.rpc("get_all_store_conversations", params: ["p_store_id": storeId.uuidString])
@@ -81,7 +78,6 @@ final class ChatService {
         }
 
         let conversations = try decoder.decode([Conversation].self, from: response.data)
-        NSLog("[ChatService] RPC returned \(conversations.count) conversations")
         return conversations
     }
 

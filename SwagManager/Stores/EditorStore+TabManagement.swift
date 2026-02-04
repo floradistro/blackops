@@ -65,7 +65,6 @@ extension EditorStore {
         selectedLocation = nil
         selectedQueue = nil
         selectedCustomer = nil
-        selectedMCPServer = nil
         selectedEmail = nil
         editedCode = nil
     }
@@ -105,13 +104,10 @@ extension OpenTabItem {
         case .customer(let c):
             store.selectedCustomer = c
 
-        case .mcpServer(let m):
-            store.selectedMCPServer = m
-
         case .email(let e):
             store.selectedEmail = e
 
-        case .cart, .emailCampaign, .metaCampaign, .metaIntegration, .agentBuilder:
+        case .cart, .emailCampaign, .metaCampaign, .metaIntegration, .aiChat:
             // These tabs don't have dedicated state
             break
 

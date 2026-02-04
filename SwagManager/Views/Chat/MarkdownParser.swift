@@ -87,10 +87,11 @@ struct MarkdownParser {
                 continue
             }
 
-            // Table detection
+            // Table detection - support both |col|col| and col|col formats
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            let isTableLine = trimmed.hasPrefix("|") && trimmed.hasSuffix("|")
-            let isSeparator = isTableLine && trimmed.contains("-")
+            let pipeCount = trimmed.filter { $0 == "|" }.count
+            let isTableLine = pipeCount >= 2 && !trimmed.hasPrefix("```")
+            let isSeparator = isTableLine && (trimmed.contains("---") || trimmed.contains("|-"))
 
             if isTableLine {
                 if !inTable && !buf.isEmpty {

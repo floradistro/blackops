@@ -95,7 +95,6 @@ actor PaymentService {
         // Don't convert to snake_case - Edge Function expects camelCase
         request.httpBody = try encoder.encode(payload)
 
-        NSLog("[PaymentService] Creating payment intent - location: \(payload.locationId), register: \(payload.registerId), amount: $\(payload.amount)")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -104,7 +103,6 @@ actor PaymentService {
         }
 
         let responseString = String(data: data, encoding: .utf8) ?? "nil"
-        NSLog("[PaymentService] Response status=\(httpResponse.statusCode): \(responseString.prefix(500))")
 
         guard httpResponse.statusCode == 200 else {
             throw PaymentError.serverError("HTTP \(httpResponse.statusCode)")
@@ -126,7 +124,6 @@ actor PaymentService {
             // Check intent status
             let intent = try await fetchIntent(intentId)
 
-            NSLog("[PaymentService] Polling attempt \(attempt)/\(maxAttempts) - status: \(intent.status)")
 
             switch intent.status {
             case "completed":

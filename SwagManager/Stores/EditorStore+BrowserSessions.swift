@@ -9,22 +9,18 @@ extension EditorStore {
 
     func loadBrowserSessions() async {
         guard let store = selectedStore else {
-            NSLog("[EditorStore] No store selected, cannot load browser sessions")
             return
         }
 
         await MainActor.run { isLoadingBrowserSessions = true }
 
         do {
-            NSLog("[EditorStore] Loading browser sessions for store: \(store.id)")
             let fetchedSessions = try await supabase.fetchBrowserSessions(storeId: store.id)
             await MainActor.run {
                 browserSessions = fetchedSessions
                 isLoadingBrowserSessions = false
             }
-            NSLog("[EditorStore] Loaded \(fetchedSessions.count) browser sessions")
         } catch {
-            NSLog("[EditorStore] Failed to load browser sessions: \(error)")
             await MainActor.run {
                 self.error = "Failed to load browser sessions: \(error.localizedDescription)"
                 isLoadingBrowserSessions = false
@@ -43,7 +39,6 @@ extension EditorStore {
 
     func createNewBrowserSession() async {
         guard let store = selectedStore else {
-            NSLog("[EditorStore] No store selected, cannot create browser session")
             return
         }
 
@@ -57,9 +52,7 @@ extension EditorStore {
             // Open the new session
             openBrowserSession(newSession)
 
-            NSLog("[EditorStore] Created new browser session: \(newSession.id)")
         } catch {
-            NSLog("[EditorStore] Failed to create browser session: \(error)")
             self.error = "Failed to create browser session: \(error.localizedDescription)"
         }
     }
@@ -86,9 +79,7 @@ extension EditorStore {
                 selectedBrowserSession = nil
             }
 
-            NSLog("[EditorStore] Closed browser session: \(session.id)")
         } catch {
-            NSLog("[EditorStore] Failed to close browser session: \(error)")
             self.error = "Failed to close browser session: \(error.localizedDescription)"
         }
     }
@@ -116,7 +107,6 @@ extension EditorStore {
                 }
             }
         } catch {
-            NSLog("[EditorStore] Failed to refresh browser session: \(error)")
         }
     }
 }

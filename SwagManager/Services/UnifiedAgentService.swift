@@ -1,0 +1,392 @@
+import Foundation
+
+// MARK: - Unified Agent Service
+// Runs the agentic loop locally in Swift
+// Handles both remote (Supabase) and local (file/shell) tools
+// Mirrors Claude Code architecture
+
+@MainActor
+class UnifiedAgentService: ObservableObject {
+    static let shared = UnifiedAgentService()
+
+    // MARK: - State
+
+    @Published var isRunning = false
+    @Published var currentTool: String?
+
+    // MARK: - Configuration
+
+    private let anthropicEndpoint = "https://api.anthropic.com/v1/messages"
+    private let maxTurns = 20
+
+    // Remote tools endpoint (Supabase)
+    private var remoteToolsEndpoint: String {
+        "\(SupabaseConfig.url)/functions/v1/execute-tool"
+    }
+
+    // MARK: - Run Agent
+
+    /// Run the unified agent with both local and remote tools
+    func run(
+        prompt: String,
+        systemPrompt: String,
+        storeId: UUID?,
+        includeLocalTools: Bool = true,
+        includeRemoteTools: Bool = true,
+        onText: @escaping (String) -> Void,
+        onToolStart: @escaping (String) -> Void,
+        onToolResult: @escaping (String, Bool, String) -> Void,
+        onError: @escaping (String) -> Void,
+        onComplete: @escaping (Int, Int) -> Void  // input tokens, output tokens
+    ) async {
+        isRunning = true
+        defer { isRunning = false; currentTool = nil }
+
+        // Build tool definitions
+        var tools: [[String: Any]] = []
+        if includeLocalTools {
+            tools.append(contentsOf: LocalToolService.toolDefinitions)
+        }
+        if includeRemoteTools {
+            tools.append(contentsOf: RemoteToolDefinitions.all)
+        }
+
+        // Build messages
+        var messages: [[String: Any]] = [
+            ["role": "user", "content": prompt]
+        ]
+
+        var totalInputTokens = 0
+        var totalOutputTokens = 0
+        var turnCount = 0
+
+        // Agentic loop
+        while turnCount < maxTurns {
+            turnCount += 1
+
+            // Call Anthropic API
+            let response = await callAnthropic(
+                messages: messages,
+                systemPrompt: systemPrompt,
+                tools: tools,
+                storeId: storeId
+            )
+
+            guard let response = response else {
+                onError("Failed to get response from API")
+                break
+            }
+
+            // Track tokens
+            if let usage = response["usage"] as? [String: Any] {
+                totalInputTokens += usage["input_tokens"] as? Int ?? 0
+                totalOutputTokens += usage["output_tokens"] as? Int ?? 0
+            }
+
+            // Process content blocks
+            guard let content = response["content"] as? [[String: Any]] else {
+                onError("Invalid response format")
+                break
+            }
+
+            var hasToolUse = false
+            var toolResults: [[String: Any]] = []
+            var assistantContent: [[String: Any]] = []
+
+            for block in content {
+                guard let type = block["type"] as? String else { continue }
+
+                if type == "text", let text = block["text"] as? String {
+                    onText(text)
+                    assistantContent.append(block)
+                }
+                else if type == "tool_use" {
+                    hasToolUse = true
+                    assistantContent.append(block)
+
+                    guard let toolId = block["id"] as? String,
+                          let toolName = block["name"] as? String,
+                          let toolInput = block["input"] as? [String: Any] else {
+                        continue
+                    }
+
+                    currentTool = toolName
+                    onToolStart(toolName)
+
+                    // Execute tool (local or remote)
+                    let result: ToolResult
+                    if LocalToolService.isLocalTool(toolName) {
+                        result = await LocalToolService.shared.execute(tool: toolName, input: toolInput)
+                    } else {
+                        result = await executeRemoteTool(
+                            name: toolName,
+                            input: toolInput,
+                            storeId: storeId
+                        )
+                    }
+
+                    currentTool = nil
+                    onToolResult(toolName, result.success, result.output)
+
+                    toolResults.append([
+                        "type": "tool_result",
+                        "tool_use_id": toolId,
+                        "content": result.asJSON
+                    ])
+                }
+            }
+
+            // If no tool use, we're done
+            if !hasToolUse {
+                break
+            }
+
+            // Add assistant message and tool results to conversation
+            messages.append(["role": "assistant", "content": assistantContent])
+            messages.append(["role": "user", "content": toolResults])
+        }
+
+        onComplete(totalInputTokens, totalOutputTokens)
+    }
+
+    // MARK: - Anthropic API Call
+
+    private func callAnthropic(
+        messages: [[String: Any]],
+        systemPrompt: String,
+        tools: [[String: Any]],
+        storeId: UUID?
+    ) async -> [String: Any]? {
+        guard let apiKey = getAnthropicAPIKey() else {
+            print("Missing Anthropic API key")
+            return nil
+        }
+
+        var body: [String: Any] = [
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 8192,
+            "system": systemPrompt + (storeId != nil ? "\n\nStore context: store_id=\(storeId!.uuidString)" : ""),
+            "messages": messages
+        ]
+
+        if !tools.isEmpty {
+            body["tools"] = tools
+        }
+
+        guard let url = URL(string: anthropicEndpoint) else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("Anthropic API error: \(errorText)")
+                return nil
+            }
+
+            return try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        } catch {
+            print("Anthropic API call failed: \(error)")
+            return nil
+        }
+    }
+
+    // MARK: - Remote Tool Execution
+
+    private func executeRemoteTool(
+        name: String,
+        input: [String: Any],
+        storeId: UUID?
+    ) async -> ToolResult {
+        // Call Supabase edge function to execute remote tool
+        guard let url = URL(string: remoteToolsEndpoint) else {
+            return ToolResult(success: false, output: "Invalid remote tools endpoint")
+        }
+
+        var body = input
+        if let storeId = storeId, body["store_id"] == nil {
+            body["store_id"] = storeId.uuidString
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload: [String: Any] = [
+            "tool": name,
+            "input": body
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return ToolResult(success: false, output: "Remote tool execution failed")
+            }
+
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let success = json["success"] as? Bool ?? false
+                let output = json["data"] ?? json["error"] ?? "No output"
+                let outputString: String
+                if let str = output as? String {
+                    outputString = str
+                } else if let data = try? JSONSerialization.data(withJSONObject: output, options: .prettyPrinted),
+                          let str = String(data: data, encoding: .utf8) {
+                    outputString = str
+                } else {
+                    outputString = String(describing: output)
+                }
+                return ToolResult(success: success, output: outputString)
+            }
+
+            return ToolResult(success: false, output: "Invalid response format")
+        } catch {
+            return ToolResult(success: false, output: "Error: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - API Key
+
+    private func getAnthropicAPIKey() -> String? {
+        // Try environment variable first
+        if let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] {
+            return key
+        }
+        // Try UserDefaults
+        if let key = UserDefaults.standard.string(forKey: "anthropic_api_key"), !key.isEmpty {
+            return key
+        }
+        // Try Keychain (could implement later)
+        return nil
+    }
+
+    func setAPIKey(_ key: String) {
+        UserDefaults.standard.set(key, forKey: "anthropic_api_key")
+    }
+
+    var hasAPIKey: Bool {
+        getAnthropicAPIKey() != nil
+    }
+}
+
+// MARK: - Remote Tool Definitions
+
+enum RemoteToolDefinitions {
+    static let all: [[String: Any]] = [
+        // Inventory
+        [
+            "name": "inventory_summary",
+            "description": "Get inventory summary grouped by category, location, or product",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "store_id": ["type": "string"],
+                    "group_by": ["type": "string", "enum": ["category", "location", "product"]],
+                    "location_id": ["type": "string"]
+                ],
+                "required": ["store_id"]
+            ]
+        ],
+        // Orders
+        [
+            "name": "orders_list",
+            "description": "List orders with optional filters",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "store_id": ["type": "string"],
+                    "status": ["type": "string"],
+                    "limit": ["type": "integer"]
+                ],
+                "required": ["store_id"]
+            ]
+        ],
+        [
+            "name": "order_details",
+            "description": "Get full order details",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "order_id": ["type": "string"]
+                ],
+                "required": ["order_id"]
+            ]
+        ],
+        // Customers
+        [
+            "name": "customers_search",
+            "description": "Search customers by name, email, or phone",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "store_id": ["type": "string"],
+                    "query": ["type": "string"],
+                    "limit": ["type": "integer"]
+                ],
+                "required": ["store_id", "query"]
+            ]
+        ],
+        [
+            "name": "customer_details",
+            "description": "Get customer profile with order history",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "customer_id": ["type": "string"]
+                ],
+                "required": ["customer_id"]
+            ]
+        ],
+        // Products
+        [
+            "name": "products_search",
+            "description": "Search products by name or SKU",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "store_id": ["type": "string"],
+                    "query": ["type": "string"],
+                    "limit": ["type": "integer"]
+                ],
+                "required": ["store_id"]
+            ]
+        ],
+        // Analytics
+        [
+            "name": "analytics_sales",
+            "description": "Get sales analytics for a time period",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "store_id": ["type": "string"],
+                    "start_date": ["type": "string"],
+                    "end_date": ["type": "string"]
+                ],
+                "required": ["store_id", "start_date", "end_date"]
+            ]
+        ],
+        // Locations
+        [
+            "name": "locations_list",
+            "description": "List all locations for a store",
+            "input_schema": [
+                "type": "object",
+                "properties": [
+                    "store_id": ["type": "string"]
+                ],
+                "required": ["store_id"]
+            ]
+        ]
+    ]
+}

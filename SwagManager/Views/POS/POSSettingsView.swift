@@ -10,7 +10,7 @@ import SwiftUI
 import AppKit
 
 struct POSSettingsView: View {
-    @ObservedObject var store: EditorStore
+    var store: EditorStore
     let locationId: UUID
 
     @State private var isAutoPrintEnabled = false
@@ -55,7 +55,6 @@ struct POSSettingsView: View {
         }
         .frame(width: 340, height: 500)
         .onAppear {
-            NSLog("[POSSettingsView] onAppear - locationId: \(locationId)")
             // Load current settings
             let settings = LabelPrinterSettings.shared
             isAutoPrintEnabled = settings.isAutoPrintEnabled
@@ -292,7 +291,6 @@ struct POSSettingsView: View {
     // MARK: - Helpers
 
     private func loadRegisters() async {
-        NSLog("[POSSettingsView] loadRegisters() called for location: \(locationId.uuidString.lowercased())")
         isLoadingRegisters = true
 
         do {
@@ -306,11 +304,9 @@ struct POSSettingsView: View {
                 .execute()
                 .value
 
-            NSLog("[POSSettingsView] Loaded \(response.count) registers")
             registers = response
             isLoadingRegisters = false
         } catch {
-            NSLog("[POSSettingsView] Failed to load registers: \(error)")
             isLoadingRegisters = false
         }
     }

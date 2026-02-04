@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct BrowserSession: Codable, Identifiable, Equatable, Hashable {
     let id: UUID
@@ -115,5 +116,114 @@ struct BrowserSession: Codable, Identifiable, Equatable, Hashable {
 
     static func == (lhs: BrowserSession, rhs: BrowserSession) -> Bool {
         lhs.id == rhs.id
+    }
+}
+
+// MARK: - Open Tab Item
+// Represents items that can be opened in tabs (Safari/Xcode style)
+
+enum OpenTabItem: Identifiable, Hashable {
+    case creation(Creation)
+    case product(Product)
+    case conversation(Conversation)
+    case category(Category)
+    case browserSession(BrowserSession)
+    case order(Order)
+    case location(Location)
+    case queue(Location)
+    case customer(Customer)
+    case email(ResendEmail)
+    case cart(UUID)
+    case emailCampaign(EmailCampaign)
+    case metaCampaign(MetaCampaign)
+    case metaIntegration(MetaIntegration)
+    case aiAgent(AIAgent)
+    case aiChat
+
+    var id: String {
+        switch self {
+        case .creation(let c): return "creation-\(c.id)"
+        case .product(let p): return "product-\(p.id)"
+        case .conversation(let c): return "conversation-\(c.id)"
+        case .category(let c): return "category-\(c.id)"
+        case .browserSession(let s): return "browser-\(s.id)"
+        case .order(let o): return "order-\(o.id)"
+        case .location(let l): return "location-\(l.id)"
+        case .queue(let l): return "queue-\(l.id)"
+        case .customer(let c): return "customer-\(c.id)"
+        case .email(let e): return "email-\(e.id)"
+        case .cart(let id): return "cart-\(id)"
+        case .emailCampaign(let c): return "email-campaign-\(c.id)"
+        case .metaCampaign(let c): return "meta-campaign-\(c.id)"
+        case .metaIntegration(let i): return "meta-integration-\(i.id)"
+        case .aiAgent(let a): return "agent-\(a.id)"
+        case .aiChat: return "ai-chat"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .creation(let c): return c.name
+        case .product(let p): return p.name
+        case .conversation(let c): return c.title ?? "Chat"
+        case .category(let c): return c.name
+        case .browserSession(let s): return s.displayName
+        case .order(let o): return o.orderNumber
+        case .location(let l): return l.name
+        case .queue(let l): return "\(l.name) Queue"
+        case .customer(let c): return c.displayName
+        case .email(let e): return e.subject
+        case .cart: return "Cart"
+        case .emailCampaign(let c): return c.name
+        case .metaCampaign(let c): return c.name
+        case .metaIntegration(let i): return i.businessName ?? "Meta"
+        case .aiAgent(let a): return a.name ?? "Agent"
+        case .aiChat: return "AI Chat"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .creation: return "wand.and.stars"
+        case .product: return "cube.box"
+        case .conversation: return "bubble.left.and.bubble.right"
+        case .category: return "folder"
+        case .browserSession: return "globe"
+        case .order: return "bag"
+        case .location: return "mappin.and.ellipse"
+        case .queue: return "person.3.sequence"
+        case .customer: return "person"
+        case .email: return "envelope"
+        case .cart: return "cart"
+        case .emailCampaign: return "paperplane"
+        case .metaCampaign: return "megaphone"
+        case .metaIntegration: return "link"
+        case .aiAgent: return "cpu"
+        case .aiChat: return "bubble.left.and.bubble.right"
+        }
+    }
+
+    // Alias for title (used by some components)
+    var name: String { title }
+
+    var iconColor: Color {
+        switch self {
+        case .creation: return .purple
+        case .product: return .blue
+        case .conversation: return .green
+        case .category: return .orange
+        case .browserSession: return .cyan
+        case .order: return .pink
+        case .location: return .indigo
+        case .queue: return .mint
+        case .customer: return .teal
+        case .email: return .blue
+        case .cart: return .orange
+        case .emailCampaign: return .green
+        case .metaCampaign: return .blue
+        case .metaIntegration: return .purple
+        case .aiAgent: return .cyan
+        case .aiChat: return .green
+        }
     }
 }

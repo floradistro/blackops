@@ -36,15 +36,12 @@ extension EditorStore {
         do {
             creations = try await supabase.fetchCreations()
         } catch {
-            print("Error loading creations: \(error)")
             self.error = "Failed to load creations: \(error.localizedDescription)"
         }
 
         // Load collections separately so one failure doesn't block the other
         do {
-            NSLog("[EditorStore] Fetching collections...")
             collections = try await supabase.fetchCollections()
-            NSLog("[EditorStore] Loaded %d collections", collections.count)
 
             // Load all collection items
             var itemsMap: [UUID: [UUID]] = [:]
@@ -53,9 +50,7 @@ extension EditorStore {
                 itemsMap[collection.id] = items.map { $0.creationId }
             }
             collectionItems = itemsMap
-            NSLog("[EditorStore] Loaded collection items for %d collections", itemsMap.count)
         } catch {
-            NSLog("[EditorStore] Error loading collections: %@", String(describing: error))
             // Don't override error if creations also failed
             if self.error == nil {
                 self.error = "Failed to load collections: \(error.localizedDescription)"
@@ -153,7 +148,6 @@ extension EditorStore {
             selectedCreationIds.remove(creation.id)
             await loadCreations()
         } catch {
-            print("Delete failed for \(creation.name): \(error)")
             self.error = "Failed to delete '\(creation.name)': \(error.localizedDescription)"
         }
     }
