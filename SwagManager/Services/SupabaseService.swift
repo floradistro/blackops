@@ -194,8 +194,8 @@ class SupabaseService {
     }
 
     // Products
-    func fetchProducts(storeId: UUID, categoryId: UUID? = nil, search: String? = nil) async throws -> [Product] {
-        try await products.fetchProducts(storeId: storeId, categoryId: categoryId, search: search)
+    func fetchProducts(storeId: UUID, categoryId: UUID? = nil, search: String? = nil, status: String? = nil, excludeStatus: String? = "archived") async throws -> [Product] {
+        try await products.fetchProducts(storeId: storeId, categoryId: categoryId, search: search, status: status, excludeStatus: excludeStatus)
     }
 
     func fetchProduct(id: UUID) async throws -> Product {

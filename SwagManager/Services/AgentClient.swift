@@ -36,6 +36,9 @@ class AgentClient: ObservableObject {
     private var webSocket: URLSessionWebSocketTask?
     private var session: URLSession?
     private var reconnectTask: Task<Void, Never>?
+    private var reconnectAttempts = 0
+    private let maxReconnectAttempts = 5
+    private var hasEverConnected = false
 
     // MARK: - Callbacks
 
@@ -67,15 +70,17 @@ class AgentClient: ObservableObject {
         webSocket?.resume()
 
         receiveMessage()
-        print("[AgentClient] Connecting to ws://localhost:\(serverPort)")
     }
 
     func disconnect() {
         reconnectTask?.cancel()
         reconnectTask = nil
+        reconnectAttempts = 0
         webSocket?.cancel(with: .goingAway, reason: nil)
         webSocket = nil
-        isConnected = false
+        if isConnected {
+            isConnected = false
+        }
         serverVersion = nil
     }
 
@@ -233,6 +238,8 @@ class AgentClient: ObservableObject {
         switch type {
         case "ready":
             isConnected = true
+            hasEverConnected = true
+            reconnectAttempts = 0
             serverVersion = json["version"] as? String
             parseTools(from: json["tools"])
             print("[AgentClient] Connected v\(serverVersion ?? "?"), \(availableTools.count) tools")
@@ -401,13 +408,23 @@ class AgentClient: ObservableObject {
     }
 
     private func handleDisconnect() {
-        isConnected = false
-        isRunning = false
-        currentTool = nil
+        // Guard redundant @Published updates — prevents unnecessary view re-renders
+        if isConnected { isConnected = false }
+        if isRunning { isRunning = false }
+        if currentTool != nil { currentTool = nil }
         webSocket = nil
 
+        reconnectAttempts += 1
+
+        // Only auto-reconnect if we previously had a successful connection
+        // and haven't exceeded max attempts. Prevents infinite loop when server is down.
+        guard hasEverConnected, reconnectAttempts <= maxReconnectAttempts else { return }
+
+        // Exponential backoff: 2s, 4s, 8s, 16s, 30s (capped)
+        let delay = min(UInt64(pow(2.0, Double(reconnectAttempts))) * 1_000_000_000, 30_000_000_000)
+
         reconnectTask = Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(nanoseconds: delay)
             if !Task.isCancelled {
                 connect()
             }

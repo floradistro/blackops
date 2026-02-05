@@ -231,16 +231,15 @@ struct CatalogContentView: View {
     @State private var isEditMode = false
     @State private var showArchived = false
     @State private var isProcessing = false
+    @State private var isLoadingArchived = false
 
-    // Cached filtered data (avoid filtering on every render)
-    @State private var cachedFilteredProducts: [Product] = []
-    @State private var cachedArchivedCount: Int = 0
-    // Debounce token to prevent onChange cascade during bulk loads
-    @State private var filterGeneration: Int = 0
+    // Cached display data
+    @State private var displayProducts: [Product] = []
+    // Archived products fetched on-demand from DB (not kept in store.products)
+    @State private var archivedProducts: [Product] = []
+    @State private var archivedCount: Int = 0
 
     var body: some View {
-        // PERF: List at top level with .searchable outside conditionals
-        // prevents _NSDetectedLayoutRecursion from VStack + conditional + searchable
         List(selection: isEditMode ? $selectedProductIds : .constant(Set<UUID>())) {
             if isEditMode && !selectedProductIds.isEmpty {
                 Section {
@@ -250,18 +249,30 @@ struct CatalogContentView: View {
                 .listRowInsets(EdgeInsets())
             }
 
-            if store.products.isEmpty {
-                ContentUnavailableView("No Products", systemImage: "square.grid.2x2", description: Text("Products will appear here"))
-                    .listRowSeparator(.hidden)
-            } else if cachedFilteredProducts.isEmpty {
-                ContentUnavailableView(
-                    showArchived ? "No Archived Products" : "No Products Found",
-                    systemImage: showArchived ? "archivebox" : "magnifyingglass",
-                    description: Text(showArchived ? "Archived products will appear here" : "Try a different search term")
-                )
+            if isLoadingArchived {
+                HStack {
+                    Spacer()
+                    ProgressView("Loading archived products...")
+                        .controlSize(.small)
+                    Spacer()
+                }
                 .listRowSeparator(.hidden)
+            } else if displayProducts.isEmpty {
+                if showArchived {
+                    ContentUnavailableView("No Archived Products", systemImage: "archivebox",
+                        description: Text("Archived products will appear here"))
+                        .listRowSeparator(.hidden)
+                } else if store.products.isEmpty {
+                    ContentUnavailableView("No Products", systemImage: "square.grid.2x2",
+                        description: Text("Products will appear here"))
+                        .listRowSeparator(.hidden)
+                } else {
+                    ContentUnavailableView("No Products Found", systemImage: "magnifyingglass",
+                        description: Text("Try a different search term"))
+                        .listRowSeparator(.hidden)
+                }
             } else {
-                ForEach(cachedFilteredProducts) { product in
+                ForEach(displayProducts) { product in
                     if isEditMode {
                         ProductListRow(product: product, showArchiveBadge: showArchived)
                             .tag(product.id)
@@ -290,7 +301,7 @@ struct CatalogContentView: View {
                         systemImage: showArchived ? "tray.full" : "archivebox"
                     )
                 }
-                .help(showArchived ? "Show active products" : "Show archived products (\(cachedArchivedCount))")
+                .help(showArchived ? "Show active products" : "Show archived (\(archivedCount))")
 
                 Button {
                     withAnimation {
@@ -304,27 +315,28 @@ struct CatalogContentView: View {
                 }
             }
         }
-        .task { updateFilteredProducts() }
-        .onChange(of: searchText) { _, _ in updateFilteredProducts() }
-        .onChange(of: showArchived) { _, _ in updateFilteredProducts() }
-        .onChange(of: store.products.count) { _, newCount in
-            // Debounce: only refilter if count actually changed meaningfully
-            let gen = filterGeneration + 1
-            filterGeneration = gen
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if self.filterGeneration == gen {
-                    self.updateFilteredProducts()
-                }
+        .task {
+            updateDisplayProducts()
+            await fetchArchivedCount()
+        }
+        .onChange(of: searchText) { _, _ in updateDisplayProducts() }
+        .onChange(of: showArchived) { _, newValue in
+            if newValue {
+                Task { await fetchArchivedProducts() }
+            } else {
+                archivedProducts = []
+                updateDisplayProducts()
             }
         }
+        .onChange(of: store.products.count) { _, _ in
+            if !showArchived { updateDisplayProducts() }
+        }
         .onChange(of: isEditMode) { _, newValue in
-            if !newValue {
-                selectedProductIds.removeAll()
-            }
+            if !newValue { selectedProductIds.removeAll() }
         }
     }
 
-    // MARK: - Bulk Action Bar (extracted to reduce body complexity)
+    // MARK: - Bulk Action Bar
 
     @ViewBuilder
     private var bulkActionBar: some View {
@@ -369,21 +381,50 @@ struct CatalogContentView: View {
         .background(Color(nsColor: .controlBackgroundColor))
     }
 
-    private func updateFilteredProducts() {
-        let products = store.products
-        cachedArchivedCount = products.reduce(into: 0) { count, p in
-            if p.status == "archived" { count += 1 }
-        }
-        let archived = showArchived
+    // MARK: - Data
+
+    private func updateDisplayProducts() {
+        let source = showArchived ? archivedProducts : store.products
         let search = searchText
-        cachedFilteredProducts = products.filter { product in
-            let isArchived = product.status == "archived"
-            let matchesArchiveFilter = archived ? isArchived : !isArchived
-            guard matchesArchiveFilter else { return false }
-            if search.isEmpty { return true }
-            return product.name.localizedCaseInsensitiveContains(search) ||
+        if search.isEmpty {
+            displayProducts = source
+        } else {
+            displayProducts = source.filter { product in
+                product.name.localizedCaseInsensitiveContains(search) ||
                 (product.sku?.localizedCaseInsensitiveContains(search) ?? false)
+            }
         }
+    }
+
+    /// Lightweight count query — no JSON decoding of product rows
+    private func fetchArchivedCount() async {
+        do {
+            let response = try await store.supabase.client
+                .from("products")
+                .select("id", head: true, count: .exact)
+                .eq("store_id", value: store.currentStoreId)
+                .eq("status", value: "archived")
+                .execute()
+            archivedCount = response.count ?? 0
+        } catch {
+            archivedCount = 0
+        }
+    }
+
+    /// Fetch archived products on-demand from DB (only when user toggles)
+    private func fetchArchivedProducts() async {
+        isLoadingArchived = true
+        do {
+            archivedProducts = try await store.supabase.products.fetchProducts(
+                storeId: store.currentStoreId,
+                status: "archived",
+                excludeStatus: nil
+            )
+            updateDisplayProducts()
+        } catch {
+            archivedProducts = []
+        }
+        isLoadingArchived = false
     }
 
     private func bulkArchive() async {
@@ -393,6 +434,7 @@ struct CatalogContentView: View {
         selectedProductIds.removeAll()
         isProcessing = false
         isEditMode = false
+        await fetchArchivedCount()
     }
 
     private func bulkUnarchive() async {
@@ -402,6 +444,9 @@ struct CatalogContentView: View {
         selectedProductIds.removeAll()
         isProcessing = false
         isEditMode = false
+        // Refresh archived list since some were restored
+        await fetchArchivedProducts()
+        await fetchArchivedCount()
     }
 
     @ViewBuilder

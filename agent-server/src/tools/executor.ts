@@ -1891,13 +1891,14 @@ const handlers: Record<string, ToolHandler> = {
   },
 
   // ===========================================================================
-  // 11. EMAIL - Unified email tool
-  // Actions: send, send_template, list, get, templates
+  // 11. EMAIL - Unified email tool with inbox support
+  // Actions: send, send_template, list, get, templates,
+  //          inbox, inbox_get, inbox_reply, inbox_update, inbox_stats
   // ===========================================================================
   email: async (supabase, args, storeId) => {
     const action = args.action as string;
     if (!action) {
-      return { success: false, error: "action required: send, send_template, list, get, templates" };
+      return { success: false, error: "action required: send, send_template, list, get, templates, inbox, inbox_get, inbox_reply, inbox_update, inbox_stats" };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL || "https://uaednwpxursknmwdeejn.supabase.co";
@@ -1978,8 +1979,418 @@ const handlers: Record<string, ToolHandler> = {
           return { success: true, data };
         }
 
+        // =====================================================================
+        // INBOX ACTIONS - AI-powered inbound email management
+        // =====================================================================
+
+        case "inbox": {
+          // List threads with optional filters
+          const mailbox = args.mailbox as string;
+          const status = args.status as string;
+          const priority = args.priority as string;
+          const limit = (args.limit as number) || 25;
+
+          let query = supabase
+            .from("email_threads")
+            .select(`
+              id, subject, mailbox, status, priority, intent, ai_summary,
+              message_count, unread_count, last_message_at, created_at,
+              customer:customers(id, first_name, last_name, email),
+              order:orders(id, order_number, status)
+            `)
+            .order("last_message_at", { ascending: false })
+            .limit(limit);
+
+          if (storeId) query = query.eq("store_id", storeId);
+          if (mailbox) query = query.eq("mailbox", mailbox);
+          if (status) query = query.eq("status", status);
+          if (priority) query = query.eq("priority", priority);
+
+          const { data, error } = await query;
+          if (error) return { success: false, error: error.message };
+          return { success: true, data };
+        }
+
+        case "inbox_get": {
+          // Get full thread with all messages and context
+          const threadId = args.thread_id as string;
+          if (!threadId) return { success: false, error: "inbox_get requires thread_id" };
+
+          // Fetch thread
+          const { data: thread, error: threadError } = await supabase
+            .from("email_threads")
+            .select(`
+              *,
+              customer:customers(id, first_name, last_name, email, phone),
+              order:orders(id, order_number, status, total, created_at)
+            `)
+            .eq("id", threadId)
+            .single();
+
+          if (threadError) return { success: false, error: threadError.message };
+
+          // Fetch all messages in thread
+          const { data: messages, error: msgError } = await supabase
+            .from("email_inbox")
+            .select("id, direction, from_email, from_name, to_email, subject, body_text, body_html, status, ai_draft, ai_intent, ai_confidence, has_attachments, created_at, read_at, replied_at")
+            .eq("thread_id", threadId)
+            .order("created_at", { ascending: true });
+
+          if (msgError) return { success: false, error: msgError.message };
+
+          // Mark unread messages as read
+          const unreadIds = (messages || [])
+            .filter((m: Record<string, unknown>) => m.direction === "inbound" && !m.read_at)
+            .map((m: Record<string, unknown>) => m.id);
+
+          if (unreadIds.length > 0) {
+            await supabase
+              .from("email_inbox")
+              .update({ status: "read", read_at: new Date().toISOString() })
+              .in("id", unreadIds);
+
+            await supabase
+              .from("email_threads")
+              .update({ unread_count: 0 })
+              .eq("id", threadId);
+          }
+
+          return { success: true, data: { thread, messages } };
+        }
+
+        case "inbox_reply": {
+          // Reply to a thread
+          const threadId = args.thread_id as string;
+          const html = args.html as string;
+          const text = args.text as string;
+
+          if (!threadId) return { success: false, error: "inbox_reply requires thread_id" };
+          if (!html && !text) return { success: false, error: "inbox_reply requires html or text body" };
+
+          // Get thread + last inbound message for threading
+          const { data: thread } = await supabase
+            .from("email_threads")
+            .select("id, subject, customer:customers(email)")
+            .eq("id", threadId)
+            .single();
+
+          if (!thread) return { success: false, error: "Thread not found" };
+
+          const { data: lastInbound } = await supabase
+            .from("email_inbox")
+            .select("from_email, message_id, references")
+            .eq("thread_id", threadId)
+            .eq("direction", "inbound")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (!lastInbound) return { success: false, error: "No inbound message to reply to" };
+
+          // Build threading references
+          const refs: string[] = (lastInbound.references as string[]) || [];
+          if (lastInbound.message_id && !refs.includes(lastInbound.message_id)) {
+            refs.push(lastInbound.message_id);
+          }
+
+          const result = await invokeEdgeFunction("send-email", {
+            to: lastInbound.from_email,
+            subject: `Re: ${thread.subject || ""}`,
+            html,
+            text,
+            storeId,
+            thread_id: threadId,
+            in_reply_to: lastInbound.message_id,
+            references: refs,
+          });
+
+          return { success: true, data: result };
+        }
+
+        case "inbox_update": {
+          // Update thread status, priority, intent, or summary
+          const threadId = args.thread_id as string;
+          if (!threadId) return { success: false, error: "inbox_update requires thread_id" };
+
+          const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+          if (args.status) updates.status = args.status;
+          if (args.priority) updates.priority = args.priority;
+          if (args.intent) updates.intent = args.intent;
+          if (args.ai_summary) updates.ai_summary = args.ai_summary;
+
+          const { data, error } = await supabase
+            .from("email_threads")
+            .update(updates)
+            .eq("id", threadId)
+            .select("id, status, priority, intent, ai_summary")
+            .single();
+
+          if (error) return { success: false, error: error.message };
+          return { success: true, data };
+        }
+
+        case "inbox_stats": {
+          // Inbox statistics
+          let query = supabase
+            .from("email_threads")
+            .select("mailbox, status, priority", { count: "exact" });
+
+          if (storeId) query = query.eq("store_id", storeId);
+
+          const { data: threads, error } = await query;
+          if (error) return { success: false, error: error.message };
+
+          // Aggregate counts
+          const stats = {
+            total: (threads || []).length,
+            by_status: {} as Record<string, number>,
+            by_mailbox: {} as Record<string, number>,
+            by_priority: {} as Record<string, number>,
+          };
+
+          for (const t of (threads || []) as Array<{ status: string; mailbox: string; priority: string }>) {
+            stats.by_status[t.status] = (stats.by_status[t.status] || 0) + 1;
+            stats.by_mailbox[t.mailbox] = (stats.by_mailbox[t.mailbox] || 0) + 1;
+            stats.by_priority[t.priority] = (stats.by_priority[t.priority] || 0) + 1;
+          }
+
+          return { success: true, data: stats };
+        }
+
+        // =====================================================================
+        // DOMAIN MANAGEMENT - Multi-tenant email domain configuration
+        // =====================================================================
+
+        case "domains_list": {
+          // List email domains for the store
+          let query = supabase
+            .from("store_email_domains")
+            .select("id, domain, inbound_subdomain, status, receiving_enabled, sending_verified, dns_records, created_at");
+
+          if (storeId) query = query.eq("store_id", storeId);
+
+          const { data, error } = await query;
+          if (error) return { success: false, error: error.message };
+          return { success: true, data };
+        }
+
+        case "domains_add": {
+          // Add a new email domain for the store
+          const domain = args.domain as string;
+          const inboundSubdomain = (args.inbound_subdomain as string) || "in";
+
+          if (!domain) return { success: false, error: "domain required" };
+          if (!storeId) return { success: false, error: "store_id required" };
+
+          // Call Resend API to add domain
+          const RESEND_API_KEY = process.env.RESEND_API_KEY;
+          if (!RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
+
+          const fullDomain = `${inboundSubdomain}.${domain}`;
+          const resendRes = await fetch("https://api.resend.com/domains", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${RESEND_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name: fullDomain, region: "us-east-1" })
+          });
+
+          const resendData = await resendRes.json();
+          if (!resendRes.ok) {
+            return { success: false, error: `Resend API error: ${resendData.message || resendRes.status}` };
+          }
+
+          // Enable receiving
+          await fetch(`https://api.resend.com/domains/${resendData.id}`, {
+            method: "PATCH",
+            headers: {
+              "Authorization": `Bearer ${RESEND_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ capabilities: { receiving: "enabled" } })
+          });
+
+          // Format DNS records for display
+          const dnsRecords = (resendData.records || []).map((r: any) => ({
+            record: r.record,
+            name: r.name,
+            type: r.type,
+            value: r.value,
+            priority: r.priority,
+            status: r.status
+          }));
+
+          // Add receiving MX record to the list
+          dnsRecords.push({
+            record: "Receiving",
+            name: inboundSubdomain,
+            type: "MX",
+            value: "inbound-smtp.us-east-1.amazonaws.com",
+            priority: 10,
+            status: "pending"
+          });
+
+          // Insert into database
+          const { data, error } = await supabase
+            .from("store_email_domains")
+            .insert({
+              store_id: storeId,
+              domain,
+              inbound_subdomain: inboundSubdomain,
+              resend_domain_id: resendData.id,
+              status: "pending",
+              receiving_enabled: true,
+              dns_records: dnsRecords
+            })
+            .select()
+            .single();
+
+          if (error) return { success: false, error: error.message };
+
+          return {
+            success: true,
+            data: {
+              ...data,
+              message: "Domain added. Please add the following DNS records to your domain registrar:",
+              dns_records: dnsRecords
+            }
+          };
+        }
+
+        case "domains_verify": {
+          // Trigger verification for a domain
+          const domainId = args.domain_id as string;
+          if (!domainId) return { success: false, error: "domain_id required" };
+
+          // Get domain record
+          const { data: domainRecord, error: fetchError } = await supabase
+            .from("store_email_domains")
+            .select("*")
+            .eq("id", domainId)
+            .single();
+
+          if (fetchError || !domainRecord) {
+            return { success: false, error: "Domain not found" };
+          }
+
+          // Call Resend verify API
+          const RESEND_API_KEY = process.env.RESEND_API_KEY;
+          if (!RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
+
+          await fetch(`https://api.resend.com/domains/${domainRecord.resend_domain_id}/verify`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${RESEND_API_KEY}` }
+          });
+
+          // Fetch updated status
+          const statusRes = await fetch(`https://api.resend.com/domains/${domainRecord.resend_domain_id}`, {
+            headers: { "Authorization": `Bearer ${RESEND_API_KEY}` }
+          });
+
+          const statusData = await statusRes.json();
+
+          // Update database
+          const dnsRecords = (statusData.records || []).map((r: any) => ({
+            record: r.record,
+            name: r.name,
+            type: r.type,
+            value: r.value,
+            priority: r.priority,
+            status: r.status
+          }));
+
+          const receivingVerified = dnsRecords.some((r: any) => r.record === "Receiving" && r.status === "verified");
+          const sendingVerified = dnsRecords.filter((r: any) => r.record !== "Receiving").every((r: any) => r.status === "verified");
+
+          const { data, error } = await supabase
+            .from("store_email_domains")
+            .update({
+              status: statusData.status === "verified" || receivingVerified ? "verified" : "pending",
+              sending_verified: sendingVerified,
+              dns_records: dnsRecords,
+              verified_at: receivingVerified ? new Date().toISOString() : null
+            })
+            .eq("id", domainId)
+            .select()
+            .single();
+
+          if (error) return { success: false, error: error.message };
+          return { success: true, data };
+        }
+
+        case "addresses_list": {
+          // List email addresses for the store
+          let query = supabase
+            .from("store_email_addresses")
+            .select(`
+              id, address, display_name, mailbox_type, ai_enabled, ai_auto_reply, is_active, created_at,
+              domain:store_email_domains(id, domain, inbound_subdomain, status)
+            `);
+
+          if (storeId) query = query.eq("store_id", storeId);
+
+          const { data, error } = await query;
+          if (error) return { success: false, error: error.message };
+
+          // Format with full email address
+          const addresses = (data || []).map((a: any) => ({
+            ...a,
+            full_email: a.domain ? `${a.address}@${a.domain.inbound_subdomain}.${a.domain.domain}` : null
+          }));
+
+          return { success: true, data: addresses };
+        }
+
+        case "addresses_add": {
+          // Add a new email address/mailbox
+          const domainId = args.domain_id as string;
+          const address = args.address as string;
+          const displayName = args.display_name as string;
+          const mailboxType = (args.mailbox_type as string) || "general";
+          const aiEnabled = args.ai_enabled !== false;
+
+          if (!domainId || !address) {
+            return { success: false, error: "domain_id and address required" };
+          }
+          if (!storeId) return { success: false, error: "store_id required" };
+
+          // Verify domain belongs to store
+          const { data: domain } = await supabase
+            .from("store_email_domains")
+            .select("id, domain, inbound_subdomain")
+            .eq("id", domainId)
+            .eq("store_id", storeId)
+            .single();
+
+          if (!domain) return { success: false, error: "Domain not found or doesn't belong to store" };
+
+          const { data, error } = await supabase
+            .from("store_email_addresses")
+            .insert({
+              store_id: storeId,
+              domain_id: domainId,
+              address: address.toLowerCase(),
+              display_name: displayName,
+              mailbox_type: mailboxType,
+              ai_enabled: aiEnabled
+            })
+            .select()
+            .single();
+
+          if (error) return { success: false, error: error.message };
+
+          return {
+            success: true,
+            data: {
+              ...data,
+              full_email: `${address}@${domain.inbound_subdomain}.${domain.domain}`
+            }
+          };
+        }
+
         default:
-          return { success: false, error: `Unknown action: ${action}. Use: send, send_template, list, get, templates` };
+          return { success: false, error: `Unknown action: ${action}. Use: send, send_template, list, get, templates, inbox, inbox_get, inbox_reply, inbox_update, inbox_stats, domains_list, domains_add, domains_verify, addresses_list, addresses_add` };
       }
     } catch (err) {
       return { success: false, error: `Email error: ${err}` };

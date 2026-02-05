@@ -133,6 +133,7 @@ enum OpenTabItem: Identifiable, Hashable {
     case queue(Location)
     case customer(Customer)
     case email(ResendEmail)
+    case thread(EmailThread)
     case cart(UUID)
     case emailCampaign(EmailCampaign)
     case metaCampaign(MetaCampaign)
@@ -152,6 +153,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue(let l): return "queue-\(l.id)"
         case .customer(let c): return "customer-\(c.id)"
         case .email(let e): return "email-\(e.id)"
+        case .thread(let t): return "thread-\(t.id)"
         case .cart(let id): return "cart-\(id)"
         case .emailCampaign(let c): return "email-campaign-\(c.id)"
         case .metaCampaign(let c): return "meta-campaign-\(c.id)"
@@ -173,6 +175,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue(let l): return "\(l.name) Queue"
         case .customer(let c): return c.displayName
         case .email(let e): return e.subject
+        case .thread(let t): return t.displaySubject
         case .cart: return "Cart"
         case .emailCampaign(let c): return c.name
         case .metaCampaign(let c): return c.name
@@ -194,6 +197,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue: return "person.3.sequence"
         case .customer: return "person"
         case .email: return "envelope"
+        case .thread: return "tray"
         case .cart: return "cart"
         case .emailCampaign: return "paperplane"
         case .metaCampaign: return "megaphone"
@@ -218,6 +222,7 @@ enum OpenTabItem: Identifiable, Hashable {
         case .queue: return .mint
         case .customer: return .teal
         case .email: return .blue
+        case .thread: return .cyan
         case .cart: return .orange
         case .emailCampaign: return .green
         case .metaCampaign: return .blue

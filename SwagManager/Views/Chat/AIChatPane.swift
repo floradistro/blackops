@@ -146,6 +146,10 @@ struct AIChatPane: View {
             }
         }
         .task {
+            // Lazy agent start — only connect when chat pane first appears
+            if !AgentProcessManager.shared.isRunning {
+                AgentProcessManager.shared.start()
+            }
             await editorStore.loadAIAgents()
             syncAgentState()
             chatStore.storeId = editorStore.selectedStore?.id
@@ -164,6 +168,9 @@ struct AIChatPane: View {
             guard chatStore.storeId != newId else { return }
             chatStore.clearConversation()
             chatStore.storeId = newId
+            // Reset agent — will be set to new store's first agent after load
+            chatStore.agentId = nil
+            chatStore.currentAgent = nil
             Task {
                 await editorStore.loadAIAgents()
                 syncAgentState()
@@ -188,11 +195,17 @@ struct AIChatPane: View {
 
     private func syncAgentState() {
         let agents = editorStore.aiAgents
-        if chatStore.agentId == nil, let first = agents.first {
+        if let id = chatStore.agentId, let agent = agents.first(where: { $0.id == id }) {
+            // Current agent exists in this store — keep it
+            chatStore.currentAgent = agent
+        } else if let first = agents.first {
+            // Agent not found (nil or wrong store) — pick first available
             chatStore.agentId = first.id
             chatStore.currentAgent = first
-        } else if let id = chatStore.agentId, let agent = agents.first(where: { $0.id == id }) {
-            chatStore.currentAgent = agent
+        } else {
+            // No agents in this store
+            chatStore.agentId = nil
+            chatStore.currentAgent = nil
         }
     }
 

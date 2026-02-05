@@ -84,6 +84,13 @@ struct MainSidebar: View {
                     title: "Emails",
                     badge: store.emailTotalCount
                 )
+
+                SidebarRow(
+                    item: .inbox,
+                    icon: "tray.full.fill",
+                    title: "Inbox",
+                    badge: store.inboxTotalUnread
+                )
             }
 
             // AI

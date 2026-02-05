@@ -13,7 +13,7 @@ struct AppleContentView: View {
     @State private var selectedItem: SDSidebarItem? = nil
     @State private var navigationPath = NavigationPath()
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var showAIChat = true
+    @State private var showAIChat = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -165,6 +165,12 @@ struct DetailDestination: View {
 
         case .emailDetail(let id):
             EmailDetailWrapper(emailId: id, store: store)
+
+        case .inboxThread(let id):
+            ThreadDetailWrapper(threadId: id, store: store)
+
+        case .inboxSettings:
+            EmailDomainSettingsView(store: store)
 
         case .emailCampaignDetail(let id):
             EmailCampaignWrapper(campaignId: id, store: store)

@@ -92,6 +92,16 @@ class EditorStore {
     var emailCategoryCounts: [String: Int] = [:]
     var loadedCategories: Set<String> = []
 
+    // MARK: - Inbox State (Inbound Email)
+    var inboxThreads: [EmailThread] = []
+    var selectedThread: EmailThread?
+    var selectedThreadMessages: [InboxEmail] = []
+    var inboxCounts: [String: Int] = [:]  // by mailbox
+    var inboxTotalUnread: Int = 0
+    var isLoadingInbox = false
+    var selectedMailbox: InboxMailbox = .all
+    var sidebarInboxExpanded = false
+
     // MARK: - CRM/Campaigns State
     var emailCampaigns: [EmailCampaign] = []
     var selectedEmailCampaign: EmailCampaign?

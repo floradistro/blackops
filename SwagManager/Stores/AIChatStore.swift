@@ -98,9 +98,9 @@ class AIChatStore: ObservableObject {
     private var pendingThinkingRemoval: UUID?
 
     // MARK: - Configuration
-    var agentId: UUID?
-    var storeId: UUID?
-    var currentAgent: AIAgent?
+    @Published var agentId: UUID?
+    @Published var storeId: UUID?
+    @Published var currentAgent: AIAgent?
 
     // MARK: - Types
 

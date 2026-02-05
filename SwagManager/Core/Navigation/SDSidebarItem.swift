@@ -30,6 +30,9 @@ enum SDSidebarItem: Hashable {
     case browserSessionDetail(UUID)
     case emails
     case emailDetail(UUID)
+    case inbox
+    case inboxThread(UUID)
+    case inboxSettings
 
     // CRM
     case emailCampaigns

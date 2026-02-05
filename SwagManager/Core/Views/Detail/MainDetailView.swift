@@ -49,7 +49,7 @@ struct MainDetailView: View {
                 CreationsContentView(store: store, selection: $selection)
 
             case .teamChat:
-                TeamChatPlaceholderView()
+                TeamChatView(storeId: store.selectedStore?.id)
 
             // OPERATIONS - Section views
             case .browserSessions:
@@ -57,6 +57,15 @@ struct MainDetailView: View {
 
             case .emails:
                 EmailsListView(store: store, selection: $selection)
+
+            case .inbox:
+                InboxListView(store: store, selection: $selection)
+
+            case .inboxThread(let id):
+                ThreadDetailWrapper(threadId: id, store: store)
+
+            case .inboxSettings:
+                EmailDomainSettingsView(store: store)
 
             // CRM - Section views
             case .emailCampaigns:

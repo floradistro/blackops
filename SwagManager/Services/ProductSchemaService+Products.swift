@@ -11,9 +11,10 @@ extension ProductSchemaService {
     func fetchProducts(
         storeId: UUID? = nil,
         categoryId: UUID? = nil,
-        search: String? = nil
+        search: String? = nil,
+        status: String? = nil,
+        excludeStatus: String? = "archived"
     ) async throws -> [Product] {
-        // Paginate to get ALL products (Supabase default limit is 1000)
         var allProducts: [Product] = []
         let batchSize = 1000
         var offset = 0
@@ -40,6 +41,13 @@ extension ProductSchemaService {
 
             if let search = search, !search.isEmpty {
                 query = query.ilike("name", pattern: "%\(search)%")
+            }
+
+            // Filter by exact status or exclude a status at the DB level
+            if let status = status {
+                query = query.eq("status", value: status)
+            } else if let excludeStatus = excludeStatus {
+                query = query.neq("status", value: excludeStatus)
             }
 
             let batch: [Product] = try await query

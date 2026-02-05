@@ -107,6 +107,9 @@ extension OpenTabItem {
         case .email(let e):
             store.selectedEmail = e
 
+        case .thread(let t):
+            store.selectedThread = t
+
         case .cart, .emailCampaign, .metaCampaign, .metaIntegration, .aiChat:
             // These tabs don't have dedicated state
             break

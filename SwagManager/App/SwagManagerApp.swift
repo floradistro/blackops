@@ -15,8 +15,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let cache = URLCache(memoryCapacity: memoryCapacity, diskCapacity: diskCapacity)
         URLCache.shared = cache
 
-        // Start local agent server for AI chat with local file tools
-        AgentProcessManager.shared.start()
+        // Agent server starts lazily when AI chat pane is first opened
+        // (removed eager start to avoid blocking main thread during app launch)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

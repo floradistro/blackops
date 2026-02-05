@@ -7,6 +7,31 @@ import Supabase
 final class ChatService {
     private let client: SupabaseClient
 
+    /// Shared decoder for Chat models — handles ISO8601 dates without .convertFromSnakeCase
+    /// (Chat models have explicit CodingKeys so we must NOT use .convertFromSnakeCase)
+    private static let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            if container.decodeNil() {
+                throw DecodingError.valueNotFound(Date.self,
+                    DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "null date"))
+            }
+            let str = try container.decode(String.self)
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = iso.date(from: str) { return date }
+            iso.formatOptions = [.withInternetDateTime]
+            if let date = iso.date(from: str) { return date }
+            // Fallback for Postgres-style timestamps
+            let fmt = DateFormatter()
+            fmt.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+            if let date = fmt.date(from: str) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(str)")
+        }
+        return d
+    }()
+
     init(client: SupabaseClient) {
         self.client = client
     }
@@ -15,92 +40,69 @@ final class ChatService {
 
     func fetchConversations(storeId: UUID, chatType: String? = nil) async throws -> [Conversation] {
         if let chatType = chatType {
-            return try await client.from("lisa_conversations")
+            let response = try await client.from("lisa_conversations")
                 .select("*")
                 .eq("store_id", value: storeId)
                 .eq("chat_type", value: chatType)
                 .order("updated_at", ascending: false)
                 .execute()
-                .value
+            return try Self.decoder.decode([Conversation].self, from: response.data)
         } else {
-            // Fetch ALL conversations for this store (don't filter by status)
-            return try await client.from("lisa_conversations")
+            let response = try await client.from("lisa_conversations")
                 .select("*")
                 .eq("store_id", value: storeId)
                 .order("updated_at", ascending: false)
                 .execute()
-                .value
+            return try Self.decoder.decode([Conversation].self, from: response.data)
         }
     }
 
     func fetchConversation(id: UUID) async throws -> Conversation {
-        return try await client.from("lisa_conversations")
+        let response = try await client.from("lisa_conversations")
             .select("*")
             .eq("id", value: id)
             .single()
             .execute()
-            .value
+        return try Self.decoder.decode(Conversation.self, from: response.data)
     }
 
     func fetchConversationsByLocation(locationId: UUID) async throws -> [Conversation] {
-        return try await client.from("lisa_conversations")
+        let response = try await client.from("lisa_conversations")
             .select("*")
             .eq("location_id", value: locationId)
             .order("updated_at", ascending: false)
             .execute()
-            .value
+        return try Self.decoder.decode([Conversation].self, from: response.data)
     }
 
     /// Fetches all conversations for a store and its locations using backend RPC
     /// This replaces the previous N+1 query pattern with a single database call
     func fetchAllConversationsForStoreLocations(storeId: UUID, fetchLocations: @escaping (UUID) async throws -> [Location]) async throws -> [Conversation] {
-
-        // Use the backend RPC - single query handles all logic
         let response = try await client.rpc("get_all_store_conversations", params: ["p_store_id": storeId.uuidString])
             .execute()
-
-        // Decode the JSON response
-        let decoder = JSONDecoder()
-        // Note: Don't use .convertFromSnakeCase - Conversation model has explicit CodingKeys
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let container = try decoder.singleValueContainer()
-            let dateString = try container.decode(String.self)
-            if let date = ISO8601DateFormatter().date(from: dateString) {
-                return date
-            }
-            // Try alternative format
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ"
-            if let date = formatter.date(from: dateString) {
-                return date
-            }
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date")
-        }
-
-        let conversations = try decoder.decode([Conversation].self, from: response.data)
-        return conversations
+        return try Self.decoder.decode([Conversation].self, from: response.data)
     }
 
     func createConversation(_ conversation: ConversationInsert) async throws -> Conversation {
-        return try await client.from("lisa_conversations")
+        let response = try await client.from("lisa_conversations")
             .insert(conversation)
             .select("*")
             .single()
             .execute()
-            .value
+        return try Self.decoder.decode(Conversation.self, from: response.data)
     }
 
     func getOrCreateTeamConversation(storeId: UUID, chatType: String = "dm", title: String? = nil) async throws -> Conversation {
         // Try to find existing conversation of this type
-        let existing: [Conversation] = try await client.from("lisa_conversations")
+        let existingResponse = try await client.from("lisa_conversations")
             .select("*")
             .eq("store_id", value: storeId)
             .eq("chat_type", value: chatType)
             .eq("status", value: "active")
             .limit(1)
             .execute()
-            .value
 
+        let existing = try Self.decoder.decode([Conversation].self, from: existingResponse.data)
         if let first = existing.first {
             return first
         }
@@ -119,46 +121,46 @@ final class ChatService {
     // MARK: - Messages
 
     func fetchMessages(conversationId: UUID, limit: Int = 50, before: Date? = nil) async throws -> [ChatMessage] {
-        let messages: [ChatMessage]
         if let before = before {
-            messages = try await client.from("lisa_messages")
+            let response = try await client.from("lisa_messages")
                 .select("*")
                 .eq("conversation_id", value: conversationId)
                 .lt("created_at", value: ISO8601DateFormatter().string(from: before))
                 .order("created_at", ascending: false)
                 .limit(limit)
                 .execute()
-                .value
+            let messages = try Self.decoder.decode([ChatMessage].self, from: response.data)
+            return messages.reversed()
         } else {
-            messages = try await client.from("lisa_messages")
+            let response = try await client.from("lisa_messages")
                 .select("*")
                 .eq("conversation_id", value: conversationId)
                 .order("created_at", ascending: false)
                 .limit(limit)
                 .execute()
-                .value
+            let messages = try Self.decoder.decode([ChatMessage].self, from: response.data)
+            return messages.reversed()
         }
-        return messages.reversed() // Return in chronological order
     }
 
     func sendMessage(_ message: ChatMessageInsert) async throws -> ChatMessage {
-        return try await client.from("lisa_messages")
+        let response = try await client.from("lisa_messages")
             .insert(message)
             .select("*")
             .single()
             .execute()
-            .value
+        return try Self.decoder.decode(ChatMessage.self, from: response.data)
     }
 
     // MARK: - Chat Participants
 
     func fetchParticipants(conversationId: UUID) async throws -> [ChatParticipant] {
-        return try await client.from("lisa_chat_participants")
+        let response = try await client.from("lisa_chat_participants")
             .select("*")
             .eq("conversation_id", value: conversationId)
             .is("left_at", value: nil)
             .execute()
-            .value
+        return try Self.decoder.decode([ChatParticipant].self, from: response.data)
     }
 
     func updateTypingStatus(conversationId: UUID, userId: UUID, isTyping: Bool) async throws {
