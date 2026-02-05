@@ -57,6 +57,8 @@ import {
 const MODEL_PRICING: Record<string, { input: number; output: number; cacheRead?: number; cacheWrite?: number }> = {
   "claude-sonnet-4-20250514": { input: 3, output: 15, cacheRead: 0.30, cacheWrite: 3.75 },
   "claude-sonnet-4-5-20250929": { input: 3, output: 15, cacheRead: 0.30, cacheWrite: 3.75 },
+  "claude-opus-4-6-20260201": { input: 15, output: 75, cacheRead: 1.50, cacheWrite: 18.75 },
+  "claude-opus-4-5-20251101": { input: 15, output: 75, cacheRead: 1.50, cacheWrite: 18.75 },
   "claude-opus-4-20250514": { input: 15, output: 75, cacheRead: 1.50, cacheWrite: 18.75 },
   "claude-3-5-haiku-20241022": { input: 0.80, output: 4, cacheRead: 0.08, cacheWrite: 1 },
   // Fallback for unknown models
@@ -406,10 +408,7 @@ async function handleQuery(
   }
 
   // Select model
-  let model = config?.model || "claude-sonnet-4-20250514";
-  if (model.includes("opus-4-5")) {
-    model = "claude-sonnet-4-20250514"; // Opus 4.5 not available for API yet
-  }
+  const model = config?.model || "claude-sonnet-4-20250514";
 
   // =========================================================================
   // CONVERSATION MANAGEMENT (Anthropic best practice: stateless API)

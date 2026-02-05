@@ -26,7 +26,8 @@ struct AgentConfigPanel: View {
 
     private let models = [
         ("claude-sonnet-4-20250514", "Claude Sonnet 4", "Fast & capable"),
-        ("claude-opus-4-5-20251101", "Claude Opus 4.5", "Most powerful"),
+        ("claude-opus-4-6-20260201", "Claude Opus 4.6", "Most powerful"),
+        ("claude-opus-4-5-20251101", "Claude Opus 4.5", "Previous flagship"),
         ("claude-3-5-haiku-20241022", "Claude Haiku 3.5", "Fastest")
     ]
 

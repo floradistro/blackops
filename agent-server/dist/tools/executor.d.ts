@@ -60,6 +60,8 @@ export interface ExecutionContext {
     inputTokens?: number;
     outputTokens?: number;
     totalCost?: number;
+    costBefore?: number;
+    turnCost?: number;
 }
 export declare function executeTool(supabase: SupabaseClient, toolName: string, args: Record<string, unknown>, storeId?: string, context?: ExecutionContext): Promise<ToolResult>;
 export declare function getImplementedTools(): string[];

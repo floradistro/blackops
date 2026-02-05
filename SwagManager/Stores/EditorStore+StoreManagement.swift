@@ -151,7 +151,9 @@ class EditorStore {
     @ObservationIgnored let defaultStoreId = UUID(uuidString: "cd2e1122-d511-4edb-be5d-98ef274b4baf")!
 
     init() {
-        startRealtimeSubscription()
+        // DISABLED: Realtime subscriptions cause main thread blocking
+        // TODO: Re-enable with batched/throttled updates
+        // startRealtimeSubscription()
     }
 
     deinit {

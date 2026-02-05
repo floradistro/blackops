@@ -50,8 +50,7 @@ struct ThreadDetailView: View {
         }
         .navigationTitle(thread.displaySubject)
         .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                // Status actions
+            ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button("Mark Resolved") {
                         Task { await store.updateThreadStatus(thread, status: "resolved") }
@@ -311,20 +310,37 @@ struct AIDraftView: View {
 struct ThreadDetailWrapper: View {
     let threadId: UUID
     var store: EditorStore
+    @State private var isLoading = true
+    @State private var thread: EmailThread?
 
     var body: some View {
-        if let thread = store.inboxThreads.first(where: { $0.id == threadId }) {
-            ThreadDetailView(thread: thread, store: store)
-                .task {
-                    // Load messages when thread detail appears
-                    await store.loadThreadMessages(thread)
-                }
-        } else {
-            ContentUnavailableView("Thread not found", systemImage: "tray")
-                .task {
-                    // Try to load if not in current list
-                    await store.loadInboxThreads()
-                }
+        Group {
+            if isLoading {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let thread {
+                ThreadDetailView(thread: thread, store: store)
+            } else {
+                ContentUnavailableView("Thread not found", systemImage: "tray")
+            }
+        }
+        .task(id: threadId) {
+            isLoading = true
+
+            // Find thread in current list or reload
+            if let found = store.inboxThreads.first(where: { $0.id == threadId }) {
+                thread = found
+            } else {
+                await store.loadInboxThreads()
+                thread = store.inboxThreads.first(where: { $0.id == threadId })
+            }
+
+            // Load messages for this thread
+            if let thread {
+                await store.loadThreadMessages(thread)
+            }
+
+            isLoading = false
         }
     }
 }

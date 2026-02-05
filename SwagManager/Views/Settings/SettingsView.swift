@@ -566,9 +566,10 @@ struct AISettingsView: View {
 
             Section {
                 Picker("Default Model", selection: $defaultModel) {
+                    Text("Claude Opus 4.6").tag("claude-opus-4-6-20260201")
+                    Text("Claude Opus 4.5").tag("claude-opus-4-5-20251101")
                     Text("Claude Sonnet 4").tag("claude-sonnet-4-20250514")
-                    Text("Claude Opus 4").tag("claude-opus-4-20250514")
-                    Text("Claude 3.5 Sonnet").tag("claude-3-5-sonnet-20241022")
+                    Text("Claude Haiku 3.5").tag("claude-3-5-haiku-20241022")
                 }
             } header: {
                 Text("Model")

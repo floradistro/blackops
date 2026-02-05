@@ -17,6 +17,9 @@ final class SyncService: ObservableObject {
     @Published private(set) var isSyncing = false
     @Published private(set) var lastSyncTime: Date?
 
+    // Throttle sync requests
+    private var syncTask: Task<Void, Never>?
+
     // MARK: - Configure
 
     func configure(modelContext: ModelContext, storeId: UUID) {
@@ -24,21 +27,32 @@ final class SyncService: ObservableObject {
         self.storeId = storeId
     }
 
-    // MARK: - Full Sync
+    // MARK: - Full Sync (Throttled)
 
     func syncAll() async {
+        // Cancel any pending sync
+        syncTask?.cancel()
+
         guard !isSyncing else { return }
         isSyncing = true
-        defer {
-            isSyncing = false
-            lastSyncTime = Date()
+
+        syncTask = Task {
+            defer {
+                Task { @MainActor in
+                    self.isSyncing = false
+                    self.lastSyncTime = Date()
+                }
+            }
+
+            // Run syncs in parallel, but each sync processes data in batches
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await self.syncLocations() }
+                group.addTask { await self.syncOrders() }
+                group.addTask { await self.syncCustomers() }
+            }
         }
 
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.syncLocations() }
-            group.addTask { await self.syncOrders() }
-            group.addTask { await self.syncCustomers() }
-        }
+        await syncTask?.value
     }
 
     // MARK: - Sync Locations
