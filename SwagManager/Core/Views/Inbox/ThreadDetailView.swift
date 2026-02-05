@@ -315,6 +315,10 @@ struct ThreadDetailWrapper: View {
     var body: some View {
         if let thread = store.inboxThreads.first(where: { $0.id == threadId }) {
             ThreadDetailView(thread: thread, store: store)
+                .task {
+                    // Load messages when thread detail appears
+                    await store.loadThreadMessages(thread)
+                }
         } else {
             ContentUnavailableView("Thread not found", systemImage: "tray")
                 .task {

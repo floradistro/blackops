@@ -831,44 +831,42 @@ class TelemetryService: ObservableObject {
         isLive = false
     }
 
-    /// Handle new span from realtime (called on MainActor)
+    /// Handle new span from realtime - decodes in background to avoid blocking main thread
     private func handleNewSpan(_ insert: InsertAction) {
         let record = insert.record
-        print("[Telemetry] Realtime INSERT received: \(record["action"]?.stringValue ?? "unknown")")
+        let storeId = currentStoreId
 
-        // Check if it's a tool action or API request (for AI telemetry)
-        guard let action = record["action"]?.stringValue,
-              (action.hasPrefix("tool.") || action == "claude_api_request") else {
-            print("[Telemetry] Skipping non-telemetry action")
-            return
-        }
-
-        // Filter by store only if a specific store is selected
-        // If currentStoreId is nil, show all events (global telemetry view)
-        if let storeId = currentStoreId {
-            let spanStoreId = record["store_id"]?.stringValue
-            // Case-insensitive comparison - Postgres returns lowercase, Swift UUID uses uppercase
-            if let spanStoreId = spanStoreId,
-               spanStoreId.lowercased() != storeId.uuidString.lowercased() {
-                // Skip - different store
+        // Decode in background to avoid main thread blocking
+        Task.detached { [weak self] in
+            // Check if it's a tool action or API request (for AI telemetry)
+            guard let action = record["action"]?.stringValue,
+                  (action.hasPrefix("tool.") || action == "claude_api_request") else {
                 return
             }
-            // Note: If spanStoreId is nil, we still show it (global events)
-        }
 
-        // Decode and insert
-        do {
-            let jsonData = try JSONEncoder().encode(record)
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let span = try decoder.decode(TelemetrySpan.self, from: jsonData)
+            // Filter by store only if a specific store is selected
+            if let storeId = storeId {
+                let spanStoreId = record["store_id"]?.stringValue
+                if let spanStoreId = spanStoreId,
+                   spanStoreId.lowercased() != storeId.uuidString.lowercased() {
+                    return
+                }
+            }
 
-            print("[Telemetry] Decoded span: \(span.action), inserting into traces")
-            // Direct call since we're already on MainActor
-            insertSpanIntoTraces(span)
-            print("[Telemetry] After insert - trace count: \(recentTraces.count), updateCount: \(updateCount)")
-        } catch {
-            print("[Telemetry] Decode error: \(error)")
+            // Decode in background
+            do {
+                let jsonData = try JSONEncoder().encode(record)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let span = try decoder.decode(TelemetrySpan.self, from: jsonData)
+
+                // Only update UI on main thread
+                await MainActor.run { [weak self] in
+                    self?.insertSpanIntoTraces(span)
+                }
+            } catch {
+                print("[Telemetry] Decode error: \(error)")
+            }
         }
     }
 
@@ -1155,28 +1153,34 @@ class TelemetryService: ObservableObject {
             }
 
             let response: [TelemetrySpan] = try await baseQuery.execute().value
+            let traceCount = recentTraces.count
 
-            let totalSpans = response.count
-            let errors = response.filter { $0.isError }.count
-            let durations = response.compactMap { $0.durationMs }.sorted()
+            // Move heavy array operations to background thread
+            let computedStats = await Task.detached { @Sendable () -> TelemetryStats in
+                let totalSpans = response.count
+                let errors = response.filter { $0.isError }.count
+                let durations = response.compactMap { $0.durationMs }.sorted()
 
-            let avgDuration = durations.isEmpty ? nil : Double(durations.reduce(0, +)) / Double(durations.count)
-            let p50 = durations.isEmpty ? nil : Double(durations[durations.count / 2])
-            let p95 = durations.isEmpty ? nil : Double(durations[Int(Double(durations.count) * 0.95)])
-            let p99 = durations.isEmpty ? nil : Double(durations[Int(Double(durations.count) * 0.99)])
+                let avgDuration = durations.isEmpty ? nil : Double(durations.reduce(0, +)) / Double(durations.count)
+                let p50 = durations.isEmpty ? nil : Double(durations[durations.count / 2])
+                let p95 = durations.isEmpty ? nil : Double(durations[Int(Double(durations.count) * 0.95)])
+                let p99 = durations.isEmpty ? nil : Double(durations[Int(Double(durations.count) * 0.99)])
 
-            stats = TelemetryStats(
-                totalTraces: recentTraces.count,
-                totalSpans: totalSpans,
-                toolCalls: totalSpans,
-                errors: errors,
-                avgDurationMs: avgDuration,
-                byAction: nil,
-                bySource: nil,
-                p50Ms: p50,
-                p95Ms: p95,
-                p99Ms: p99
-            )
+                return TelemetryStats(
+                    totalTraces: traceCount,
+                    totalSpans: totalSpans,
+                    toolCalls: totalSpans,
+                    errors: errors,
+                    avgDurationMs: avgDuration,
+                    byAction: nil,
+                    bySource: nil,
+                    p50Ms: p50,
+                    p95Ms: p95,
+                    p99Ms: p99
+                )
+            }.value
+
+            stats = computedStats
 
         } catch {
             // Stats are optional, don't show error

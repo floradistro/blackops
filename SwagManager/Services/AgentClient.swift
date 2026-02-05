@@ -468,9 +468,11 @@ class AgentClient: ObservableObject {
     // MARK: - Execution Log Management
 
     private func addExecutionLog(_ entry: ExecutionLogEntry) {
-        executionLogs.insert(entry, at: 0)
+        // Append instead of insert(at:0) for O(1) instead of O(n)
+        // Views should use .reversed() for newest-first display
+        executionLogs.append(entry)
         if executionLogs.count > maxLogEntries {
-            executionLogs.removeLast(executionLogs.count - maxLogEntries)
+            executionLogs.removeFirst(executionLogs.count - maxLogEntries)
         }
     }
 

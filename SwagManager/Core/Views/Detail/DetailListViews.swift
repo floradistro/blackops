@@ -11,6 +11,7 @@ struct AllOrdersListView: View {
     @State private var searchText = ""
     @State private var statusFilter: String? = nil
     @State private var cachedFilteredOrders: [SDOrder] = []
+    @State private var searchDebounceTask: Task<Void, Never>?
 
     var body: some View {
         List {
@@ -37,7 +38,14 @@ struct AllOrdersListView: View {
             }
         }
         .task { updateFilteredOrders() }
-        .onChange(of: searchText) { _, _ in updateFilteredOrders() }
+        .onChange(of: searchText) { _, _ in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                updateFilteredOrders()
+            }
+        }
         .onChange(of: statusFilter) { _, _ in updateFilteredOrders() }
         .onChange(of: orders.count) { _, _ in updateFilteredOrders() }
     }
@@ -146,6 +154,7 @@ struct CustomersListView: View {
     var store: EditorStore
     @State private var searchText = ""
     @State private var cachedFilteredCustomers: [Customer] = []
+    @State private var searchDebounceTask: Task<Void, Never>?
 
     var body: some View {
         List {
@@ -164,7 +173,14 @@ struct CustomersListView: View {
             }
             updateFilteredCustomers()
         }
-        .onChange(of: searchText) { _, _ in updateFilteredCustomers() }
+        .onChange(of: searchText) { _, _ in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                updateFilteredCustomers()
+            }
+        }
         .onChange(of: store.customers.count) { _, _ in updateFilteredCustomers() }
     }
 
@@ -238,6 +254,8 @@ struct CatalogContentView: View {
     // Archived products fetched on-demand from DB (not kept in store.products)
     @State private var archivedProducts: [Product] = []
     @State private var archivedCount: Int = 0
+    // Debounce task for search
+    @State private var searchDebounceTask: Task<Void, Never>?
 
     var body: some View {
         List(selection: isEditMode ? $selectedProductIds : .constant(Set<UUID>())) {
@@ -319,7 +337,15 @@ struct CatalogContentView: View {
             updateDisplayProducts()
             await fetchArchivedCount()
         }
-        .onChange(of: searchText) { _, _ in updateDisplayProducts() }
+        .onChange(of: searchText) { _, newValue in
+            // Debounce search to avoid main thread blocking on every keystroke
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                updateDisplayProducts()
+            }
+        }
         .onChange(of: showArchived) { _, newValue in
             if newValue {
                 Task { await fetchArchivedProducts() }
@@ -575,6 +601,7 @@ struct CreationsContentView: View {
     @Binding var selection: SDSidebarItem?
     @State private var searchText = ""
     @State private var cachedFilteredCreations: [Creation] = []
+    @State private var searchDebounceTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -594,7 +621,14 @@ struct CreationsContentView: View {
         }
         .navigationTitle("Creations")
         .task { updateFilteredCreations() }
-        .onChange(of: searchText) { _, _ in updateFilteredCreations() }
+        .onChange(of: searchText) { _, _ in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                updateFilteredCreations()
+            }
+        }
         .onChange(of: store.creations.count) { _, _ in updateFilteredCreations() }
     }
 

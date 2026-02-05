@@ -25,20 +25,24 @@ extension EditorStore {
                 customerStats = stats
             }
 
-            // Load remaining customers in background
-            Task {
+            // Load remaining customers in background - only update UI once complete
+            Task.detached { [weak self] in
+                guard let self = self else { return }
                 var allCustomers = firstBatch
                 var offset = 100
                 let batchSize = 1000
 
                 while true {
-                    let batch = try await supabase.fetchCustomers(storeId: storeId, limit: batchSize, offset: offset)
+                    let batch = try await self.supabase.fetchCustomers(storeId: storeId, limit: batchSize, offset: offset)
                     if batch.isEmpty { break }
                     allCustomers.append(contentsOf: batch)
-                    customers = allCustomers
                     offset += batchSize
-
                     if batch.count < batchSize { break }
+                }
+
+                // Single UI update when complete
+                await MainActor.run {
+                    self.customers = allCustomers
                 }
             }
         } catch {

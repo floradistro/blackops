@@ -234,14 +234,17 @@ class AIChatStore: ObservableObject {
                     return false
                 }) {
                     if case .toolCall(let id, let name, _, let input, _, let timestamp) = self.timeline[index] {
+                        // Format result string - JSON serialization happens inline since result may not be Sendable
                         let resultString: String?
                         if let result = result {
                             if JSONSerialization.isValidJSONObject(result),
-                               let data = try? JSONSerialization.data(withJSONObject: result, options: .prettyPrinted),
+                               let data = try? JSONSerialization.data(withJSONObject: result),
                                let str = String(data: data, encoding: .utf8) {
-                                resultString = str
+                                // Truncate very long results to avoid main thread blocking
+                                resultString = str.count > 5000 ? String(str.prefix(5000)) + "\n... (truncated)" : str
                             } else {
-                                resultString = String(describing: result)
+                                let desc = String(describing: result)
+                                resultString = desc.count > 5000 ? String(desc.prefix(5000)) + "\n... (truncated)" : desc
                             }
                         } else {
                             resultString = errorMsg

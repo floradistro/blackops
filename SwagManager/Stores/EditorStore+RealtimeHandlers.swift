@@ -24,11 +24,13 @@ extension EditorStore {
     ) async {
         // Keep processing events in parallel
         await withTaskGroup(of: Void.self) { group in
-            // Handle creations inserts
+            // Handle creations inserts - decode in background
             group.addTask {
                 for await insert in creationsInserts {
+                    // Decode outside MainActor to avoid blocking
+                    let creation = try? insert.decodeRecord(as: Creation.self, decoder: JSONDecoder.supabaseDecoder)
                     await MainActor.run {
-                        if let creation = try? insert.decodeRecord(as: Creation.self, decoder: JSONDecoder.supabaseDecoder) {
+                        if let creation = creation {
                             if !self.creations.contains(where: { $0.id == creation.id }) {
                                 self.creations.insert(creation, at: 0)
                             }
@@ -39,16 +41,16 @@ extension EditorStore {
                 }
             }
 
-            // Handle creations updates
+            // Handle creations updates - decode in background
             group.addTask {
                 for await update in creationsUpdates {
+                    let creation = try? update.decodeRecord(as: Creation.self, decoder: JSONDecoder.supabaseDecoder)
                     await MainActor.run {
-                        if let creation = try? update.decodeRecord(as: Creation.self, decoder: JSONDecoder.supabaseDecoder) {
+                        if let creation = creation {
                             if let idx = self.creations.firstIndex(where: { $0.id == creation.id }) {
                                 self.creations[idx] = creation
                                 if self.selectedCreation?.id == creation.id {
                                     self.selectedCreation = creation
-                                    // Don't overwrite editedCode if user has local changes
                                     if self.editedCode == nil || !self.hasUnsavedChanges {
                                         self.editedCode = creation.reactCode
                                     }
@@ -78,11 +80,12 @@ extension EditorStore {
                 }
             }
 
-            // Handle collections inserts
+            // Handle collections inserts - decode in background
             group.addTask {
                 for await insert in collectionsInserts {
+                    let collection = try? insert.decodeRecord(as: CreationCollection.self, decoder: JSONDecoder.supabaseDecoder)
                     await MainActor.run {
-                        if let collection = try? insert.decodeRecord(as: CreationCollection.self, decoder: JSONDecoder.supabaseDecoder) {
+                        if let collection = collection {
                             if !self.collections.contains(where: { $0.id == collection.id }) {
                                 self.collections.insert(collection, at: 0)
                             }
@@ -95,11 +98,12 @@ extension EditorStore {
                 }
             }
 
-            // Handle collections updates
+            // Handle collections updates - decode in background
             group.addTask {
                 for await update in collectionsUpdates {
+                    let collection = try? update.decodeRecord(as: CreationCollection.self, decoder: JSONDecoder.supabaseDecoder)
                     await MainActor.run {
-                        if let collection = try? update.decodeRecord(as: CreationCollection.self, decoder: JSONDecoder.supabaseDecoder) {
+                        if let collection = collection {
                             if let idx = self.collections.firstIndex(where: { $0.id == collection.id }) {
                                 self.collections[idx] = collection
                             }
@@ -157,35 +161,33 @@ extension EditorStore {
                 }
             }
 
-            // Handle browser sessions inserts
+            // Handle browser sessions inserts - decode in background
             group.addTask {
                 for await insert in browserSessionsInserts {
+                    let session = try? insert.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder)
                     await MainActor.run {
-                        if let session = try? insert.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder) {
-                            // Only add if it belongs to current store
+                        if let session = session {
                             if session.storeId == self.selectedStore?.id {
                                 if !self.browserSessions.contains(where: { $0.id == session.id }) {
                                     self.browserSessions.insert(session, at: 0)
                                 }
                             }
-                        } else {
                         }
                     }
                 }
             }
 
-            // Handle browser sessions updates
+            // Handle browser sessions updates - decode in background
             group.addTask {
                 for await update in browserSessionsUpdates {
+                    let session = try? update.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder)
                     await MainActor.run {
-                        if let session = try? update.decodeRecord(as: BrowserSession.self, decoder: JSONDecoder.supabaseDecoder) {
+                        if let session = session {
                             if let idx = self.browserSessions.firstIndex(where: { $0.id == session.id }) {
                                 self.browserSessions[idx] = session
-                                // Update selected if this is the selected one
                                 if self.selectedBrowserSession?.id == session.id {
                                     self.selectedBrowserSession = session
                                 }
-                                // Update in open tabs
                                 if let tabIndex = self.openTabs.firstIndex(where: {
                                     if case .browserSession(let s) = $0, s.id == session.id { return true }
                                     return false
