@@ -293,31 +293,41 @@ struct EmailDomainSettingsView: View {
     }
 
     private func syncAccount(_ account: EmailAccount) async {
-        await MainActor.run {
-            syncingAccountId = account.id
+        syncingAccountId = account.id
+
+        defer {
+            Task { @MainActor in
+                syncingAccountId = nil
+            }
         }
 
         do {
-            // Make direct HTTP request to avoid blocking
+            // Make direct HTTP request with proper auth
             let url = URL(string: "https://uaednwpxursknmwdeejn.supabase.co/functions/v1/gmail-sync")!
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
 
             let body = ["action": "sync", "account_id": account.id.uuidString]
             request.httpBody = try JSONEncoder().encode(body)
 
-            let (_, _) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
 
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                throw NSError(domain: "GmailSync", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+            }
+
+            // Reload data after successful sync
             await loadData()
+
+            // Also refresh inbox if it's being viewed
+            await store.loadInboxThreads()
         } catch {
             await MainActor.run {
                 self.error = "Sync failed: \(error.localizedDescription)"
             }
-        }
-
-        await MainActor.run {
-            syncingAccountId = nil
         }
     }
 

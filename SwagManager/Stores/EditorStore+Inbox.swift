@@ -88,7 +88,14 @@ extension EditorStore {
         do {
             let messages: [InboxEmail] = try await supabase.client
                 .from("email_inbox")
-                .select()
+                .select("""
+                    id, store_id, thread_id, resend_email_id, direction,
+                    from_email, from_name, to_email, to_name, subject,
+                    body_html, body_text, message_id, in_reply_to,
+                    has_attachments, attachments, status,
+                    ai_draft, ai_intent, ai_confidence,
+                    customer_id, order_id, created_at, read_at, replied_at, received_at
+                """)
                 .eq("thread_id", value: thread.id)
                 .order("received_at", ascending: true)
                 .execute()

@@ -94,9 +94,6 @@ class AIChatStore: ObservableObject {
     private var currentStreamingMessageId: UUID?
     private var currentThinkingId: UUID?
 
-    // Track generation state for smooth transitions
-    private var pendingThinkingRemoval: UUID?
-
     // MARK: - Configuration
     @Published var agentId: UUID?
     @Published var storeId: UUID?
