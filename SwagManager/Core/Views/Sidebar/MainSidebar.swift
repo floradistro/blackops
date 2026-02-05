@@ -89,13 +89,6 @@ struct MainSidebar: View {
             // AI
             Section("AI") {
                 SidebarRow(
-                    item: .aiChat,
-                    icon: "bubble.left.and.text.bubble.right.fill",
-                    title: "AI Chat",
-                    badge: 0
-                )
-
-                SidebarRow(
                     item: .agents,
                     icon: "gearshape.2.fill",
                     title: "Agents",

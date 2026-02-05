@@ -2,36 +2,32 @@ import Foundation
 import SwiftUI
 
 // MARK: - Agent Client
-// WebSocket client for communicating with the local Claude Agent SDK server
-// Following Anthropic engineering patterns for agent communication
+// WebSocket client for communicating with local agent server
+// Implements Anthropic multi-turn conversation pattern with persistent storage
 
 @MainActor
 class AgentClient: ObservableObject {
     static let shared = AgentClient()
 
-    // MARK: - Published State
+    // MARK: - Connection State
 
     @Published private(set) var isConnected = false
     @Published private(set) var isRunning = false
-    @Published private(set) var currentTool: String?
     @Published private(set) var serverVersion: String?
     @Published private(set) var availableTools: [ToolMetadata] = []
-    @Published private(set) var debugMessages: [DebugMessage] = []
+
+    // MARK: - Conversation State
+
+    @Published private(set) var currentConversationId: String?
+    @Published private(set) var conversations: [ConversationMeta] = []
+
+    // MARK: - Execution State
+
+    @Published private(set) var currentTool: String?
     @Published private(set) var currentModel: String?
-
-    // MARK: - Execution Logs (Real-time tool telemetry)
     @Published private(set) var executionLogs: [ExecutionLogEntry] = []
-    @Published private(set) var currentExecution: ExecutionSession?
-    private var pendingToolStart: Date?
-    private var pendingToolInput: [String: Any]?
-    private let maxLogEntries = 100
-
-    // MARK: - Conversation Trace (Full message history for debugging)
+    @Published private(set) var debugMessages: [DebugMessage] = []
     @Published private(set) var conversationTrace: [ConversationMessage] = []
-    @Published private(set) var thinkingBlocks: [ThinkingBlock] = []
-    private var currentThinkingBlock: ThinkingBlock?
-
-    // MARK: - Performance Metrics
     @Published private(set) var sessionMetrics: SessionMetrics = SessionMetrics()
 
     // MARK: - Configuration
@@ -46,8 +42,14 @@ class AgentClient: ObservableObject {
     private var onText: ((String) -> Void)?
     private var onToolStart: ((String, [String: Any]) -> Void)?
     private var onToolResult: ((String, Bool, Any?, String?) -> Void)?
-    private var onDone: ((String, TokenUsage) -> Void)?
+    private var onDone: ((String, String, TokenUsage) -> Void)?  // (status, conversationId, usage)
     private var onError: ((String) -> Void)?
+    private var onConversationCreated: ((ConversationMeta) -> Void)?
+
+    // Tool execution tracking
+    private var pendingToolStart: Date?
+    private var pendingToolInput: [String: Any]?
+    private let maxLogEntries = 100
 
     // MARK: - Initialization
 
@@ -65,7 +67,6 @@ class AgentClient: ObservableObject {
         webSocket?.resume()
 
         receiveMessage()
-
         print("[AgentClient] Connecting to ws://localhost:\(serverPort)")
     }
 
@@ -78,18 +79,19 @@ class AgentClient: ObservableObject {
         serverVersion = nil
     }
 
-    // MARK: - Send Query
+    // MARK: - Query (Main API)
 
     func query(
         prompt: String,
         storeId: UUID?,
         config: AgentConfig? = nil,
-        attachedPaths: [String] = [],
+        conversationId: String? = nil,
         onText: @escaping (String) -> Void,
         onToolStart: @escaping (String, [String: Any]) -> Void,
         onToolResult: @escaping (String, Bool, Any?, String?) -> Void,
-        onDone: @escaping (String, TokenUsage) -> Void,
-        onError: @escaping (String) -> Void
+        onDone: @escaping (String, String, TokenUsage) -> Void,
+        onError: @escaping (String) -> Void,
+        onConversationCreated: ((ConversationMeta) -> Void)? = nil
     ) {
         guard isConnected else {
             onError("Not connected to agent server")
@@ -106,6 +108,7 @@ class AgentClient: ObservableObject {
         self.onToolResult = onToolResult
         self.onDone = onDone
         self.onError = onError
+        self.onConversationCreated = onConversationCreated
 
         isRunning = true
 
@@ -122,9 +125,9 @@ class AgentClient: ObservableObject {
             message["config"] = config.toDict()
         }
 
-        // Send attached paths for project context auto-reading
-        if !attachedPaths.isEmpty {
-            message["attachedPaths"] = attachedPaths
+        // Pass conversation ID to continue existing conversation
+        if let conversationId = conversationId ?? currentConversationId {
+            message["conversationId"] = conversationId
         }
 
         send(message)
@@ -132,6 +135,46 @@ class AgentClient: ObservableObject {
 
     func abort() {
         send(["type": "abort"])
+    }
+
+    // MARK: - Conversation Management
+
+    func newConversation() {
+        currentConversationId = nil
+        send(["type": "new_conversation"])
+    }
+
+    func getConversations(storeId: UUID, limit: Int = 20) {
+        send([
+            "type": "get_conversations",
+            "storeId": storeId.uuidString,
+            "limit": limit
+        ])
+    }
+
+    func selectConversation(_ id: String) {
+        currentConversationId = id
+    }
+
+    /// Load full conversation messages from server for timeline restoration
+    var onConversationLoaded: ((String, String, [[String: Any]]) -> Void)?  // (id, title, messages)
+
+    func loadConversation(_ id: String) {
+        send([
+            "type": "load_conversation",
+            "conversationId": id
+        ])
+    }
+
+    // MARK: - Tool Management
+
+    func requestTools() {
+        guard isConnected else { return }
+        send(["type": "get_tools"])
+    }
+
+    func ping() {
+        send(["type": "ping"])
     }
 
     // MARK: - WebSocket Communication
@@ -169,7 +212,6 @@ class AgentClient: ObservableObject {
                 @unknown default:
                     break
                 }
-                // Continue receiving
                 self.receiveMessage()
 
             case .failure(let error):
@@ -192,96 +234,50 @@ class AgentClient: ObservableObject {
         case "ready":
             isConnected = true
             serverVersion = json["version"] as? String
-            // Parse tools from server (now includes category)
-            if let toolsArray = json["tools"] as? [[String: Any]] {
-                availableTools = toolsArray.compactMap { dict in
-                    guard let id = dict["id"] as? String,
-                          let name = dict["name"] as? String,
-                          let description = dict["description"] as? String else { return nil }
-                    let category = dict["category"] as? String ?? "other"
-                    return ToolMetadata(id: id, name: name, description: description, category: category)
-                }
-            }
-            // Log tool categories
-            let categories = Set(availableTools.map { $0.category })
-            print("[AgentClient] Connected, server version: \(serverVersion ?? "unknown"), tools: \(availableTools.count) in \(categories.count) categories")
+            parseTools(from: json["tools"])
+            print("[AgentClient] Connected v\(serverVersion ?? "?"), \(availableTools.count) tools")
+
+        case "tools":
+            parseTools(from: json["tools"])
+            print("[AgentClient] Tools refreshed: \(availableTools.count)")
 
         case "pong":
             break
 
-        case "tools":
-            // Handle tools refresh response (same format as ready)
-            if let toolsArray = json["tools"] as? [[String: Any]] {
-                availableTools = toolsArray.compactMap { dict in
-                    guard let id = dict["id"] as? String,
-                          let name = dict["name"] as? String,
-                          let description = dict["description"] as? String else { return nil }
-                    let category = dict["category"] as? String ?? "other"
-                    return ToolMetadata(id: id, name: name, description: description, category: category)
-                }
-                let categories = Set(availableTools.map { $0.category })
-                print("[AgentClient] Tools refreshed: \(availableTools.count) tools in \(categories.count) categories")
-            }
-
         case "started":
             isRunning = true
             currentModel = json["model"] as? String
-            debugMessages.removeAll() // Clear debug messages for new query
-            conversationTrace.removeAll() // Clear conversation trace
-            thinkingBlocks.removeAll() // Clear thinking blocks
-            sessionMetrics = SessionMetrics() // Reset metrics
-            sessionMetrics.startTime = Date()
-            // Start new execution session
-            currentExecution = ExecutionSession(
-                model: json["model"] as? String ?? "unknown",
-                storeId: json["storeId"] as? String
-            )
-            // Add initial user message to trace
-            if let prompt = json["prompt"] as? String {
-                conversationTrace.append(ConversationMessage(
-                    role: .user,
-                    content: prompt,
-                    timestamp: Date()
-                ))
+            if let convId = json["conversationId"] as? String {
+                currentConversationId = convId
             }
+            // Reset telemetry for new session
+            debugMessages.removeAll()
+            conversationTrace.removeAll()
+            sessionMetrics = SessionMetrics()
+            sessionMetrics.startTime = Date()
 
         case "text":
             if let text = json["text"] as? String {
-                // Track text for conversation trace (accumulate assistant response)
+                sessionMetrics.textChunks += 1
+                // Track in conversation trace
                 if let lastMsg = conversationTrace.last, lastMsg.role == .assistant {
-                    // Append to existing assistant message
                     var updated = lastMsg
                     updated.content += text
                     conversationTrace[conversationTrace.count - 1] = updated
                 } else {
-                    // Start new assistant message
                     conversationTrace.append(ConversationMessage(
                         role: .assistant,
                         content: text,
                         timestamp: Date()
                     ))
                 }
-                sessionMetrics.textChunks += 1
                 onText?(text)
-            }
-
-        case "thinking":
-            // Capture Claude's thinking/reasoning (extended thinking feature)
-            if let thinking = json["thinking"] as? String {
-                let block = ThinkingBlock(
-                    content: thinking,
-                    timestamp: Date(),
-                    turnNumber: sessionMetrics.turns
-                )
-                thinkingBlocks.append(block)
             }
 
         case "tool_start":
             if let tool = json["tool"] as? String {
-                print("[AgentClient] Tool start: \(tool)")
                 currentTool = tool
                 let input = json["input"] as? [String: Any] ?? [:]
-                // Track for execution log
                 pendingToolStart = Date()
                 pendingToolInput = input
                 sessionMetrics.toolCalls += 1
@@ -300,9 +296,8 @@ class AgentClient: ObservableObject {
                 let success = json["success"] as? Bool ?? false
                 let result = json["result"]
                 let error = json["error"] as? String
-                print("[AgentClient] Tool result: \(tool) success=\(success)")
 
-                // Create execution log entry
+                // Create execution log
                 let duration = pendingToolStart.map { Date().timeIntervalSince($0) }
                 let logEntry = ExecutionLogEntry(
                     toolName: tool,
@@ -314,10 +309,12 @@ class AgentClient: ObservableObject {
                     startedAt: pendingToolStart ?? Date()
                 )
                 addExecutionLog(logEntry)
-                pendingToolStart = nil
-                pendingToolInput = nil
 
-                // Add tool result to conversation trace
+                // Update metrics
+                if !success { sessionMetrics.errors += 1 }
+                if let d = duration { sessionMetrics.totalToolTime += d }
+
+                // Add to conversation trace
                 conversationTrace.append(ConversationMessage(
                     role: .toolResult,
                     content: success ? formatResult(result) : (error ?? "Unknown error"),
@@ -326,9 +323,8 @@ class AgentClient: ObservableObject {
                     timestamp: Date()
                 ))
 
-                // Update metrics
-                if !success { sessionMetrics.errors += 1 }
-                if let d = duration { sessionMetrics.totalToolTime += d }
+                pendingToolStart = nil
+                pendingToolInput = nil
 
                 onToolResult?(tool, success, result, error)
             }
@@ -338,6 +334,7 @@ class AgentClient: ObservableObject {
             isRunning = false
             currentTool = nil
             let status = json["status"] as? String ?? "unknown"
+            let conversationId = json["conversationId"] as? String ?? currentConversationId ?? ""
             var usage = TokenUsage(inputTokens: 0, outputTokens: 0, totalCost: 0)
             if let usageDict = json["usage"] as? [String: Any] {
                 usage = TokenUsage(
@@ -346,33 +343,11 @@ class AgentClient: ObservableObject {
                     totalCost: usageDict["totalCost"] as? Double ?? 0
                 )
             }
-            // Finalize execution session
-            if var session = currentExecution {
-                session.completedAt = Date()
-                session.status = status == "end_turn" ? .success : (status == "error" ? .error : .success)
-                session.usage = usage
-                currentExecution = session
-            }
             // Finalize metrics
             sessionMetrics.endTime = Date()
             sessionMetrics.finalUsage = usage
-            sessionMetrics.turns = json["num_turns"] as? Int ?? sessionMetrics.turns
-            print("[AgentClient] Done: \(status), tokens: \(usage.totalTokens)")
-            onDone?(status, usage)
-            clearCallbacks()
 
-        case "error":
-            isRunning = false
-            currentTool = nil
-            let error = json["error"] as? String ?? "Unknown error"
-            print("[AgentClient] Error: \(error)")
-            onError?(error)
-            clearCallbacks()
-
-        case "aborted":
-            isRunning = false
-            currentTool = nil
-            onError?("Aborted")
+            onDone?(status, conversationId, usage)
             clearCallbacks()
 
         case "debug":
@@ -386,7 +361,39 @@ class AgentClient: ObservableObject {
                 timestamp: Date()
             )
             debugMessages.append(debugMsg)
-            print("[AgentClient] Debug [\(level)]: \(message)")
+
+        case "error":
+            isRunning = false
+            currentTool = nil
+            let error = json["error"] as? String ?? "Unknown error"
+            onError?(error)
+            clearCallbacks()
+
+        case "aborted":
+            isRunning = false
+            currentTool = nil
+            onError?("Aborted")
+            clearCallbacks()
+
+        case "conversation_created":
+            if let convData = json["conversation"] as? [String: Any] {
+                let conv = parseConversationMeta(convData)
+                currentConversationId = conv.id
+                onConversationCreated?(conv)
+            }
+
+        case "conversations":
+            if let convsData = json["conversations"] as? [[String: Any]] {
+                conversations = convsData.map { parseConversationMeta($0) }
+            }
+
+        case "conversation_loaded":
+            if let convId = json["conversationId"] as? String,
+               let title = json["title"] as? String,
+               let msgs = json["messages"] as? [[String: Any]] {
+                currentConversationId = convId
+                onConversationLoaded?(convId, title, msgs)
+            }
 
         default:
             print("[AgentClient] Unknown message type: \(type)")
@@ -399,9 +406,8 @@ class AgentClient: ObservableObject {
         currentTool = nil
         webSocket = nil
 
-        // Auto-reconnect
         reconnectTask = Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
             if !Task.isCancelled {
                 connect()
             }
@@ -414,139 +420,133 @@ class AgentClient: ObservableObject {
         onToolResult = nil
         onDone = nil
         onError = nil
+        onConversationCreated = nil
     }
 
-    // MARK: - Ping
+    // MARK: - Parsing Helpers
 
-    func ping() {
-        send(["type": "ping"])
+    private func parseTools(from toolsAny: Any?) {
+        guard let toolsArray = toolsAny as? [[String: Any]] else { return }
+        availableTools = toolsArray.compactMap { dict in
+            guard let id = dict["id"] as? String,
+                  let name = dict["name"] as? String,
+                  let description = dict["description"] as? String else { return nil }
+            let category = dict["category"] as? String ?? "other"
+            return ToolMetadata(id: id, name: name, description: description, category: category)
+        }
     }
 
-    // MARK: - Request Tools Refresh
-
-    /// Request fresh tools list from server (useful when already connected)
-    func requestTools() {
-        guard isConnected else { return }
-        send(["type": "get_tools"])
+    private func parseConversationMeta(_ dict: [String: Any]) -> ConversationMeta {
+        ConversationMeta(
+            id: dict["id"] as? String ?? "",
+            title: dict["title"] as? String ?? "Untitled",
+            agentId: dict["agentId"] as? String,
+            agentName: dict["agentName"] as? String,
+            messageCount: dict["messageCount"] as? Int ?? 0,
+            createdAt: dict["createdAt"] as? String ?? "",
+            updatedAt: dict["updatedAt"] as? String ?? ""
+        )
     }
 
     // MARK: - Execution Log Management
 
     private func addExecutionLog(_ entry: ExecutionLogEntry) {
         executionLogs.insert(entry, at: 0)
-        // Trim to max entries
         if executionLogs.count > maxLogEntries {
             executionLogs.removeLast(executionLogs.count - maxLogEntries)
         }
     }
 
+    private func formatResult(_ result: Any?) -> String {
+        guard let result = result else { return "null" }
+        if let str = result as? String { return str }
+        if let data = try? JSONSerialization.data(withJSONObject: result, options: .prettyPrinted),
+           let str = String(data: data, encoding: .utf8) {
+            return str
+        }
+        return String(describing: result)
+    }
+
     func clearExecutionLogs() {
         executionLogs.removeAll()
-        currentExecution = nil
     }
 
     func clearAllTelemetry() {
         executionLogs.removeAll()
-        currentExecution = nil
-        conversationTrace.removeAll()
-        thinkingBlocks.removeAll()
         debugMessages.removeAll()
+        conversationTrace.removeAll()
         sessionMetrics = SessionMetrics()
+        currentConversationId = nil
     }
 
-    // MARK: - Export Functions
+    // MARK: - Export Methods
 
-    /// Export full session as JSON for debugging/sharing
     func exportSessionJSON() -> String {
-        var export: [String: Any] = [
-            "timestamp": ISO8601DateFormatter().string(from: Date()),
-            "model": currentExecution?.model ?? currentModel ?? "unknown",
-            "serverVersion": serverVersion ?? "unknown"
+        var session: [String: Any] = [
+            "conversationId": currentConversationId ?? "none",
+            "timestamp": ISO8601DateFormatter().string(from: Date())
         ]
 
-        // Metrics
-        export["metrics"] = [
-            "toolCalls": sessionMetrics.toolCalls,
-            "errors": sessionMetrics.errors,
-            "turns": sessionMetrics.turns,
-            "totalDuration": sessionMetrics.totalDuration ?? 0,
-            "totalToolTime": sessionMetrics.totalToolTime,
-            "inputTokens": sessionMetrics.finalUsage?.inputTokens ?? 0,
-            "outputTokens": sessionMetrics.finalUsage?.outputTokens ?? 0,
-            "totalCost": sessionMetrics.finalUsage?.totalCost ?? 0
-        ]
-
-        // Tool calls
-        export["toolCalls"] = executionLogs.map { log -> [String: Any] in
-            [
+        // Export execution logs
+        let logs = executionLogs.map { log -> [String: Any] in
+            var entry: [String: Any] = [
                 "tool": log.toolName,
-                "status": log.status == .success ? "success" : "error",
-                "duration": log.duration ?? 0,
-                "input": log.input,
-                "output": log.outputSummary,
-                "error": log.error as Any,
-                "timestamp": ISO8601DateFormatter().string(from: log.startedAt)
+                "timestamp": ISO8601DateFormatter().string(from: log.startedAt),
+                "status": String(describing: log.status)
             ]
+            if let duration = log.duration { entry["duration"] = duration }
+            entry["input"] = log.input
+            if let output = log.output { entry["output"] = String(describing: output) }
+            if let error = log.error { entry["error"] = error }
+            return entry
         }
+        session["executionLogs"] = logs
 
-        // Conversation trace
-        export["conversation"] = conversationTrace.map { msg -> [String: Any] in
-            var m: [String: Any] = [
+        // Export conversation trace
+        let trace = conversationTrace.map { msg -> [String: Any] in
+            var entry: [String: Any] = [
                 "role": msg.role.rawValue,
+                "timestamp": ISO8601DateFormatter().string(from: msg.timestamp),
                 "content": msg.content,
-                "timestamp": ISO8601DateFormatter().string(from: msg.timestamp)
+                "isError": msg.isError
             ]
-            if let input = msg.toolInput {
-                m["toolInput"] = input
-            }
-            if let name = msg.toolName {
-                m["toolName"] = name
-            }
-            return m
+            if let tool = msg.toolName { entry["tool"] = tool }
+            if let input = msg.toolInput { entry["input"] = input }
+            return entry
         }
+        session["conversationTrace"] = trace
 
-        // Debug messages
-        export["debug"] = debugMessages.map { d -> [String: Any] in
-            [
-                "level": d.level.rawValue,
-                "message": d.message,
-                "data": d.data as Any,
-                "timestamp": ISO8601DateFormatter().string(from: d.timestamp)
-            ]
-        }
+        // Export metrics
+        session["metrics"] = [
+            "toolCalls": sessionMetrics.toolCalls,
+            "textChunks": sessionMetrics.textChunks,
+            "errors": sessionMetrics.errors,
+            "totalToolTime": sessionMetrics.totalToolTime
+        ]
 
-        if let data = try? JSONSerialization.data(withJSONObject: export, options: [.prettyPrinted, .sortedKeys]),
-           let str = String(data: data, encoding: .utf8) {
-            return str
+        if let data = try? JSONSerialization.data(withJSONObject: session, options: .prettyPrinted),
+           let json = String(data: data, encoding: .utf8) {
+            return json
         }
         return "{}"
     }
 
-    /// Export single tool call as curl command for replay
     func exportToolAsCurl(_ log: ExecutionLogEntry) -> String {
-        let inputJson = (try? JSONSerialization.data(withJSONObject: log.input, options: []))
-            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        var curl = "curl -X POST \\\n"
+        curl += "  'https://your-api-endpoint/tools/\(log.toolName)' \\\n"
+        curl += "  -H 'Content-Type: application/json' \\\n"
 
-        return """
-        curl -X POST 'https://uaednwpxursknmwdeejn.supabase.co/functions/v1/tools-gateway' \\
-          -H 'Authorization: Bearer YOUR_KEY' \\
-          -H 'Content-Type: application/json' \\
-          -d '{"tool": "\(log.toolName)", "input": \(inputJson)}'
-        """
-    }
-
-    // MARK: - Private Helpers
-
-    private func formatResult(_ result: Any?) -> String {
-        guard let result = result else { return "(no result)" }
-        if let str = result as? String {
-            return String(str.prefix(500))
+        let input = log.input
+        if !input.isEmpty,
+           let data = try? JSONSerialization.data(withJSONObject: input, options: .prettyPrinted),
+           let json = String(data: data, encoding: .utf8) {
+            let escaped = json.replacingOccurrences(of: "'", with: "'\\''")
+            curl += "  -d '\(escaped)'"
+        } else {
+            curl += "  -d '{}'"
         }
-        if let data = try? JSONSerialization.data(withJSONObject: result, options: []),
-           let str = String(data: data, encoding: .utf8) {
-            return String(str.prefix(500))
-        }
-        return String(describing: result).prefix(500).description
+
+        return curl
     }
 }
 
@@ -555,18 +555,16 @@ class AgentClient: ObservableObject {
 struct AgentConfig {
     var model: String?
     var maxTurns: Int?
-    var permissionMode: String?
     var systemPrompt: String?
-    var enabledTools: [String]?  // Filter to only these tool IDs
-    var agentId: String?         // AI Agent UUID for telemetry
-    var agentName: String?       // AI Agent name for telemetry
-    var apiKey: String?          // Anthropic API key
+    var enabledTools: [String]?
+    var agentId: String?
+    var agentName: String?
+    var apiKey: String?
 
     func toDict() -> [String: Any] {
         var dict: [String: Any] = [:]
         if let model = model { dict["model"] = model }
         if let maxTurns = maxTurns { dict["maxTurns"] = maxTurns }
-        if let permissionMode = permissionMode { dict["permissionMode"] = permissionMode }
         if let systemPrompt = systemPrompt { dict["systemPrompt"] = systemPrompt }
         if let enabledTools = enabledTools { dict["enabledTools"] = enabledTools }
         if let agentId = agentId { dict["agentId"] = agentId }
@@ -590,8 +588,6 @@ struct TokenUsage {
     }
 }
 
-// MARK: - Tool Metadata (from server)
-
 struct ToolMetadata: Identifiable, Equatable {
     let id: String
     let name: String
@@ -599,28 +595,14 @@ struct ToolMetadata: Identifiable, Equatable {
     let category: String
 }
 
-// MARK: - Debug Message
-
-enum DebugLevel: String {
-    case info
-    case warn
-    case error
-}
-
-struct DebugMessage: Identifiable {
-    let id = UUID()
-    let level: DebugLevel
-    let message: String
-    let data: [String: Any]?
-    let timestamp: Date
-
-    var levelColor: String {
-        switch level {
-        case .info: return "blue"
-        case .warn: return "orange"
-        case .error: return "red"
-        }
-    }
+struct ConversationMeta: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let agentId: String?
+    let agentName: String?
+    let messageCount: Int
+    let createdAt: String
+    let updatedAt: String
 }
 
 // MARK: - Execution Log Entry
@@ -686,26 +668,20 @@ struct ExecutionLogEntry: Identifiable {
     }
 }
 
-// MARK: - Execution Session
+// MARK: - Debug Message
 
-struct ExecutionSession: Identifiable {
+enum DebugLevel: String {
+    case info
+    case warn
+    case error
+}
+
+struct DebugMessage: Identifiable {
     let id = UUID()
-    let model: String
-    let storeId: String?
-    let startedAt = Date()
-    var completedAt: Date?
-    var status: ExecutionStatus = .running
-    var usage: TokenUsage?
-
-    var duration: TimeInterval? {
-        guard let completedAt = completedAt else { return nil }
-        return completedAt.timeIntervalSince(startedAt)
-    }
-
-    var formattedDuration: String {
-        guard let duration = duration else { return "..." }
-        return String(format: "%.2fs", duration)
-    }
+    let level: DebugLevel
+    let message: String
+    let data: [String: Any]?
+    let timestamp: Date
 }
 
 // MARK: - Conversation Message (for trace view)
@@ -746,15 +722,6 @@ struct ConversationMessage: Identifiable {
         case .system: return .gray
         }
     }
-}
-
-// MARK: - Thinking Block (extended thinking capture)
-
-struct ThinkingBlock: Identifiable {
-    let id = UUID()
-    let content: String
-    let timestamp: Date
-    let turnNumber: Int
 }
 
 // MARK: - Session Metrics

@@ -8,33 +8,50 @@ extension EditorStore {
     // MARK: - Catalog Data Loading
 
     func loadCatalog() async {
-        await loadCatalogs()
-        await loadCatalogData()
-        await loadConversations()
+        // PERF: Run catalogs + data in parallel; conversations are unrelated — don't block
+        async let catalogsTask: () = loadCatalogs()
+        async let dataTask: () = loadCatalogData()
+        _ = await (catalogsTask, dataTask)
+
+        // Conversations loaded separately — don't block catalog rendering
+        Task { await loadConversations() }
     }
 
     func loadCatalogData() async {
+        // Capture values for concurrent access (services are now nonisolated/Sendable)
+        let catalogService = supabase.catalogs
+        let productService = supabase.products
+        let client = supabase.client
+        let storeId = currentStoreId
+        let catalogId = selectedCatalog?.id
+
         do {
-            categories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: selectedCatalog?.id)
-            products = try await supabase.fetchProducts(storeId: currentStoreId)
+            // PERF: Fetch ALL data in PARALLEL — network + JSON decode runs off main thread
+            // (CatalogService and ProductSchemaService are no longer @MainActor)
+            async let fetchedCategories = catalogService.fetchCategories(storeId: storeId, catalogId: catalogId)
+            async let fetchedProducts = productService.fetchProducts(storeId: storeId)
+            async let fetchedSchemas: [PricingSchema] = {
+                do {
+                    let response = try await client
+                        .from("pricing_schemas")
+                        .select("*")
+                        .eq("is_active", value: true)
+                        .execute()
+                    let decoder = JSONDecoder()
+                    decoder.keyDecodingStrategy = .convertFromSnakeCase
+                    return try decoder.decode([PricingSchema].self, from: response.data)
+                } catch {
+                    return []
+                }
+            }()
 
-            // Load pricing schemas for instant tier selection (Apple pattern: pre-load all data)
-            do {
-                // Load ALL active pricing schemas - no store/catalog filter
-                // Products reference schemas by pricing_schema_id, so we need all schemas available
-                let response = try await supabase.client
-                    .from("pricing_schemas")
-                    .select("*")
-                    .eq("is_active", value: true)
-                    .execute()
+            let (cats, prods, schemas) = try await (fetchedCategories, fetchedProducts, fetchedSchemas)
 
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                let schemas = try decoder.decode([PricingSchema].self, from: response.data)
-                pricingSchemas = schemas
-            } catch {
-                pricingSchemas = []
-            }
+            // SINGLE synchronous batch update on main thread
+            // @Observable coalesces notifications within the same run loop tick
+            categories = cats
+            products = prods
+            pricingSchemas = schemas
         } catch {
             if self.error == nil {
                 self.error = "Failed to load catalog: \(error.localizedDescription)"

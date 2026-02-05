@@ -235,89 +235,52 @@ struct CatalogContentView: View {
     // Cached filtered data (avoid filtering on every render)
     @State private var cachedFilteredProducts: [Product] = []
     @State private var cachedArchivedCount: Int = 0
+    // Debounce token to prevent onChange cascade during bulk loads
+    @State private var filterGeneration: Int = 0
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Bulk action bar (shown when items selected)
+        // PERF: List at top level with .searchable outside conditionals
+        // prevents _NSDetectedLayoutRecursion from VStack + conditional + searchable
+        List(selection: isEditMode ? $selectedProductIds : .constant(Set<UUID>())) {
             if isEditMode && !selectedProductIds.isEmpty {
-                HStack(spacing: 16) {
-                    Text("\(selectedProductIds.count) selected")
-                        .font(.subheadline.weight(.medium))
-
-                    Spacer()
-
-                    if isProcessing {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        if showArchived {
-                            Button {
-                                Task { await bulkUnarchive() }
-                            } label: {
-                                Label("Restore", systemImage: "arrow.uturn.backward")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.blue)
-                        } else {
-                            Button {
-                                Task { await bulkArchive() }
-                            } label: {
-                                Label("Archive", systemImage: "archivebox")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.orange)
-                        }
-
-                        Button {
-                            selectedProductIds.removeAll()
-                        } label: {
-                            Text("Cancel")
-                        }
-                        .buttonStyle(.bordered)
-                    }
+                Section {
+                    bulkActionBar
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color(nsColor: .controlBackgroundColor))
-
-                Divider()
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
             }
 
-            // Content
-            Group {
-                if store.products.isEmpty {
-                    ContentUnavailableView("No Products", systemImage: "square.grid.2x2", description: Text("Products will appear here"))
-                } else if cachedFilteredProducts.isEmpty {
-                    ContentUnavailableView(
-                        showArchived ? "No Archived Products" : "No Products Found",
-                        systemImage: showArchived ? "archivebox" : "magnifyingglass",
-                        description: Text(showArchived ? "Archived products will appear here" : "Try a different search term")
-                    )
-                } else {
-                    List(selection: $selectedProductIds) {
-                        ForEach(cachedFilteredProducts) { product in
-                            if isEditMode {
-                                ProductListRow(product: product, showArchiveBadge: showArchived)
-                                    .tag(product.id)
-                            } else {
-                                NavigationLink(value: SDSidebarItem.productDetail(product.id)) {
-                                    ProductListRow(product: product, showArchiveBadge: showArchived)
-                                }
-                                .contextMenu {
-                                    productContextMenu(for: product)
-                                }
-                            }
+            if store.products.isEmpty {
+                ContentUnavailableView("No Products", systemImage: "square.grid.2x2", description: Text("Products will appear here"))
+                    .listRowSeparator(.hidden)
+            } else if cachedFilteredProducts.isEmpty {
+                ContentUnavailableView(
+                    showArchived ? "No Archived Products" : "No Products Found",
+                    systemImage: showArchived ? "archivebox" : "magnifyingglass",
+                    description: Text(showArchived ? "Archived products will appear here" : "Try a different search term")
+                )
+                .listRowSeparator(.hidden)
+            } else {
+                ForEach(cachedFilteredProducts) { product in
+                    if isEditMode {
+                        ProductListRow(product: product, showArchiveBadge: showArchived)
+                            .tag(product.id)
+                    } else {
+                        NavigationLink(value: SDSidebarItem.productDetail(product.id)) {
+                            ProductListRow(product: product, showArchiveBadge: showArchived)
+                        }
+                        .contextMenu {
+                            productContextMenu(for: product)
                         }
                     }
-                    .listStyle(.inset)
-                    .searchable(text: $searchText, prompt: "Search products")
                 }
             }
         }
+        .listStyle(.inset)
+        .searchable(text: $searchText, prompt: "Search products")
         .navigationTitle(showArchived ? "Archived" : "Catalog")
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                // Archive filter toggle
                 Button {
                     showArchived.toggle()
                     selectedProductIds.removeAll()
@@ -329,7 +292,6 @@ struct CatalogContentView: View {
                 }
                 .help(showArchived ? "Show active products" : "Show archived products (\(cachedArchivedCount))")
 
-                // Edit mode toggle
                 Button {
                     withAnimation {
                         isEditMode.toggle()
@@ -345,31 +307,88 @@ struct CatalogContentView: View {
         .task { updateFilteredProducts() }
         .onChange(of: searchText) { _, _ in updateFilteredProducts() }
         .onChange(of: showArchived) { _, _ in updateFilteredProducts() }
-        .onChange(of: store.products.count) { _, _ in updateFilteredProducts() }
+        .onChange(of: store.products.count) { _, newCount in
+            // Debounce: only refilter if count actually changed meaningfully
+            let gen = filterGeneration + 1
+            filterGeneration = gen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if self.filterGeneration == gen {
+                    self.updateFilteredProducts()
+                }
+            }
+        }
         .onChange(of: isEditMode) { _, newValue in
-            // Clear selection when exiting edit mode
             if !newValue {
                 selectedProductIds.removeAll()
             }
         }
     }
 
+    // MARK: - Bulk Action Bar (extracted to reduce body complexity)
+
+    @ViewBuilder
+    private var bulkActionBar: some View {
+        HStack(spacing: 16) {
+            Text("\(selectedProductIds.count) selected")
+                .font(.subheadline.weight(.medium))
+
+            Spacer()
+
+            if isProcessing {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                if showArchived {
+                    Button {
+                        Task { await bulkUnarchive() }
+                    } label: {
+                        Label("Restore", systemImage: "arrow.uturn.backward")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                } else {
+                    Button {
+                        Task { await bulkArchive() }
+                    } label: {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                }
+
+                Button {
+                    selectedProductIds.removeAll()
+                } label: {
+                    Text("Cancel")
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
     private func updateFilteredProducts() {
-        cachedArchivedCount = store.products.filter { $0.status == "archived" }.count
-        cachedFilteredProducts = store.products.filter { product in
+        let products = store.products
+        cachedArchivedCount = products.reduce(into: 0) { count, p in
+            if p.status == "archived" { count += 1 }
+        }
+        let archived = showArchived
+        let search = searchText
+        cachedFilteredProducts = products.filter { product in
             let isArchived = product.status == "archived"
-            let matchesArchiveFilter = showArchived ? isArchived : !isArchived
-            let matchesSearch = searchText.isEmpty ||
-                product.name.localizedCaseInsensitiveContains(searchText) ||
-                (product.sku?.localizedCaseInsensitiveContains(searchText) ?? false)
-            return matchesArchiveFilter && matchesSearch
+            let matchesArchiveFilter = archived ? isArchived : !isArchived
+            guard matchesArchiveFilter else { return false }
+            if search.isEmpty { return true }
+            return product.name.localizedCaseInsensitiveContains(search) ||
+                (product.sku?.localizedCaseInsensitiveContains(search) ?? false)
         }
     }
 
     private func bulkArchive() async {
         guard !selectedProductIds.isEmpty else { return }
         isProcessing = true
-        print("📦 Archiving \(selectedProductIds.count) products: \(selectedProductIds)")
         await store.bulkUpdateProductStatus(ids: Array(selectedProductIds), status: "archived")
         selectedProductIds.removeAll()
         isProcessing = false
@@ -379,7 +398,6 @@ struct CatalogContentView: View {
     private func bulkUnarchive() async {
         guard !selectedProductIds.isEmpty else { return }
         isProcessing = true
-        print("📦 Restoring \(selectedProductIds.count) products: \(selectedProductIds)")
         await store.bulkUpdateProductStatus(ids: Array(selectedProductIds), status: "published")
         selectedProductIds.removeAll()
         isProcessing = false
@@ -388,7 +406,6 @@ struct CatalogContentView: View {
 
     @ViewBuilder
     private func productContextMenu(for product: Product) -> some View {
-        // Archive/Restore
         if product.status == "archived" {
             Button {
                 Task { await store.bulkUpdateProductStatus(ids: [product.id], status: "published") }
@@ -405,7 +422,6 @@ struct CatalogContentView: View {
 
         Divider()
 
-        // Status changes
         if product.status != "published" {
             Button {
                 Task { await store.bulkUpdateProductStatus(ids: [product.id], status: "published") }
@@ -424,7 +440,6 @@ struct CatalogContentView: View {
 
         Divider()
 
-        // Copy actions
         Button {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(product.id.uuidString, forType: .string)
@@ -450,14 +465,11 @@ struct ProductListRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
-                AsyncImage(url: URL(string: product.featuredImage ?? "")) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(nsColor: .quaternaryLabelColor))
-                }
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                // PERF: CachedAsyncImage uses NSCache instead of re-fetching per scroll
+                CachedAsyncImage(
+                    url: product.featuredImage.flatMap { URL(string: $0) },
+                    size: 40
+                )
 
                 if showArchiveBadge {
                     Image(systemName: "archivebox.fill")

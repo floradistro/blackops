@@ -553,39 +553,31 @@ private struct TelemetrySection: View {
     @State private var selectedTab = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Header
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header - compact
+            HStack(spacing: 6) {
                 Text("TELEMETRY")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.tertiary)
 
-                // Live indicator
+                // Live indicator - minimal
                 if telemetry.isLive {
-                    HStack(spacing: 3) {
-                        Circle()
-                            .fill(Color.primary)
-                            .frame(width: 5, height: 5)
-                        Text("LIVE")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundStyle(.primary)
-                    }
+                    Circle()
+                        .fill(Color.primary)
+                        .frame(width: 5, height: 5)
                 }
 
                 Spacer()
 
-                // Quick stats
+                // Compact stats
                 if let stats = telemetry.stats {
-                    HStack(spacing: 10) {
-                        Text("\(stats.totalTraces)")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                        Text("\(stats.toolCalls)")
-                            .font(.system(size: 10, design: .monospaced))
+                    HStack(spacing: 6) {
+                        Text("\(stats.totalTraces)tr")
+                            .font(.system(size: 9, design: .monospaced))
                             .foregroundStyle(.tertiary)
                         if stats.errors > 0 {
-                            Text("\(stats.errors) err")
-                                .font(.system(size: 10, design: .monospaced))
+                            Text("\(stats.errors)err")
+                                .font(.system(size: 9, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -594,32 +586,41 @@ private struct TelemetrySection: View {
                 Button {
                     showFullPanel = true
                 } label: {
-                    Text("expand")
-                        .font(.system(size: 10, design: .monospaced))
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 9))
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         isExpanded.toggle()
                     }
                 } label: {
-                    Text(isExpanded ? "−" : "+")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.tertiary)
             }
 
             if isExpanded {
-                // Tab picker - minimal monochrome
-                MonoOptionSelector(
-                    options: [0, 1, 2],
-                    selection: $selectedTab,
-                    labels: [0: "live", 1: "history", 2: "debug"]
-                )
-                .frame(width: 180)
+                // Tab picker - compact
+                HStack(spacing: 2) {
+                    ForEach([0, 1, 2], id: \.self) { tab in
+                        Button {
+                            selectedTab = tab
+                        } label: {
+                            Text(["live", "hist", "dbg"][tab])
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(selectedTab == tab ? Color.primary.opacity(0.1) : Color.clear)
+                                .foregroundStyle(selectedTab == tab ? .primary : .tertiary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
                 switch selectedTab {
                 case 0:
@@ -669,25 +670,31 @@ private struct TelemetrySection: View {
 
     private var sessionMetricsBar: some View {
         let metrics = agentClient.sessionMetrics
-        return HStack(spacing: 14) {
-            metricItem("\(metrics.toolCalls)", "calls")
-            metricItem("\(metrics.errors)", "err")
-            metricItem(String(format: "%.0f%%", metrics.successRate * 100), "ok")
-            metricItem(String(format: "%.0fms", metrics.avgToolTime * 1000), "avg")
+        return HStack(spacing: 8) {
+            metricItem("\(metrics.toolCalls)", "c")
+            if metrics.errors > 0 {
+                metricItem("\(metrics.errors)", "e")
+            }
+            metricItem(String(format: "%.0f%%", metrics.successRate * 100), "")
+            metricItem(String(format: "%.0f", metrics.avgToolTime * 1000), "ms")
             Spacer()
             if let usage = metrics.finalUsage {
-                metricItem(usage.formattedCost, "cost")
+                Text(usage.formattedCost)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(.tertiary)
             }
         }
     }
 
     private func metricItem(_ value: String, _ label: String) -> some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 1) {
             Text(value)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-            Text(label)
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+            if !label.isEmpty {
+                Text(label)
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundStyle(.quaternary)
+            }
         }
     }
 
@@ -703,23 +710,21 @@ private struct TelemetrySection: View {
             } else if telemetry.recentTraces.isEmpty {
                 emptyState("No traces")
             } else {
-                VStack(spacing: 6) {
-                    HStack {
-                        HStack(spacing: 4) {
-                            ForEach(TelemetryService.TimeRange.allCases, id: \.self) { range in
-                                Button {
-                                    telemetry.timeRange = range
-                                    Task { await telemetry.fetchRecentTraces(storeId: storeId) }
-                                } label: {
-                                    Text(range.rawValue)
-                                        .font(.system(size: 10, design: .monospaced))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(telemetry.timeRange == range ? Color.primary.opacity(0.12) : Color.primary.opacity(0.04))
-                                        .foregroundStyle(telemetry.timeRange == range ? .primary : .secondary)
-                                }
-                                .buttonStyle(.plain)
+                VStack(spacing: 4) {
+                    HStack(spacing: 2) {
+                        ForEach(TelemetryService.TimeRange.allCases, id: \.self) { range in
+                            Button {
+                                telemetry.timeRange = range
+                                Task { await telemetry.fetchRecentTraces(storeId: storeId) }
+                            } label: {
+                                Text(range.rawValue)
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 3)
+                                    .background(telemetry.timeRange == range ? Color.primary.opacity(0.1) : Color.clear)
+                                    .foregroundStyle(telemetry.timeRange == range ? .primary : .tertiary)
                             }
+                            .buttonStyle(.plain)
                         }
 
                         Spacer()
@@ -727,11 +732,11 @@ private struct TelemetrySection: View {
                         Button {
                             Task { await telemetry.fetchRecentTraces(storeId: storeId) }
                         } label: {
-                            Text("refresh")
-                                .font(.system(size: 10, design: .monospaced))
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 9))
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                     }
 
                     ScrollView {
@@ -782,37 +787,37 @@ private struct TelemetrySection: View {
 private struct LiveToolRow: View {
     let log: ExecutionLogEntry
 
-    private var statusLabel: String {
+    private var statusIcon: String {
         switch log.status {
-        case .success: return "OK"
-        case .running: return "..."
-        case .error: return "ERR"
+        case .success: return "✓"
+        case .running: return "○"
+        case .error: return "×"
         }
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(statusLabel)
-                .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                .foregroundStyle(log.status == .error ? Color.secondary : Color(nsColor: .tertiaryLabelColor))
-                .frame(width: 24)
+        HStack(spacing: 4) {
+            Text(statusIcon)
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(log.status == .error ? .secondary : .tertiary)
+                .frame(width: 12)
 
             Text(log.toolName)
-                .font(.system(.caption, design: .monospaced))
+                .font(.system(size: 10, design: .monospaced))
                 .lineLimit(1)
 
             Spacer()
 
             Text(log.formattedDuration)
-                .font(.system(.caption2, design: .monospaced))
+                .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.tertiary)
 
             Text(log.startedAt, style: .time)
-                .font(.caption2)
+                .font(.system(size: 8))
                 .foregroundStyle(.quaternary)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
     }
 }
 
@@ -822,36 +827,36 @@ private struct CompactTraceRow: View {
     let trace: Trace
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(trace.id.prefix(8) + "...")
-                .font(.system(.caption, design: .monospaced))
-
-            Text(trace.source)
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.secondary)
-
-            Text("\(trace.toolCount)")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.tertiary)
-
-            if trace.hasErrors {
-                Text("\(trace.errorCount)")
+        HStack(spacing: 4) {
+            // Status + ID
+            HStack(spacing: 3) {
+                Text(trace.hasErrors ? "×" : "✓")
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundStyle(trace.hasErrors ? .secondary : .tertiary)
+
+                Text(trace.id.prefix(6))
+                    .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
+            // Tool count
+            Text("\(trace.toolCount)t")
+                .font(.system(size: 8, design: .monospaced))
+                .foregroundStyle(.tertiary)
+
             Spacer()
 
+            // Duration + time
             Text(trace.formattedDuration)
-                .font(.system(.caption2, design: .monospaced))
+                .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.tertiary)
 
             Text(trace.startTime, style: .time)
-                .font(.caption2)
+                .font(.system(size: 8))
                 .foregroundStyle(.quaternary)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
     }
 }
 

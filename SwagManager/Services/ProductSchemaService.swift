@@ -5,8 +5,8 @@
 import Foundation
 import Supabase
 
-@MainActor
-final class ProductSchemaService {
+// NOT @MainActor — network I/O + JSON decoding must run off main thread
+final class ProductSchemaService: @unchecked Sendable {
     internal let client: SupabaseClient
 
     init(client: SupabaseClient) {

@@ -99,19 +99,19 @@ struct AppleContentView: View {
         _ = await (locationsTask, ordersTask, agentsTask)
 
         // PHASE 2: Secondary data - fire and forget (don't block UI)
+        // NOTE: loadCatalog() calls loadCatalogs() + loadCatalogData() + loadConversations()
+        // sequentially, so we must NOT call them separately in parallel (causes double-load cascade)
         Task.detached(priority: .utility) { [store, syncService] in
             async let syncTask: () = syncService.syncAll()
-            async let catalogsTask: () = store.loadCatalogs()
-            async let catalogTask: () = store.loadCatalogData()
+            async let catalogTask: () = store.loadCatalog()
             async let customersTask: () = store.loadCustomers()
             async let creationsTask: () = store.loadCreations()
-            async let conversationsTask: () = store.loadConversations()
             async let browserTask: () = store.loadBrowserSessions()
             async let emailsTask: () = store.loadEmailCounts()
             async let campaignsTask: () = store.loadAllCampaigns()
 
-            _ = await (syncTask, catalogsTask, catalogTask, customersTask, creationsTask,
-                       conversationsTask, browserTask, emailsTask, campaignsTask)
+            _ = await (syncTask, catalogTask, customersTask, creationsTask,
+                       browserTask, emailsTask, campaignsTask)
         }
     }
 }

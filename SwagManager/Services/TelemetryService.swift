@@ -15,6 +15,7 @@ struct TelemetrySpan: Identifiable, Codable {
     let details: [String: AnyCodable]?
     let createdAt: Date
     let requestId: String?
+    let conversationId: String?
     let storeId: UUID?
     let resourceType: String?
 
@@ -32,6 +33,7 @@ struct TelemetrySpan: Identifiable, Codable {
         case details
         case createdAt = "created_at"
         case requestId = "request_id"
+        case conversationId = "conversation_id"
         case storeId = "store_id"
         case resourceType = "resource_type"
     }
@@ -46,6 +48,7 @@ struct TelemetrySpan: Identifiable, Codable {
         errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
         details = try container.decodeIfPresent([String: AnyCodable].self, forKey: .details)
         requestId = try container.decodeIfPresent(String.self, forKey: .requestId)
+        conversationId = try container.decodeIfPresent(String.self, forKey: .conversationId)
         storeId = try container.decodeIfPresent(UUID.self, forKey: .storeId)
         resourceType = try container.decodeIfPresent(String.self, forKey: .resourceType)
         depth = 0
@@ -80,6 +83,7 @@ struct TelemetrySpan: Identifiable, Codable {
         try container.encodeIfPresent(details, forKey: .details)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(requestId, forKey: .requestId)
+        try container.encodeIfPresent(conversationId, forKey: .conversationId)
         try container.encodeIfPresent(storeId, forKey: .storeId)
         try container.encodeIfPresent(resourceType, forKey: .resourceType)
     }
@@ -116,12 +120,183 @@ struct TelemetrySpan: Identifiable, Codable {
         details?["agent_id"]?.value as? String
     }
 
+    // MARK: - AI Telemetry Fields (gen_ai.* OTEL conventions)
+
+    /// Is this a Claude API request span?
+    var isApiRequest: Bool {
+        action == "claude_api_request"
+    }
+
+    /// Model used for this API call (e.g., "claude-sonnet-4-20250514")
+    var model: String? {
+        details?["gen_ai.request.model"]?.value as? String
+    }
+
+    /// Input tokens consumed
+    var inputTokens: Int? {
+        details?["gen_ai.usage.input_tokens"]?.value as? Int
+    }
+
+    /// Output tokens generated
+    var outputTokens: Int? {
+        details?["gen_ai.usage.output_tokens"]?.value as? Int
+    }
+
+    /// Cache read tokens (prompt caching)
+    var cacheReadTokens: Int? {
+        details?["gen_ai.usage.cache_read_tokens"]?.value as? Int
+    }
+
+    /// Cache creation tokens (prompt caching)
+    var cacheCreationTokens: Int? {
+        details?["gen_ai.usage.cache_creation_tokens"]?.value as? Int
+    }
+
+    /// Total cost in USD
+    var cost: Double? {
+        details?["gen_ai.usage.cost"]?.value as? Double
+    }
+
+    /// Turn number in the conversation
+    var turnNumber: Int? {
+        details?["turn_number"]?.value as? Int
+    }
+
+    /// Stop reason (end_turn, tool_use, max_tokens, etc.)
+    var stopReason: String? {
+        details?["stop_reason"]?.value as? String
+    }
+
+    /// Formatted token usage string
+    var formattedTokens: String? {
+        guard let input = inputTokens, let output = outputTokens else { return nil }
+        return "\(input) → \(output)"
+    }
+
+    /// Formatted cost string
+    var formattedCost: String? {
+        guard let cost = cost else { return nil }
+        return String(format: "$%.4f", cost)
+    }
+
+    /// Short model name (e.g., "sonnet-4" from "claude-sonnet-4-20250514")
+    var shortModelName: String? {
+        guard let model = model else { return nil }
+        // Extract model family and version: claude-sonnet-4-20250514 -> sonnet-4
+        let parts = model.replacingOccurrences(of: "claude-", with: "").components(separatedBy: "-")
+        if parts.count >= 2 {
+            return "\(parts[0])-\(parts[1])"
+        }
+        return model
+    }
+
     var formattedDuration: String {
         guard let ms = durationMs else { return "-" }
         if ms < 1000 {
             return "\(ms)ms"
         }
         return String(format: "%.2fs", Double(ms) / 1000.0)
+    }
+
+    // MARK: - Tool Execution Detail Fields (for span inspector)
+
+    /// Tool input arguments (sanitized, from details.tool_input)
+    var toolInput: [String: Any]? {
+        details?["tool_input"]?.value as? [String: Any]
+    }
+
+    /// Tool result data (from details.tool_result)
+    var toolResult: Any? {
+        details?["tool_result"]?.value
+    }
+
+    /// Tool error message (from details.tool_error)
+    var toolError: String? {
+        details?["tool_error"]?.value as? String
+    }
+
+    /// Whether this tool call timed out
+    var timedOut: Bool {
+        (details?["timed_out"]?.value as? Bool) ?? false
+    }
+
+    /// Error type classification (rate_limit, validation, auth, etc.)
+    var errorType: String? {
+        details?["error_type"]?.value as? String
+    }
+
+    /// Whether the error is retryable
+    var retryable: Bool {
+        (details?["retryable"]?.value as? Bool) ?? false
+    }
+
+    /// Marginal cost of the API turn that triggered this tool
+    var marginalCost: Double? {
+        details?["marginal_cost"]?.value as? Double
+    }
+
+    /// Input payload size in bytes
+    var inputBytes: Int? {
+        details?["input_bytes"]?.value as? Int
+    }
+
+    /// Output payload size in bytes
+    var outputBytes: Int? {
+        details?["output_bytes"]?.value as? Int
+    }
+
+    /// OTEL trace ID (W3C 32 hex chars)
+    var otelTraceId: String? {
+        (details?["otel"]?.value as? [String: Any])?["trace_id"] as? String
+    }
+
+    /// OTEL span ID (W3C 16 hex chars)
+    var otelSpanId: String? {
+        (details?["otel"]?.value as? [String: Any])?["span_id"] as? String
+    }
+
+    /// OTEL span kind
+    var otelSpanKind: String? {
+        (details?["otel"]?.value as? [String: Any])?["span_kind"] as? String
+    }
+
+    /// OTEL service name
+    var otelServiceName: String? {
+        (details?["otel"]?.value as? [String: Any])?["service_name"] as? String
+    }
+
+    /// OTEL service version
+    var otelServiceVersion: String? {
+        (details?["otel"]?.value as? [String: Any])?["service_version"] as? String
+    }
+
+    /// Whether this is a tool execution span (not an API request)
+    var isToolSpan: Bool {
+        action.hasPrefix("tool.")
+    }
+
+    /// Tool action (e.g., "adjust" from "tool.inventory.adjust")
+    var toolAction: String? {
+        let parts = action.components(separatedBy: ".")
+        return parts.count >= 3 ? parts[2] : nil
+    }
+
+    /// Formatted marginal cost
+    var formattedMarginalCost: String? {
+        guard let cost = marginalCost, cost > 0 else { return nil }
+        return String(format: "$%.6f", cost)
+    }
+
+    /// Formatted payload sizes
+    var formattedPayloadSize: String? {
+        guard let inBytes = inputBytes, let outBytes = outputBytes else { return nil }
+        return "\(formatBytes(inBytes)) in / \(formatBytes(outBytes)) out"
+    }
+
+    private func formatBytes(_ bytes: Int) -> String {
+        if bytes < 1024 { return "\(bytes)B" }
+        if bytes < 1024 * 1024 { return String(format: "%.1fKB", Double(bytes) / 1024.0) }
+        return String(format: "%.1fMB", Double(bytes) / (1024.0 * 1024.0))
     }
 }
 
@@ -134,11 +309,12 @@ struct Trace: Identifiable, Hashable {
     let endTime: Date?
 
     static func == (lhs: Trace, rhs: Trace) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id && lhs.spans.count == rhs.spans.count
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(spans.count)
     }
 
     var duration: TimeInterval? {
@@ -168,6 +344,165 @@ struct Trace: Identifiable, Hashable {
 
     var source: String {
         rootSpan?.source ?? spans.first?.source ?? "unknown"
+    }
+
+    // MARK: - Aggregated AI Telemetry
+
+    /// All API request spans in this trace
+    var apiRequestSpans: [TelemetrySpan] {
+        spans.filter { $0.isApiRequest }
+    }
+
+    /// Total input tokens across all API calls
+    var totalInputTokens: Int {
+        apiRequestSpans.compactMap { $0.inputTokens }.reduce(0, +)
+    }
+
+    /// Total output tokens across all API calls
+    var totalOutputTokens: Int {
+        apiRequestSpans.compactMap { $0.outputTokens }.reduce(0, +)
+    }
+
+    /// Total cache read tokens across all API calls
+    var totalCacheReadTokens: Int {
+        apiRequestSpans.compactMap { $0.cacheReadTokens }.reduce(0, +)
+    }
+
+    /// Total cost across all API calls
+    var totalCost: Double {
+        apiRequestSpans.compactMap { $0.cost }.reduce(0, +)
+    }
+
+    /// Number of API turns in this trace
+    var turnCount: Int {
+        apiRequestSpans.count
+    }
+
+    /// Model used (from first API request)
+    var model: String? {
+        apiRequestSpans.first?.model
+    }
+
+    /// Short model name (e.g., "sonnet-4")
+    var shortModelName: String? {
+        apiRequestSpans.first?.shortModelName
+    }
+
+    /// Formatted token usage for trace
+    var formattedTokens: String? {
+        guard totalInputTokens > 0 || totalOutputTokens > 0 else { return nil }
+        return "\(totalInputTokens) → \(totalOutputTokens)"
+    }
+
+    /// Formatted total cost
+    var formattedCost: String? {
+        guard totalCost > 0 else { return nil }
+        return String(format: "$%.4f", totalCost)
+    }
+
+    /// Has AI telemetry data?
+    var hasAITelemetry: Bool {
+        !apiRequestSpans.isEmpty
+    }
+}
+
+/// A conversation session (group of traces with same conversation_id)
+/// One entry in the sidebar = one conversation session
+struct TelemetrySession: Identifiable, Hashable {
+    let id: String  // conversation_id
+    let traces: [Trace]
+    let startTime: Date
+    let endTime: Date?
+
+    /// Include trace count + span count so SwiftUI detects realtime updates
+    static func == (lhs: TelemetrySession, rhs: TelemetrySession) -> Bool {
+        lhs.id == rhs.id
+            && lhs.traces.count == rhs.traces.count
+            && lhs.allSpans.count == rhs.allSpans.count
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(traces.count)
+    }
+
+    var duration: TimeInterval? {
+        guard let end = endTime else { return nil }
+        return end.timeIntervalSince(startTime)
+    }
+
+    var formattedDuration: String {
+        guard let dur = duration else { return "-" }
+        if dur < 1 {
+            return String(format: "%.0fms", dur * 1000)
+        }
+        if dur < 60 {
+            return String(format: "%.1fs", dur)
+        }
+        let mins = Int(dur / 60)
+        let secs = Int(dur) % 60
+        return "\(mins)m \(secs)s"
+    }
+
+    /// All spans across all traces in this session
+    var allSpans: [TelemetrySpan] {
+        traces.flatMap { $0.spans }
+    }
+
+    var toolCount: Int {
+        allSpans.filter { $0.action.hasPrefix("tool.") }.count
+    }
+
+    var errorCount: Int {
+        allSpans.filter { $0.isError }.count
+    }
+
+    var hasErrors: Bool {
+        errorCount > 0
+    }
+
+    var source: String {
+        traces.first?.source ?? "unknown"
+    }
+
+    /// Number of user turns (each trace = one user prompt/turn)
+    var turnCount: Int {
+        traces.count
+    }
+
+    // MARK: - Aggregated AI Telemetry
+
+    var totalInputTokens: Int {
+        traces.map { $0.totalInputTokens }.reduce(0, +)
+    }
+
+    var totalOutputTokens: Int {
+        traces.map { $0.totalOutputTokens }.reduce(0, +)
+    }
+
+    var totalCost: Double {
+        traces.map { $0.totalCost }.reduce(0, +)
+    }
+
+    var model: String? {
+        traces.first?.model
+    }
+
+    var shortModelName: String? {
+        traces.first?.shortModelName
+    }
+
+    var formattedCost: String? {
+        guard totalCost > 0 else { return nil }
+        return String(format: "$%.4f", totalCost)
+    }
+
+    var hasAITelemetry: Bool {
+        traces.contains { $0.hasAITelemetry }
+    }
+
+    var agentName: String? {
+        allSpans.first(where: { $0.agentName != nil })?.agentName
     }
 }
 
@@ -203,6 +538,174 @@ struct TelemetryStats: Codable {
     }
 }
 
+// MARK: - Tool Analytics Models
+
+/// Per-tool performance metrics from get_tool_analytics() RPC
+struct ToolPerformance: Identifiable, Codable {
+    var id: String { toolName }
+    let toolName: String
+    let totalCalls: Int
+    let successCount: Int
+    let errorCount: Int
+    let timeoutCount: Int
+    let errorRate: Double
+    let avgMs: Double
+    let p50Ms: Double
+    let p90Ms: Double
+    let p95Ms: Double
+    let p99Ms: Double
+    let minMs: Int
+    let maxMs: Int
+    let avgInputBytes: Int
+    let avgOutputBytes: Int
+    let totalMarginalCost: Double
+    let callsPerMinute: Double
+    let reliabilityScore: Double
+    let actions: [String: ToolActionMetrics]
+    let errorTypes: [String: Int]
+
+    enum CodingKeys: String, CodingKey {
+        case toolName = "tool_name"
+        case totalCalls = "total_calls"
+        case successCount = "success_count"
+        case errorCount = "error_count"
+        case timeoutCount = "timeout_count"
+        case errorRate = "error_rate"
+        case avgMs = "avg_ms"
+        case p50Ms = "p50_ms"
+        case p90Ms = "p90_ms"
+        case p95Ms = "p95_ms"
+        case p99Ms = "p99_ms"
+        case minMs = "min_ms"
+        case maxMs = "max_ms"
+        case avgInputBytes = "avg_input_bytes"
+        case avgOutputBytes = "avg_output_bytes"
+        case totalMarginalCost = "total_marginal_cost"
+        case callsPerMinute = "calls_per_minute"
+        case reliabilityScore = "reliability_score"
+        case actions, errorTypes = "error_types"
+    }
+
+    var formattedReliability: String {
+        String(format: "%.1f%%", reliabilityScore)
+    }
+
+    var formattedCost: String {
+        totalMarginalCost > 0 ? String(format: "$%.4f", totalMarginalCost) : "-"
+    }
+
+    var latencyCategory: String {
+        if p95Ms < 200 { return "fast" }
+        if p95Ms < 1000 { return "normal" }
+        return "slow"
+    }
+}
+
+/// Metrics for a specific tool action (e.g., inventory.adjust)
+struct ToolActionMetrics: Codable {
+    let count: Int
+    let avgMs: Double
+    let p50Ms: Double
+    let p95Ms: Double
+    let errorCount: Int
+    let errorRate: Double
+
+    enum CodingKeys: String, CodingKey {
+        case count
+        case avgMs = "avg_ms"
+        case p50Ms = "p50_ms"
+        case p95Ms = "p95_ms"
+        case errorCount = "error_count"
+        case errorRate = "error_rate"
+    }
+}
+
+/// Summary from get_tool_analytics()
+struct ToolAnalyticsSummary: Codable {
+    let totalCalls: Int
+    let totalErrors: Int
+    let totalTimeouts: Int
+    let overallErrorRate: Double
+    let overallAvgMs: Double
+    let overallP50Ms: Double
+    let overallP95Ms: Double
+    let uniqueTools: Int
+    let totalMarginalCost: Double
+    let slowestTool: String?
+    let mostUsedTool: String?
+    let mostErrorsTool: String?
+    let hoursAnalyzed: Int
+
+    enum CodingKeys: String, CodingKey {
+        case totalCalls = "total_calls"
+        case totalErrors = "total_errors"
+        case totalTimeouts = "total_timeouts"
+        case overallErrorRate = "overall_error_rate"
+        case overallAvgMs = "overall_avg_ms"
+        case overallP50Ms = "overall_p50_ms"
+        case overallP95Ms = "overall_p95_ms"
+        case uniqueTools = "unique_tools"
+        case totalMarginalCost = "total_marginal_cost"
+        case slowestTool = "slowest_tool"
+        case mostUsedTool = "most_used_tool"
+        case mostErrorsTool = "most_errors_tool"
+        case hoursAnalyzed = "hours_analyzed"
+    }
+
+    var formattedErrorRate: String {
+        String(format: "%.1f%%", overallErrorRate)
+    }
+
+    var formattedCost: String {
+        totalMarginalCost > 0 ? String(format: "$%.4f", totalMarginalCost) : "$0"
+    }
+}
+
+/// Full response from get_tool_analytics()
+struct ToolAnalyticsResponse: Codable {
+    let tools: [ToolPerformance]
+    let summary: ToolAnalyticsSummary
+}
+
+/// Span comparison data from get_tool_trace_detail()
+struct SpanComparison: Codable {
+    let avgMs: Double
+    let p95Ms: Double
+    let errorRate: Double
+    let totalCalls24h: Int
+    let isSlow: Bool
+    let percentileRank: Double
+
+    enum CodingKeys: String, CodingKey {
+        case avgMs = "avg_ms"
+        case p95Ms = "p95_ms"
+        case errorRate = "error_rate"
+        case totalCalls24h = "total_calls_24h"
+        case isSlow = "is_slow"
+        case percentileRank = "percentile_rank"
+    }
+}
+
+/// Timeline bucket for tool performance charts
+struct ToolTimelineBucket: Codable, Identifiable {
+    var id: String { "\(time)-\(tool)" }
+    let time: Date
+    let tool: String
+    let calls: Int
+    let errors: Int
+    let timeouts: Int
+    let avgMs: Double
+    let p95Ms: Double
+    let maxMs: Int
+
+    enum CodingKeys: String, CodingKey {
+        case time, tool, calls, errors, timeouts
+        case avgMs = "avg_ms"
+        case p95Ms = "p95_ms"
+        case maxMs = "max_ms"
+    }
+}
+
 // MARK: - Telemetry Service
 
 @MainActor
@@ -210,12 +713,16 @@ class TelemetryService: ObservableObject {
     static let shared = TelemetryService()
 
     @Published var recentTraces: [Trace] = []
+    @Published var recentSessions: [TelemetrySession] = []
     @Published var currentTrace: Trace?
     @Published var stats: TelemetryStats?
     @Published var isLoading = false
     @Published var error: String?
     @Published var isLive = false  // Realtime connection status
     @Published var updateCount = 0  // Incremented on realtime updates to trigger UI refresh
+
+    // Active conversation tracking — set by AIChatStore, consumed by TelemetryPanel
+    @Published var activeConversationId: String?
 
     // Filter state
     @Published var sourceFilter: String?
@@ -329,10 +836,10 @@ class TelemetryService: ObservableObject {
         let record = insert.record
         print("[Telemetry] Realtime INSERT received: \(record["action"]?.stringValue ?? "unknown")")
 
-        // Check if it's a tool action
+        // Check if it's a tool action or API request (for AI telemetry)
         guard let action = record["action"]?.stringValue,
-              action.hasPrefix("tool.") else {
-            print("[Telemetry] Skipping non-tool action")
+              (action.hasPrefix("tool.") || action == "claude_api_request") else {
+            print("[Telemetry] Skipping non-telemetry action")
             return
         }
 
@@ -405,8 +912,32 @@ class TelemetryService: ObservableObject {
             }
         }
 
+        // Rebuild sessions from updated traces
+        rebuildSessions()
+
         // Increment update counter to ensure SwiftUI observes the change
         updateCount += 1
+    }
+
+    /// Rebuild sessions from current recentTraces
+    private func rebuildSessions() {
+        var sessionMap: [String: [Trace]] = [:]
+        for trace in recentTraces {
+            let convId = trace.spans.compactMap({ $0.conversationId }).first ?? trace.id
+            sessionMap[convId, default: []].append(trace)
+        }
+
+        var sessions: [TelemetrySession] = []
+        for (convId, sessionTraces) in sessionMap {
+            let sorted = sessionTraces.sorted { $0.startTime < $1.startTime }
+            sessions.append(TelemetrySession(
+                id: convId,
+                traces: sorted,
+                startTime: sorted.first?.startTime ?? Date(),
+                endTime: sorted.last?.endTime
+            ))
+        }
+        recentSessions = sessions.sorted { $0.startTime > $1.startTime }
     }
 
     // MARK: - Fetch Recent Traces
@@ -428,10 +959,11 @@ class TelemetryService: ObservableObject {
             // Silent fetch - no logging spam
 
             // Build query with all filters first, then order/limit
+            // Fetch both tool.* actions AND claude_api_request for AI telemetry
             var baseQuery = supabase
                 .from("audit_logs")
                 .select()
-                .like("action", pattern: "tool.%")
+                .or("action.like.tool.%,action.eq.claude_api_request")
                 .gte("created_at", value: cutoffString)
 
             if let storeId = storeId {
@@ -495,6 +1027,26 @@ class TelemetryService: ObservableObject {
 
             // Sort by most recent first
             recentTraces = traces.sorted { $0.startTime > $1.startTime }
+
+            // Build sessions by grouping traces by conversation_id
+            var sessionMap: [String: [Trace]] = [:]
+            for trace in recentTraces {
+                // Get conversation_id from any span in the trace
+                let convId = trace.spans.compactMap({ $0.conversationId }).first ?? trace.id
+                sessionMap[convId, default: []].append(trace)
+            }
+
+            var sessions: [TelemetrySession] = []
+            for (convId, sessionTraces) in sessionMap {
+                let sorted = sessionTraces.sorted { $0.startTime < $1.startTime }
+                sessions.append(TelemetrySession(
+                    id: convId,
+                    traces: sorted,
+                    startTime: sorted.first?.startTime ?? Date(),
+                    endTime: sorted.last?.endTime
+                ))
+            }
+            recentSessions = sessions.sorted { $0.startTime > $1.startTime }
 
             // Merge agents from traces with configured agents
             let allAgents = agentSet.union(Set(configuredAgents))
@@ -629,6 +1181,106 @@ class TelemetryService: ObservableObject {
         } catch {
             // Stats are optional, don't show error
             print("[Telemetry] Stats error: \(error)")
+        }
+    }
+
+    // MARK: - Tool Analytics
+
+    @Published var toolAnalytics: ToolAnalyticsResponse?
+    @Published var toolTimeline: [ToolTimelineBucket] = []
+    @Published var selectedSpanComparison: SpanComparison?
+    @Published var isLoadingToolAnalytics = false
+
+    // RPC param structs (Supabase Swift SDK requires Encodable)
+    private struct ToolAnalyticsParams: Encodable {
+        let p_store_id: String?
+        let p_hours_back: Int
+    }
+
+    private struct ToolTimelineParams: Encodable {
+        let p_store_id: String?
+        let p_hours_back: Int
+        let p_bucket_minutes: Int
+    }
+
+    private struct SpanDetailParams: Encodable {
+        let p_span_id: String
+    }
+
+    /// Fetch comprehensive tool analytics via RPC
+    func fetchToolAnalytics(storeId: UUID?, hoursBack: Int? = nil) async {
+        isLoadingToolAnalytics = true
+        defer { isLoadingToolAnalytics = false }
+
+        do {
+            let supabase = SupabaseService.shared.adminClient
+            let hours = hoursBack ?? timeRange.hours
+
+            let response = try await supabase.rpc(
+                "get_tool_analytics",
+                params: ToolAnalyticsParams(
+                    p_store_id: storeId?.uuidString,
+                    p_hours_back: hours
+                )
+            ).execute()
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            toolAnalytics = try decoder.decode(ToolAnalyticsResponse.self, from: response.data)
+
+        } catch {
+            print("[Telemetry] Tool analytics error: \(error)")
+        }
+    }
+
+    /// Fetch tool performance timeline for charts
+    func fetchToolTimeline(storeId: UUID?, hoursBack: Int? = nil, bucketMinutes: Int = 15) async {
+        do {
+            let supabase = SupabaseService.shared.adminClient
+            let hours = hoursBack ?? timeRange.hours
+
+            let response = try await supabase.rpc(
+                "get_tool_timeline",
+                params: ToolTimelineParams(
+                    p_store_id: storeId?.uuidString,
+                    p_hours_back: hours,
+                    p_bucket_minutes: bucketMinutes
+                )
+            ).execute()
+
+            struct TimelineResponse: Codable {
+                let buckets: [ToolTimelineBucket]
+            }
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let result = try decoder.decode(TimelineResponse.self, from: response.data)
+            toolTimeline = result.buckets
+
+        } catch {
+            print("[Telemetry] Tool timeline error: \(error)")
+        }
+    }
+
+    /// Fetch span comparison data (how this span compares to average)
+    func fetchSpanComparison(spanId: UUID) async {
+        do {
+            let supabase = SupabaseService.shared.adminClient
+
+            let response = try await supabase.rpc(
+                "get_tool_trace_detail",
+                params: SpanDetailParams(p_span_id: spanId.uuidString)
+            ).execute()
+
+            struct DetailResponse: Codable {
+                let comparison: SpanComparison
+            }
+            let decoder = JSONDecoder()
+            let result = try decoder.decode(DetailResponse.self, from: response.data)
+            selectedSpanComparison = result.comparison
+
+        } catch {
+            print("[Telemetry] Span comparison error: \(error)")
+            selectedSpanComparison = nil
         }
     }
 

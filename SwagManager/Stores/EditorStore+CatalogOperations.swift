@@ -8,39 +8,24 @@ extension EditorStore {
     // MARK: - Catalog Operations
 
     func loadCatalogs() async {
-        await MainActor.run { isLoadingCatalogs = true }
+        isLoadingCatalogs = true
 
         do {
-            let fetchedCatalogs = try await supabase.fetchCatalogs(storeId: currentStoreId)
-            await MainActor.run { catalogs = fetchedCatalogs }
-            for cat in catalogs {
-            }
+            // Fetch catalogs (lightweight — just the catalog records)
+            let catalogService = supabase.catalogs
+            let storeId = currentStoreId
+            let fetchedCatalogs = try await catalogService.fetchCatalogs(storeId: storeId)
+            catalogs = fetchedCatalogs
 
-            // Auto-create default catalog if none exist but categories do
+            // One-time migration: if no catalogs exist, check for orphan categories
+            // This only triggers when the store has never had catalogs set up
             if catalogs.isEmpty {
-                let orphanCategories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: nil)
-                let orphanCount = orphanCategories.filter { $0.catalogId == nil }.count
-
-                if orphanCount > 0 {
-                    await createDefaultCatalogAndMigrate()
-                    await MainActor.run { isLoadingCatalogs = false }
-                    return // createDefaultCatalogAndMigrate will reload catalogs
-                }
-            } else if let defaultCatalog = catalogs.first(where: { $0.isDefault == true }) ?? catalogs.first {
-                // Catalogs exist - assign ALL categories for this store to the default catalog
-                // This ensures categories don't belong to other/orphaned catalogs
-                let allCategories = try await supabase.fetchCategories(storeId: currentStoreId, catalogId: nil)
-                let wrongCatalogCount = allCategories.filter { $0.catalogId != defaultCatalog.id }.count
-                if wrongCatalogCount > 0 {
-                    _ = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: defaultCatalog.id, onlyOrphans: false)
-                }
+                await createDefaultCatalogAndMigrate()
             }
 
-            // Don't auto-select - let user expand catalog to see contents
-            await MainActor.run { isLoadingCatalogs = false }
+            isLoadingCatalogs = false
         } catch {
-            await MainActor.run { isLoadingCatalogs = false }
-            // Don't show error if table doesn't exist yet
+            isLoadingCatalogs = false
         }
     }
 
@@ -49,24 +34,23 @@ extension EditorStore {
             return
         }
 
+        let catalogService = supabase.catalogs
+        let storeId = currentStoreId
+
         do {
-            // First check if catalog already exists
-            catalogs = try await supabase.fetchCatalogs(storeId: currentStoreId)
-
-            if let existingCatalog = catalogs.first {
-                // Use existing catalog for migration but don't auto-select
-
-                // Migrate orphan categories
-                let migratedCount = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: existingCatalog.id)
-                if migratedCount > 0 {
-                }
+            // Re-check catalogs (another task might have created one)
+            let existing = try await catalogService.fetchCatalogs(storeId: storeId)
+            if let existingCatalog = existing.first {
+                catalogs = existing
+                // Migrate orphan categories via RPC (lightweight server-side operation)
+                _ = try? await catalogService.assignCategoriesToCatalog(
+                    storeId: storeId, catalogId: existingCatalog.id, onlyOrphans: true)
                 return
             }
 
-
-            // Create default "Distro" catalog
+            // Create default catalog
             let insert = CatalogInsert(
-                storeId: currentStoreId,
+                storeId: storeId,
                 ownerUserId: ownerUserId,
                 name: "Distro",
                 slug: "distro-\(Int(Date().timeIntervalSince1970))",
@@ -76,16 +60,12 @@ extension EditorStore {
                 isDefault: true
             )
 
-            let newCatalog = try await supabase.createCatalog(insert)
-
-            // Migrate orphan categories
-            let migratedCount = try await supabase.assignCategoriesToCatalog(storeId: currentStoreId, catalogId: newCatalog.id)
-
+            let newCatalog = try await catalogService.createCatalog(insert)
+            _ = try? await catalogService.assignCategoriesToCatalog(
+                storeId: storeId, catalogId: newCatalog.id)
             catalogs = [newCatalog]
-            // Don't auto-select - keep collapsed
         } catch {
-            // Don't show error to user - just load what we have
-            await loadCatalogData()
+            // Silent — catalog will be created on next load
         }
     }
 

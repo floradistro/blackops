@@ -44,9 +44,14 @@ class AgentProcessManager: ObservableObject {
 
         error = nil
 
-        // Check if port is already in use
+        // If port is already in use, just connect to the existing server
         if isPortInUse(port) {
-            error = "Port \(port) already in use. Kill external server first."
+            print("[AgentProcessManager] Port \(port) already in use — connecting to existing server")
+            isRunning = true
+            Task {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                AgentClient.shared.connect()
+            }
             return
         }
 
@@ -131,13 +136,16 @@ class AgentProcessManager: ObservableObject {
     func stop() {
         AgentClient.shared.disconnect()
 
-        process?.terminate()
-        process = nil
-        outputPipe = nil
-        errorPipe = nil
+        if let process = process {
+            process.terminate()
+            self.process = nil
+            outputPipe = nil
+            errorPipe = nil
+            print("[AgentProcessManager] Stopped agent server process")
+        } else {
+            print("[AgentProcessManager] Disconnected from external server")
+        }
         isRunning = false
-
-        print("[AgentProcessManager] Stopped agent server")
     }
 
     func restart() {

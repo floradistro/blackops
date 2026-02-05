@@ -3,8 +3,8 @@
 import Foundation
 import Supabase
 
-@MainActor
-final class CatalogService {
+// NOT @MainActor — network I/O + JSON decoding must run off main thread
+final class CatalogService: @unchecked Sendable {
     private let client: SupabaseClient
 
     init(client: SupabaseClient) {

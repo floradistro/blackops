@@ -1,34 +1,63 @@
 /**
  * Type definitions for agent server communication
+ *
+ * Protocol for Swift app <-> Agent Server communication
+ * All conversations are persisted and support multi-turn interactions
  */
 export interface AgentConfig {
     model?: string;
     maxTurns?: number;
-    permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+    maxTokens?: number;
     systemPrompt?: string;
     enabledTools?: string[];
     agentId?: string;
     agentName?: string;
     apiKey?: string;
 }
+export interface ConversationMeta {
+    id: string;
+    title: string;
+    agentId?: string;
+    agentName?: string;
+    messageCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
 export type ClientMessage = {
     type: "query";
     prompt: string;
     config?: Partial<AgentConfig>;
     storeId?: string;
-    attachedPaths?: string[];
+    userId?: string;
+    conversationId?: string;
 } | {
     type: "abort";
 } | {
     type: "ping";
 } | {
     type: "get_tools";
+} | {
+    type: "new_conversation";
+} | {
+    type: "get_conversations";
+    storeId: string;
+    limit?: number;
+} | {
+    type: "load_conversation";
+    conversationId: string;
 };
 export interface ToolMetadata {
     id: string;
     name: string;
     description: string;
     category: string;
+}
+export interface TokenUsage {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens?: number;
+    cacheCreationTokens?: number;
+    totalCost: number;
 }
 export type ServerMessage = {
     type: "ready";
@@ -42,6 +71,7 @@ export type ServerMessage = {
 } | {
     type: "started";
     model: string;
+    conversationId: string;
     storeId?: string;
 } | {
     type: "text";
@@ -59,6 +89,7 @@ export type ServerMessage = {
 } | {
     type: "done";
     status: string;
+    conversationId: string;
     usage: TokenUsage;
 } | {
     type: "error";
@@ -66,21 +97,19 @@ export type ServerMessage = {
 } | {
     type: "aborted";
 } | {
-    type: "debug";
-    level: "info" | "warn" | "error";
-    message: string;
-    data?: Record<string, unknown>;
+    type: "conversation_created";
+    conversation: ConversationMeta;
+} | {
+    type: "conversations";
+    conversations: ConversationMeta[];
+} | {
+    type: "conversation_loaded";
+    conversationId: string;
+    title: string;
+    messages: ConversationMessageData[];
 };
-export interface TokenUsage {
-    inputTokens: number;
-    outputTokens: number;
-    totalCost: number;
-}
-export interface McpToolResult {
-    [key: string]: unknown;
-    content: Array<{
-        type: "text";
-        text: string;
-    }>;
-    isError?: boolean;
+export interface ConversationMessageData {
+    role: "user" | "assistant";
+    content: unknown[];
+    createdAt: string;
 }

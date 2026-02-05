@@ -9,6 +9,7 @@ struct CatalogsListView: View {
 
     // Cached category counts
     @State private var categoryCounts: [UUID: Int] = [:]
+    @State private var lastCategoryCount: Int = -1
 
     var body: some View {
         List {
@@ -30,7 +31,12 @@ struct CatalogsListView: View {
             }
         }
         .task { updateCategoryCounts() }
-        .onChange(of: store.categories.count) { _, _ in updateCategoryCounts() }
+        .onChange(of: store.categories.count) { _, newCount in
+            // Guard against redundant updates
+            guard newCount != lastCategoryCount else { return }
+            lastCategoryCount = newCount
+            updateCategoryCounts()
+        }
     }
 
     private func updateCategoryCounts() {
@@ -41,6 +47,7 @@ struct CatalogsListView: View {
             }
         }
         categoryCounts = counts
+        lastCategoryCount = store.categories.count
     }
 }
 
@@ -95,6 +102,8 @@ struct CatalogDetailView: View {
     @State private var catalog: Catalog?
     @State private var cachedCategories: [Category] = []
     @State private var productCounts: [UUID: Int] = [:]
+    @State private var lastCatCount: Int = -1
+    @State private var lastProdCount: Int = -1
 
     var body: some View {
         List {
@@ -117,8 +126,16 @@ struct CatalogDetailView: View {
             }
         }
         .task { loadData() }
-        .onChange(of: store.categories.count) { _, _ in loadData() }
-        .onChange(of: store.products.count) { _, _ in loadData() }
+        .onChange(of: store.categories.count) { _, newCount in
+            guard newCount != lastCatCount else { return }
+            lastCatCount = newCount
+            loadData()
+        }
+        .onChange(of: store.products.count) { _, newCount in
+            guard newCount != lastProdCount else { return }
+            lastProdCount = newCount
+            loadData()
+        }
     }
 
     private func loadData() {
@@ -134,6 +151,8 @@ struct CatalogDetailView: View {
             }
         }
         productCounts = counts
+        lastCatCount = store.categories.count
+        lastProdCount = store.products.count
     }
 }
 
@@ -233,15 +252,48 @@ struct CategoryDetailView: View {
     @State private var displayedProducts: [Product] = []
 
     var body: some View {
+        // PERF: Using inline search field instead of .searchable to avoid
+        // _NSDetectedLayoutRecursion when this view is pushed 2+ levels deep
+        // in NavigationStack inside NavigationSplitView (known macOS SwiftUI issue)
         List {
+            if !allCategoryProducts.isEmpty {
+                Section {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("Search products", text: $searchText)
+                            .textFieldStyle(.plain)
+                        if !searchText.isEmpty {
+                            Button {
+                                searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+
             ForEach(displayedProducts) { product in
                 NavigationLink(value: SDSidebarItem.productDetail(product.id)) {
                     ProductListRow(product: product, showArchiveBadge: false)
                 }
             }
+
+            if allCategoryProducts.isEmpty {
+                ContentUnavailableView("No Products", systemImage: "square.grid.2x2",
+                    description: Text("No products in this category"))
+                    .listRowSeparator(.hidden)
+            } else if displayedProducts.isEmpty && !searchText.isEmpty {
+                ContentUnavailableView("No Results", systemImage: "magnifyingglass",
+                    description: Text("No products match \"\(searchText)\""))
+                    .listRowSeparator(.hidden)
+            }
         }
         .listStyle(.inset)
-        .searchable(text: $searchText, prompt: "Search products")
         .navigationTitle(category?.name ?? "Category")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -250,7 +302,7 @@ struct CategoryDetailView: View {
                 }
             }
         }
-        .task { loadProducts() }
+        .task(id: categoryId) { loadProducts() }
         .onChange(of: searchText) { _, _ in filterProducts() }
     }
 

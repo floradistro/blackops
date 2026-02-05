@@ -51,6 +51,7 @@
 		2F0B076C28F367AE696B3F6D /* LocationQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16626E4BEA5C99026F8165F /* LocationQueueStore.swift */; };
 		311E3A620009B9FD944154A9 /* NewCreationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DD13249180E3F0473E3127 /* NewCreationSheet.swift */; };
 		31633C0293205FD6D5BDA791 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D997DDACBD653A34A02167 /* StatusBadge.swift */; };
+		CAC4ED1A00000001DEADBEEF /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC4ED1B00000002DEADBEEF /* CachedAsyncImage.swift */; };
 		3291F415CE4059980D757E4A /* Customer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6099626F9ED26D3F2FECA3 /* Customer.swift */; };
 		37572BCC34D1DD6C9D9B12BB /* PaymentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3652BB4CA22A77EFC07AC14A /* PaymentService.swift */; };
 		3BF63D08F0C9297CBB0F0650 /* MetaIntegrationDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB51E15DC125099B2A4A678 /* MetaIntegrationDetailPanel.swift */; };
@@ -244,6 +245,7 @@
 		RTEB0002 /* RealtimeEventBus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RealtimeEventBus.swift; path = SwagManager/Services/RealtimeEventBus.swift; sourceTree = "<group>"; };
 		E067A517274BF27C800ED3D8 /* CategoryConfigView+DataOperations.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CategoryConfigView+DataOperations.swift"; sourceTree = "<group>"; };
 		E0D997DDACBD653A34A02167 /* StatusBadge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StatusBadge.swift; path = SwagManager/Components/StatusBadge.swift; sourceTree = "<group>"; };
+		CAC4ED1B00000002DEADBEEF /* CachedAsyncImage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CachedAsyncImage.swift; path = SwagManager/Components/CachedAsyncImage.swift; sourceTree = "<group>"; };
 		E13E9796FDD6C45C1E624D9B /* ChatService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		E16626E4BEA5C99026F8165F /* LocationQueueStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocationQueueStore.swift; path = SwagManager/Stores/LocationQueueStore.swift; sourceTree = "<group>"; };
 		E679485E9F62BF1F1D0496D5 /* EmailCategory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EmailCategory.swift; path = SwagManager/Models/EmailCategory.swift; sourceTree = "<group>"; };
@@ -420,6 +422,7 @@
 				478D246137C60F1798553032 /* EditorStore+Customers.swift */,
 				C928D28576D30D7C50E0ACD5 /* EditorStore+Orders.swift */,
 				E0D997DDACBD653A34A02167 /* StatusBadge.swift */,
+				CAC4ED1B00000002DEADBEEF /* CachedAsyncImage.swift */,
 				DEA9C2AF2568CB069636E24B /* LocationQueueService.swift */,
 				RTEB0002 /* RealtimeEventBus.swift */,
 				AC8B6FFCF613C621FBF93F8E /* EditorStore+QueueManagement.swift */,
@@ -815,6 +818,7 @@
 				45C0984460E55952145E9FA1 /* CustomerService.swift in Sources */,
 				E65D847A2AF097606952D703 /* EditorStore+Customers.swift in Sources */,
 				31633C0293205FD6D5BDA791 /* StatusBadge.swift in Sources */,
+				CAC4ED1A00000001DEADBEEF /* CachedAsyncImage.swift in Sources */,
 				B9C7BE41E5197E8C0BEF5856 /* LocationQueueService.swift in Sources */,
 				RTEB0001 /* RealtimeEventBus.swift in Sources */,
 				F18A8C7AEF81C8E2D6D09479 /* EditorStore+QueueManagement.swift in Sources */,

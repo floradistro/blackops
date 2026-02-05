@@ -2,9 +2,62 @@ import Foundation
 import Combine
 import SwiftUI
 
+// MARK: - Chat Timeline Item
+// Each item is a distinct entry in the chat timeline - messages, tool calls, etc.
+
+enum ChatTimelineItem: Identifiable, Equatable {
+    case userMessage(id: UUID, content: String, timestamp: Date)
+    case thinking(id: UUID, timestamp: Date)
+    case toolCall(id: UUID, name: String, status: ToolStatus, input: [String: Any]?, result: String?, timestamp: Date)
+    case assistantMessage(id: UUID, content: String, isStreaming: Bool, timestamp: Date)
+    case error(id: UUID, message: String, timestamp: Date)
+
+    var id: UUID {
+        switch self {
+        case .userMessage(let id, _, _): return id
+        case .thinking(let id, _): return id
+        case .toolCall(let id, _, _, _, _, _): return id
+        case .assistantMessage(let id, _, _, _): return id
+        case .error(let id, _, _): return id
+        }
+    }
+
+    var timestamp: Date {
+        switch self {
+        case .userMessage(_, _, let t): return t
+        case .thinking(_, let t): return t
+        case .toolCall(_, _, _, _, _, let t): return t
+        case .assistantMessage(_, _, _, let t): return t
+        case .error(_, _, let t): return t
+        }
+    }
+
+    static func == (lhs: ChatTimelineItem, rhs: ChatTimelineItem) -> Bool {
+        switch (lhs, rhs) {
+        case (.userMessage(let id1, let c1, _), .userMessage(let id2, let c2, _)):
+            return id1 == id2 && c1 == c2
+        case (.thinking(let id1, _), .thinking(let id2, _)):
+            return id1 == id2
+        case (.toolCall(let id1, let n1, let s1, _, let r1, _), .toolCall(let id2, let n2, let s2, _, let r2, _)):
+            return id1 == id2 && n1 == n2 && s1 == s2 && r1 == r2
+        case (.assistantMessage(let id1, let c1, let s1, _), .assistantMessage(let id2, let c2, let s2, _)):
+            return id1 == id2 && c1 == c2 && s1 == s2
+        case (.error(let id1, let m1, _), .error(let id2, let m2, _)):
+            return id1 == id2 && m1 == m2
+        default:
+            return false
+        }
+    }
+}
+
+enum ToolStatus: Equatable {
+    case running
+    case success
+    case failed
+}
+
 // MARK: - Streaming Text Buffer
 // Dedicated class for 60fps text streaming without triggering array diffs
-// This is the pattern used by Apple's Messages app and Anthropic's Claude apps
 
 @MainActor
 class StreamingTextBuffer: ObservableObject {
@@ -20,78 +73,36 @@ class StreamingTextBuffer: ObservableObject {
 }
 
 // MARK: - AI Chat Store
-// Manages streaming chat with Claude agent via edge function
-// Follows Anthropic SDK patterns for agentic conversations
 
 @MainActor
 class AIChatStore: ObservableObject {
     // MARK: - Published State
-    @Published var messages: [AIChatMessage] = []
+    @Published var timeline: [ChatTimelineItem] = []
     @Published var isStreaming = false
-    @Published var currentToolExecution: String?
+    @Published var isGenerating = false  // Always true while agent is working
     @Published var error: String?
     @Published var usage: ChatTokenUsage?
-    @Published var useLocalAgent = true  // Use local Agent SDK server with file tools
-    @Published var includeCodeTools = true  // Toggle for coding capabilities
-    @Published var attachedFolders: [URL] = []  // Folders/files attached to context
 
-    // Dedicated streaming buffer for 60fps updates (avoids array diffing)
+    // Conversation persistence
+    @Published var conversationId: String?
+    @Published var conversationTitle: String?
+
+    // Dedicated streaming buffer for 60fps updates
     let streamingBuffer = StreamingTextBuffer()
+
+    // Track current streaming message ID
+    private var currentStreamingMessageId: UUID?
+    private var currentThinkingId: UUID?
+
+    // Track generation state for smooth transitions
+    private var pendingThinkingRemoval: UUID?
 
     // MARK: - Configuration
     var agentId: UUID?
     var storeId: UUID?
-    var currentAgent: AIAgent?  // Full agent config for local queries
-    private var conversationId = UUID()
-
-    // Fallback to Supabase edge function
-    private let remoteEndpoint = "claude-agent"
+    var currentAgent: AIAgent?
 
     // MARK: - Types
-
-    struct AIChatMessage: Identifiable, Equatable {
-        let id: UUID
-        let role: Role
-        var content: String
-        let timestamp: Date
-        var toolCalls: [ToolCall]?
-        var isStreaming: Bool = false  // True while text is being streamed
-
-        enum Role: String {
-            case user
-            case assistant
-            case system
-        }
-
-        struct ToolCall: Equatable, Identifiable {
-            let id: UUID
-            let name: String
-            var status: ToolStatus
-            var result: String?
-
-            enum ToolStatus: Equatable {
-                case running
-                case success
-                case failed
-            }
-
-            init(name: String, status: ToolStatus = .running, result: String? = nil) {
-                self.id = UUID()
-                self.name = name
-                self.status = status
-                self.result = result
-            }
-        }
-
-        init(role: Role, content: String, toolCalls: [ToolCall]? = nil, isStreaming: Bool = false) {
-            self.id = UUID()
-            self.role = role
-            self.content = content
-            self.timestamp = Date()
-            self.toolCalls = toolCalls
-            self.isStreaming = isStreaming
-        }
-    }
 
     struct ChatTokenUsage {
         let inputTokens: Int
@@ -100,98 +111,46 @@ class AIChatStore: ObservableObject {
 
         var estimatedCost: Double {
             if let cost = totalCost { return cost }
-            // Claude Sonnet pricing: $3/MTok input, $15/MTok output
             let inputCost = Double(inputTokens) * 0.000003
             let outputCost = Double(outputTokens) * 0.000015
             return inputCost + outputCost
-        }
-
-        init(inputTokens: Int, outputTokens: Int, totalCost: Double? = nil) {
-            self.inputTokens = inputTokens
-            self.outputTokens = outputTokens
-            self.totalCost = totalCost
-        }
-    }
-
-    // MARK: - Stream Events (matches edge function output)
-
-    private struct StreamEvent: Decodable {
-        let type: String
-        let text: String?
-        let name: String?
-        let success: Bool?
-        let result: StreamAnyCodable?
-        let error: String?
-        let usage: UsageData?
-
-        struct UsageData: Decodable {
-            let input_tokens: Int
-            let output_tokens: Int
         }
     }
 
     // MARK: - Public API
 
     func sendMessage(_ text: String) async {
-        // Try local agent first if enabled
-        print("[AIChatStore] sendMessage: useLocalAgent=\(useLocalAgent), isConnected=\(AgentClient.shared.isConnected)")
-        if useLocalAgent && AgentClient.shared.isConnected {
-            print("[AIChatStore] Using LOCAL agent")
-            await sendMessageViaLocalAgent(text)
+        guard AgentClient.shared.isConnected else {
+            error = "Not connected to agent server"
             return
         }
 
-        // Fallback to remote (Supabase edge function)
-        print("[AIChatStore] Using REMOTE agent (fallback)")
-        await sendMessageViaRemote(text)
-    }
-
-    // MARK: - Local Agent (Claude Agent SDK)
-
-    private func sendMessageViaLocalAgent(_ text: String) async {
         error = nil
         isStreaming = true
-        currentToolExecution = nil
-
-        // Add user message
-        messages.append(AIChatMessage(role: .user, content: text))
-
-        // Create placeholder for assistant response
-        // During streaming, text goes to streamingBuffer (60fps) not the message array
-        let assistantMessage = AIChatMessage(role: .assistant, content: "", isStreaming: true)
-        let assistantMessageId = assistantMessage.id
-        messages.append(assistantMessage)
-
-        // Clear streaming buffer for new message
+        isGenerating = true
         streamingBuffer.clear()
 
-        // Build prompt with folder context
-        let folderContext = buildFolderContext()
-        let fullPrompt = folderContext + text
+        // Add user message
+        withAnimation(.easeOut(duration: 0.2)) {
+            timeline.append(.userMessage(id: UUID(), content: text, timestamp: Date()))
+        }
 
-        // Extract paths from attached folders for context file reading
-        let paths = attachedFolders.map { $0.path }
+        // Add thinking indicator (will persist until content replaces it)
+        let thinkingId = UUID()
+        currentThinkingId = thinkingId
+        withAnimation(.easeOut(duration: 0.15)) {
+            timeline.append(.thinking(id: thinkingId, timestamp: Date()))
+        }
 
-        // Build config from current agent if available
-        print("[AIChatStore] currentAgent: \(currentAgent?.name ?? "nil")")
-        print("[AIChatStore] currentAgent.systemPrompt: \(currentAgent?.systemPrompt?.prefix(50) ?? "nil")")
-        print("[AIChatStore] currentAgent.enabledTools: \(String(describing: currentAgent?.enabledTools))")
-
-        // Use agent's system prompt or a sensible default
+        // Build config from current agent
         let systemPrompt = currentAgent?.systemPrompt ?? """
             You are a helpful AI assistant with access to business tools.
             Use the available tools to help answer questions about inventory, orders, customers, and analytics.
-            Be concise and professional in your responses.
             """
 
-        // Use agent-specific API key, or fall back to global settings key
         let agentApiKey = currentAgent?.apiKey
         let globalApiKey = UserDefaults.standard.string(forKey: "anthropicApiKey")
         let apiKeyToUse = (agentApiKey?.isEmpty == false ? agentApiKey : nil) ?? globalApiKey
-
-        print("[AIChatStore] agentApiKey: \(agentApiKey?.prefix(20) ?? "nil")")
-        print("[AIChatStore] globalApiKey: \(globalApiKey?.prefix(20) ?? "nil")")
-        print("[AIChatStore] apiKeyToUse: \(apiKeyToUse?.prefix(20) ?? "nil")")
 
         let config = AgentConfig(
             model: currentAgent?.model,
@@ -203,74 +162,132 @@ class AIChatStore: ObservableObject {
             apiKey: apiKeyToUse
         )
 
-        print("[AIChatStore] config.systemPrompt: \(config.systemPrompt?.prefix(50) ?? "nil")")
-        print("[AIChatStore] config.enabledTools: \(String(describing: config.enabledTools))")
-
         AgentClient.shared.query(
-            prompt: fullPrompt,
+            prompt: text,
             storeId: storeId,
             config: config,
-            attachedPaths: paths,
+            conversationId: conversationId,
             onText: { [weak self] (newText: String) in
                 guard let self = self else { return }
-                // Use streaming buffer for 60fps updates (no array diffing)
+
+                // Create streaming message first (before removing thinking)
+                if self.currentStreamingMessageId == nil {
+                    let messageId = UUID()
+                    self.currentStreamingMessageId = messageId
+
+                    // Animate: remove thinking, add message in same transaction
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        // Remove thinking indicator
+                        if let thinkingId = self.currentThinkingId {
+                            self.timeline.removeAll { item in
+                                if case .thinking(let id, _) = item { return id == thinkingId }
+                                return false
+                            }
+                            self.currentThinkingId = nil
+                        }
+
+                        // Add streaming message
+                        self.timeline.append(.assistantMessage(
+                            id: messageId,
+                            content: "",
+                            isStreaming: true,
+                            timestamp: Date()
+                        ))
+                    }
+                }
+
                 self.streamingBuffer.append(newText)
             },
             onToolStart: { [weak self] (tool: String, input: [String: Any]) in
                 guard let self = self else { return }
-                print("[AIChatStore] onToolStart: \(tool) input: \(input)")
-                self.currentToolExecution = tool
-                // Add tool call immediately in "running" state
-                if let index = self.messages.firstIndex(where: { $0.id == assistantMessageId }) {
-                    var updatedMessage = self.messages[index]
-                    var tools = updatedMessage.toolCalls ?? []
-                    tools.append(AIChatMessage.ToolCall(name: tool, status: .running))
-                    updatedMessage.toolCalls = tools
-                    self.messages[index] = updatedMessage
+
+                // Finalize any streaming message before tool
+                self.finalizeStreamingMessage()
+
+                // Animate: remove thinking, add tool call in same transaction
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    // Remove thinking indicator
+                    if let thinkingId = self.currentThinkingId {
+                        self.timeline.removeAll { item in
+                            if case .thinking(let id, _) = item { return id == thinkingId }
+                            return false
+                        }
+                        self.currentThinkingId = nil
+                    }
+
+                    // Add tool call
+                    self.timeline.append(.toolCall(
+                        id: UUID(),
+                        name: tool,
+                        status: .running,
+                        input: input,
+                        result: nil,
+                        timestamp: Date()
+                    ))
                 }
             },
-            onToolResult: { [weak self] (tool: String, success: Bool, result: Any?, error: String?) in
+            onToolResult: { [weak self] (tool: String, success: Bool, result: Any?, errorMsg: String?) in
                 guard let self = self else { return }
-                print("[AIChatStore] onToolResult: \(tool) success=\(success)")
-                self.currentToolExecution = nil
 
-                // Convert result to string safely
-                let resultString: String?
-                if let result = result {
-                    if JSONSerialization.isValidJSONObject(result),
-                       let data = try? JSONSerialization.data(withJSONObject: result, options: .prettyPrinted),
-                       let str = String(data: data, encoding: .utf8) {
-                        resultString = str
-                    } else {
-                        resultString = String(describing: result)
+                // Update last tool call with this name that's running
+                if let index = self.timeline.lastIndex(where: { item in
+                    if case .toolCall(_, let name, let status, _, _, _) = item {
+                        return name == tool && status == .running
                     }
-                } else {
-                    resultString = error
+                    return false
+                }) {
+                    if case .toolCall(let id, let name, _, let input, _, let timestamp) = self.timeline[index] {
+                        let resultString: String?
+                        if let result = result {
+                            if JSONSerialization.isValidJSONObject(result),
+                               let data = try? JSONSerialization.data(withJSONObject: result, options: .prettyPrinted),
+                               let str = String(data: data, encoding: .utf8) {
+                                resultString = str
+                            } else {
+                                resultString = String(describing: result)
+                            }
+                        } else {
+                            resultString = errorMsg
+                        }
+
+                        self.timeline[index] = .toolCall(
+                            id: id,
+                            name: name,
+                            status: success ? .success : .failed,
+                            input: input,
+                            result: resultString,
+                            timestamp: timestamp
+                        )
+                    }
                 }
 
-                // Update existing tool call status
-                if let index = self.messages.firstIndex(where: { $0.id == assistantMessageId }) {
-                    var updatedMessage = self.messages[index]
-                    if var tools = updatedMessage.toolCalls,
-                       let toolIndex = tools.lastIndex(where: { $0.name == tool && $0.status == .running }) {
-                        tools[toolIndex].status = success ? .success : .failed
-                        tools[toolIndex].result = resultString
-                        updatedMessage.toolCalls = tools
-                        self.messages[index] = updatedMessage
-                    }
+                // Add new thinking indicator for next response (animated)
+                withAnimation(.easeOut(duration: 0.15)) {
+                    let thinkingId = UUID()
+                    self.currentThinkingId = thinkingId
+                    self.timeline.append(.thinking(id: thinkingId, timestamp: Date()))
                 }
             },
-            onDone: { [weak self] (status: String, tokenUsage: TokenUsage) in
+            onDone: { [weak self] (status: String, returnedConversationId: String, tokenUsage: TokenUsage) in
                 guard let self = self else { return }
+
+                // Finalize streaming message first
+                self.finalizeStreamingMessage()
+
+                // Remove any remaining thinking indicator (animated)
+                withAnimation(.easeOut(duration: 0.2)) {
+                    if let thinkingId = self.currentThinkingId {
+                        self.timeline.removeAll { item in
+                            if case .thinking(let id, _) = item { return id == thinkingId }
+                            return false
+                        }
+                        self.currentThinkingId = nil
+                    }
+                }
+
                 self.isStreaming = false
-                self.currentToolExecution = nil
-                // Copy final text from streaming buffer to message array (single update)
-                if let index = self.messages.firstIndex(where: { $0.id == assistantMessageId }) {
-                    var updatedMessage = self.messages[index]
-                    updatedMessage.content = self.streamingBuffer.text
-                    updatedMessage.isStreaming = false
-                    self.messages[index] = updatedMessage
-                }
+                self.isGenerating = false
+                self.conversationId = returnedConversationId
                 self.usage = ChatTokenUsage(
                     inputTokens: tokenUsage.inputTokens,
                     outputTokens: tokenUsage.outputTokens,
@@ -278,260 +295,166 @@ class AIChatStore: ObservableObject {
                 )
             },
             onError: { [weak self] (errorMessage: String) in
-                print("[AIChatStore] onError: \(errorMessage)")
-                self?.error = errorMessage
-                self?.isStreaming = false
-                self?.currentToolExecution = nil
+                guard let self = self else { return }
+
+                self.finalizeStreamingMessage()
+
+                // Animated transition: remove thinking, add error
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if let thinkingId = self.currentThinkingId {
+                        self.timeline.removeAll { item in
+                            if case .thinking(let id, _) = item { return id == thinkingId }
+                            return false
+                        }
+                        self.currentThinkingId = nil
+                    }
+                    self.timeline.append(.error(id: UUID(), message: errorMessage, timestamp: Date()))
+                }
+
+                self.error = errorMessage
+                self.isStreaming = false
+                self.isGenerating = false
+            },
+            onConversationCreated: { [weak self] (conv: ConversationMeta) in
+                self?.conversationId = conv.id
+                self?.conversationTitle = conv.title
+                TelemetryService.shared.activeConversationId = conv.id
             }
         )
     }
 
-    // MARK: - Remote Agent (Supabase Edge Function)
+    private func finalizeStreamingMessage() {
+        guard let messageId = currentStreamingMessageId else { return }
 
-    private func sendMessageViaRemote(_ text: String) async {
-        guard let agentId = agentId else {
-            error = "No agent selected"
-            return
-        }
-
-        // Reset state
-        error = nil
-        isStreaming = true
-        currentToolExecution = nil
-
-        // Add user message
-        messages.append(AIChatMessage(role: .user, content: text))
-
-        // Create placeholder for assistant response (streaming mode for performance)
-        let assistantMessage = AIChatMessage(role: .assistant, content: "", isStreaming: true)
-        let assistantMessageId = assistantMessage.id
-        messages.append(assistantMessage)
-
-        // Clear streaming buffer for new message
-        streamingBuffer.clear()
-
-        // Build request - use enhanced claude-agent endpoint
-        guard let url = URL(string: "\(SupabaseConfig.url)/functions/v1/\(remoteEndpoint)") else {
-            error = "Invalid URL"
-            isStreaming = false
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        // Build conversation history (exclude current exchange)
-        let history: [[String: String]] = messages.dropLast(2).map { msg in
-            ["role": msg.role.rawValue, "content": msg.content]
-        }
-
-        // Build message with folder context
-        let folderContext = buildFolderContext()
-        let fullMessage = folderContext + text
-
-        // Build paths as simple string array
-        let paths: [String] = attachedFolders.map { $0.path }
-
-        let body: [String: Any] = [
-            "agentId": agentId.uuidString,
-            "storeId": storeId?.uuidString ?? "",
-            "message": fullMessage,
-            "conversationHistory": history,
-            "includeCodeTools": includeCodeTools,
-            "attachedPaths": paths
-        ]
-
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        } catch {
-            self.error = "Failed to encode request: \(error.localizedDescription)"
-            print("[AIChatStore] JSON encoding error: \(error)")
-            isStreaming = false
-            return
-        }
-
-        // Stream response
-        do {
-            let (bytes, response) = try await URLSession.shared.bytes(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                error = "Server error"
-                isStreaming = false
-                return
-            }
-
-            for try await line in bytes.lines {
-                guard line.hasPrefix("data: ") else { continue }
-                let jsonString = String(line.dropFirst(6))
-
-                guard let data = jsonString.data(using: .utf8),
-                      let event = try? JSONDecoder().decode(StreamEvent.self, from: data)
-                else { continue }
-
-                switch event.type {
-                case "text":
-                    if let text = event.text {
-                        // Use streaming buffer for 60fps updates
-                        streamingBuffer.append(text)
-                    }
-
-                case "tool_start":
-                    currentToolExecution = event.name
-                    // Add tool immediately in running state
-                    if let name = event.name,
-                       let index = messages.firstIndex(where: { $0.id == assistantMessageId }) {
-                        var updatedMessage = messages[index]
-                        var tools = updatedMessage.toolCalls ?? []
-                        tools.append(AIChatMessage.ToolCall(name: name, status: .running))
-                        updatedMessage.toolCalls = tools
-                        messages[index] = updatedMessage
-                    }
-
-                case "tool_result":
-                    currentToolExecution = nil
-                    if let name = event.name {
-                        let resultString: String?
-                        if let result = event.result {
-                            if JSONSerialization.isValidJSONObject(result.value ?? ""),
-                               let data = try? JSONSerialization.data(withJSONObject: result.value ?? "", options: .prettyPrinted),
-                               let str = String(data: data, encoding: .utf8) {
-                                resultString = str
-                            } else {
-                                resultString = String(describing: result.value)
-                            }
-                        } else {
-                            resultString = nil
-                        }
-                        // Update tool status
-                        if let index = messages.firstIndex(where: { $0.id == assistantMessageId }) {
-                            var updatedMessage = messages[index]
-                            if var tools = updatedMessage.toolCalls,
-                               let toolIndex = tools.lastIndex(where: { $0.name == name && $0.status == .running }) {
-                                tools[toolIndex].status = (event.success ?? false) ? .success : .failed
-                                tools[toolIndex].result = resultString
-                                updatedMessage.toolCalls = tools
-                                messages[index] = updatedMessage
-                            }
-                        }
-                    }
-
-                case "usage":
-                    if let usageData = event.usage {
-                        usage = ChatTokenUsage(
-                            inputTokens: usageData.input_tokens,
-                            outputTokens: usageData.output_tokens
-                        )
-                    }
-
-                case "error":
-                    self.error = event.error ?? "Unknown error"
-
-                case "done":
-                    // Tool calls are now updated incrementally, nothing to do here
-                    break
-
-                default:
-                    break
+        if let index = timeline.firstIndex(where: { item in
+            if case .assistantMessage(let id, _, _, _) = item { return id == messageId }
+            return false
+        }) {
+            if case .assistantMessage(let id, _, _, let timestamp) = timeline[index] {
+                let finalContent = streamingBuffer.text
+                if !finalContent.isEmpty {
+                    timeline[index] = .assistantMessage(
+                        id: id,
+                        content: finalContent,
+                        isStreaming: false,
+                        timestamp: timestamp
+                    )
+                } else {
+                    // Remove empty message
+                    timeline.remove(at: index)
                 }
             }
-
-        } catch {
-            self.error = error.localizedDescription
         }
 
-        // Copy final text from streaming buffer to message array (single update)
-        if let index = messages.firstIndex(where: { $0.id == assistantMessageId }) {
-            var updatedMessage = messages[index]
-            updatedMessage.content = streamingBuffer.text
-            updatedMessage.isStreaming = false
-            messages[index] = updatedMessage
-        }
-
-        isStreaming = false
-        currentToolExecution = nil
+        currentStreamingMessageId = nil
+        streamingBuffer.clear()
     }
 
     func clearConversation() {
-        messages.removeAll()
-        conversationId = UUID()
+        withAnimation(.easeOut(duration: 0.2)) {
+            timeline.removeAll()
+        }
+        conversationId = nil
+        conversationTitle = nil
         error = nil
         usage = nil
-        attachedFolders.removeAll()
         streamingBuffer.clear()
+        currentStreamingMessageId = nil
+        currentThinkingId = nil
+        isGenerating = false
+
+        TelemetryService.shared.activeConversationId = nil
+        AgentClient.shared.newConversation()
     }
 
-    // MARK: - Folder Management
+    /// Restore timeline from stored messages (for loading past conversations)
+    /// Messages are in Anthropic API format: [{role, content: [ContentBlock], createdAt}]
+    func restoreTimeline(from messages: [[String: Any]], conversationId: String, title: String?) {
+        self.conversationId = conversationId
+        self.conversationTitle = title
+        self.error = nil
+        self.usage = nil
+        self.streamingBuffer.clear()
+        self.currentStreamingMessageId = nil
+        self.currentThinkingId = nil
+        self.isGenerating = false
 
-    func addFolder(_ url: URL) {
-        guard !attachedFolders.contains(url) else { return }
-        attachedFolders.append(url)
-    }
+        var restored: [ChatTimelineItem] = []
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoBasic = ISO8601DateFormatter()
+        isoBasic.formatOptions = [.withInternetDateTime]
 
-    func removeFolder(_ url: URL) {
-        attachedFolders.removeAll { $0 == url }
-    }
-
-    func removeFolder(at index: Int) {
-        guard attachedFolders.indices.contains(index) else { return }
-        attachedFolders.remove(at: index)
-    }
-
-    /// Build context prefix for attached folders
-    private func buildFolderContext() -> String {
-        guard !attachedFolders.isEmpty else { return "" }
-
-        var context = "\n\n[ATTACHED CONTEXT]\nThe user has attached the following folders/files for you to work with:\n"
-        for url in attachedFolders {
-            let path = url.path
-            let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-            context += "- \(path) (\(isDir ? "folder" : "file"))\n"
+        func parseDate(_ str: String?) -> Date {
+            guard let str else { return Date() }
+            return isoFractional.date(from: str) ?? isoBasic.date(from: str) ?? Date()
         }
-        context += "\nYou can use the local tools (read_file, list_directory, search_files, search_content, etc.) to explore and work with these paths.\n[/ATTACHED CONTEXT]\n\n"
-        return context
+
+        for msg in messages {
+            guard let role = msg["role"] as? String,
+                  let contentBlocks = msg["content"] as? [[String: Any]] else { continue }
+            let timestamp = parseDate(msg["createdAt"] as? String)
+
+            if role == "user" {
+                // Check if this is a tool_result message or a regular user message
+                if let firstBlock = contentBlocks.first,
+                   firstBlock["type"] as? String == "tool_result" {
+                    // Tool results — skip, already represented by the tool_call row
+                    continue
+                }
+                // Regular user message — extract text
+                let text = contentBlocks.compactMap { block -> String? in
+                    if block["type"] as? String == "text" {
+                        return block["text"] as? String
+                    }
+                    return nil
+                }.joined()
+                if !text.isEmpty {
+                    restored.append(.userMessage(id: UUID(), content: text, timestamp: timestamp))
+                }
+            } else if role == "assistant" {
+                // Assistant messages can contain text blocks and tool_use blocks
+                for block in contentBlocks {
+                    let blockType = block["type"] as? String
+                    if blockType == "text", let text = block["text"] as? String, !text.isEmpty {
+                        restored.append(.assistantMessage(id: UUID(), content: text, isStreaming: false, timestamp: timestamp))
+                    } else if blockType == "tool_use" {
+                        let toolName = block["name"] as? String ?? "unknown"
+                        // Tool calls from history are always completed
+                        restored.append(.toolCall(
+                            id: UUID(),
+                            name: toolName,
+                            status: .success,
+                            input: block["input"] as? [String: Any],
+                            result: nil,
+                            timestamp: timestamp
+                        ))
+                    }
+                }
+            }
+        }
+
+        withAnimation(.easeOut(duration: 0.2)) {
+            timeline = restored
+        }
+
+        TelemetryService.shared.activeConversationId = conversationId
+        AgentClient.shared.selectConversation(conversationId)
     }
 
     func retryLastMessage() async {
-        guard let lastUserMessage = messages.last(where: { $0.role == .user }) else { return }
+        // Find last user message
+        guard let lastUserItem = timeline.last(where: { item in
+            if case .userMessage = item { return true }
+            return false
+        }),
+        case .userMessage(_, let content, _) = lastUserItem else { return }
 
-        // Remove last exchange
-        if let lastAssistantIndex = messages.lastIndex(where: { $0.role == .assistant }) {
-            messages.remove(at: lastAssistantIndex)
+        // Remove everything after and including last user message
+        if let index = timeline.lastIndex(where: { $0.id == lastUserItem.id }) {
+            timeline.removeSubrange(index...)
         }
-        if let lastUserIndex = messages.lastIndex(where: { $0.role == .user }) {
-            messages.remove(at: lastUserIndex)
-        }
 
-        await sendMessage(lastUserMessage.content)
-    }
-}
-
-// MARK: - StreamAnyCodable Helper
-
-private struct StreamAnyCodable: Decodable {
-    let value: Any?
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-
-        if container.decodeNil() {
-            value = nil
-        } else if let bool = try? container.decode(Bool.self) {
-            value = bool
-        } else if let int = try? container.decode(Int.self) {
-            value = int
-        } else if let double = try? container.decode(Double.self) {
-            value = double
-        } else if let string = try? container.decode(String.self) {
-            value = string
-        } else if let array = try? container.decode([StreamAnyCodable].self) {
-            value = array.map { $0.value }
-        } else if let dict = try? container.decode([String: StreamAnyCodable].self) {
-            value = dict.mapValues { $0.value }
-        } else {
-            value = nil
-        }
+        await sendMessage(content)
     }
 }

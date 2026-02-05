@@ -70,8 +70,7 @@ struct MainDetailView: View {
 
             // AI - Section views
             case .aiChat:
-                AIChatPane()
-                    .environment(store)
+                WelcomeView(store: store)
 
             case .agents:
                 AgentsListView(store: store, selection: $selection)

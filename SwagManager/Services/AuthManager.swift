@@ -59,6 +59,18 @@ class AuthManager: ObservableObject {
     private func listenToAuthChanges() async {
         for await (event, session) in supabase.auth.authStateChanges {
             switch event {
+            case .initialSession:
+                // With emitLocalSessionAsInitialSession: true, we get the cached session immediately.
+                // Must check isExpired since the local session may be stale.
+                if let session, !session.isExpired {
+                    self.session = session
+                    self.currentUser = session.user
+                    self.isAuthenticated = true
+                } else {
+                    self.session = nil
+                    self.currentUser = nil
+                    self.isAuthenticated = false
+                }
             case .signedIn:
                 self.session = session
                 self.currentUser = session?.user

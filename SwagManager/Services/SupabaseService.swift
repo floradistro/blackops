@@ -71,7 +71,8 @@ class SupabaseService {
                 auth: .init(
                     storage: UserDefaultsAuthLocalStorage(),
                     flowType: .implicit,
-                    autoRefreshToken: true
+                    autoRefreshToken: true,
+                    emitLocalSessionAsInitialSession: true
                 )
             )
         )

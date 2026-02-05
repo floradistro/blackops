@@ -14,7 +14,7 @@
  * 4. collections    - manage collections (find, create, get_theme, set_theme, set_icon)
  * 5. customers      - manage customers (find, create, update)
  * 6. products       - manage products (find, create, update, pricing)
- * 7. analytics      - analytics & data (summary, by_location, detailed, discover, employee)
+ * 7. analytics      - analytics & intelligence (summary, by_location, detailed, discover, employee, customers, products, inventory_intelligence, marketing, fraud, employee_performance, behavior, full)
  * 8. locations      - find/list locations
  * 9. orders         - manage orders (find, get, create)
  * 10. suppliers     - find suppliers
@@ -23,6 +23,50 @@
  * 13. alerts        - system alerts
  * 14. audit_trail   - audit logs
  */
+// ============================================================================
+// ERROR CLASSIFICATION (Anthropic best practice: granular error types for retry logic)
+// ============================================================================
+export var ToolErrorType;
+(function (ToolErrorType) {
+    ToolErrorType["RECOVERABLE"] = "recoverable";
+    ToolErrorType["PERMANENT"] = "permanent";
+    ToolErrorType["RATE_LIMIT"] = "rate_limit";
+    ToolErrorType["AUTH"] = "auth";
+    ToolErrorType["VALIDATION"] = "validation";
+    ToolErrorType["NOT_FOUND"] = "not_found"; // Resource doesn't exist
+})(ToolErrorType || (ToolErrorType = {}));
+// Classify errors based on message patterns
+function classifyError(error) {
+    const message = error?.message || String(error);
+    const code = error?.code;
+    // Connection/network errors - recoverable
+    if (message.includes("connection") || message.includes("ECONNREFUSED") ||
+        message.includes("timeout") || message.includes("network")) {
+        return { errorType: ToolErrorType.RECOVERABLE, retryable: true };
+    }
+    // Rate limiting
+    if (message.includes("429") || message.includes("rate") || message.includes("too many")) {
+        return { errorType: ToolErrorType.RATE_LIMIT, retryable: true };
+    }
+    // Auth errors
+    if (message.includes("401") || message.includes("403") ||
+        message.includes("unauthorized") || message.includes("forbidden") ||
+        code === "42501" /* PostgreSQL insufficient_privilege */) {
+        return { errorType: ToolErrorType.AUTH, retryable: false };
+    }
+    // Not found
+    if (message.includes("not found") || message.includes("does not exist") ||
+        code === "PGRST116" /* PostgREST not found */) {
+        return { errorType: ToolErrorType.NOT_FOUND, retryable: false };
+    }
+    // Validation errors (usually from bad AI input)
+    if (message.includes("required") || message.includes("invalid") ||
+        message.includes("must be") || message.includes("expected")) {
+        return { errorType: ToolErrorType.VALIDATION, retryable: false };
+    }
+    // Default to permanent (don't retry unknown errors)
+    return { errorType: ToolErrorType.PERMANENT, retryable: false };
+}
 // ============================================================================
 // CONSOLIDATED TOOL HANDLERS
 // ============================================================================
@@ -1049,20 +1093,89 @@ const handlers = {
             switch (action) {
                 case "find": {
                     const query = args.query || "";
-                    const limit = args.limit || 20;
+                    const limit = args.limit || 200;
+                    const statusFilter = args.status || "published";
+                    // Split query into individual words for smarter matching
+                    const words = query.trim().split(/\s+/).filter(Boolean);
+                    // Separate words that might be category names vs product names
+                    // Search categories first to find matching category IDs
+                    let categoryIds = [];
+                    if (words.length > 0) {
+                        let catQ = supabase.from("categories").select("id, name");
+                        if (storeId)
+                            catQ = catQ.eq("store_id", storeId);
+                        // Match any word against category names
+                        const catFilters = words.map(w => `name.ilike.%${w}%`).join(",");
+                        catQ = catQ.or(catFilters);
+                        const { data: matchingCats } = await catQ;
+                        categoryIds = matchingCats?.map((c) => c.id) || [];
+                    }
+                    // Build product query with category join
                     let q = supabase
                         .from("products")
-                        .select("id, name, sku, status")
+                        .select("id, name, sku, status, primary_category_id, category:categories!primary_category_id(name)")
                         .limit(limit);
-                    if (query) {
-                        q = q.or(`name.ilike.%${query}%,sku.ilike.%${query}%`);
-                    }
                     if (storeId)
                         q = q.eq("store_id", storeId);
+                    if (statusFilter !== "all")
+                        q = q.eq("status", statusFilter);
+                    if (words.length > 0) {
+                        // Build OR filter: match name words AND/OR category membership
+                        const nameFilters = words.map(w => `name.ilike.%${w}%`);
+                        const skuFilter = `sku.ilike.%${query}%`;
+                        const allFilters = [...nameFilters, skuFilter];
+                        if (categoryIds.length > 0) {
+                            allFilters.push(`primary_category_id.in.(${categoryIds.join(",")})`);
+                        }
+                        q = q.or(allFilters.join(","));
+                    }
                     const { data, error } = await q;
                     if (error)
                         return { success: false, error: error.message };
-                    return { success: true, data };
+                    const scored = (data || []).map((p) => {
+                        let score = 0;
+                        const pName = (p.name || "").toLowerCase();
+                        const catName = (p.category?.name || "").toLowerCase();
+                        for (const w of words) {
+                            const wl = w.toLowerCase();
+                            if (pName.includes(wl))
+                                score += 2;
+                            if (catName.includes(wl))
+                                score += 1;
+                        }
+                        return { product: p, score };
+                    });
+                    scored.sort((a, b) => b.score - a.score);
+                    // Enrich with inventory totals
+                    const productIds = scored.map(s => s.product.id);
+                    let inventoryMap = {};
+                    if (productIds.length > 0) {
+                        const { data: invData } = await supabase
+                            .from("inventory")
+                            .select("product_id, quantity")
+                            .in("product_id", productIds)
+                            .gt("quantity", 0);
+                        if (invData) {
+                            for (const inv of invData) {
+                                inventoryMap[inv.product_id] = (inventoryMap[inv.product_id] || 0) + inv.quantity;
+                            }
+                        }
+                    }
+                    const enriched = scored.map(s => ({
+                        id: s.product.id,
+                        name: s.product.name,
+                        sku: s.product.sku,
+                        status: s.product.status,
+                        category: s.product.category?.name || null,
+                        total_stock: inventoryMap[s.product.id] || 0
+                    }));
+                    return {
+                        success: true,
+                        data: enriched,
+                        total_count: enriched.length,
+                        limit,
+                        truncated: enriched.length >= limit
+                    };
                 }
                 case "create": {
                     const { data, error } = await supabase
@@ -1129,56 +1242,143 @@ const handlers = {
     },
     // ===========================================================================
     // 7. ANALYTICS - Unified analytics & data discovery
-    // Actions: summary, by_location, detailed, discover, employee
+    // Actions: summary, by_location, detailed, discover, employee, custom
+    // Supports: preset periods OR custom date ranges (start_date, end_date)
+    // Also supports: days_back for "last N days" queries
     // ===========================================================================
     analytics: async (supabase, args, storeId) => {
         const action = args.action || "summary";
-        const period = args.period || "last_30";
+        const period = args.period;
         const locationId = args.location_id;
+        // Custom date range support
+        const customStartDate = args.start_date;
+        const customEndDate = args.end_date;
+        const daysBack = args.days_back;
         try {
-            // Calculate date range
+            // Calculate date range - prioritize custom dates, then days_back, then period
             const today = new Date();
             let startDate;
-            switch (period) {
-                case "today":
-                    startDate = today.toISOString().split("T")[0];
-                    break;
-                case "yesterday":
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    startDate = yesterday.toISOString().split("T")[0];
-                    break;
-                case "last_7":
-                    const week = new Date(today);
-                    week.setDate(week.getDate() - 7);
-                    startDate = week.toISOString().split("T")[0];
-                    break;
-                case "last_30":
-                default:
-                    const month = new Date(today);
-                    month.setDate(month.getDate() - 30);
-                    startDate = month.toISOString().split("T")[0];
-                    break;
-                case "last_90":
-                    const quarter = new Date(today);
-                    quarter.setDate(quarter.getDate() - 90);
-                    startDate = quarter.toISOString().split("T")[0];
-                    break;
-                case "ytd":
-                    startDate = `${today.getFullYear()}-01-01`;
-                    break;
-                case "mtd":
-                    startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-                    break;
+            let endDate = today.toISOString().split("T")[0];
+            if (customStartDate) {
+                // Custom date range provided
+                startDate = customStartDate;
+                if (customEndDate) {
+                    endDate = customEndDate;
+                }
+            }
+            else if (daysBack && daysBack > 0) {
+                // Dynamic days back (e.g., last 365 days, last 180 days)
+                const start = new Date(today);
+                start.setDate(start.getDate() - daysBack);
+                startDate = start.toISOString().split("T")[0];
+            }
+            else {
+                // Use preset period
+                const periodToUse = period || "last_30";
+                switch (periodToUse) {
+                    case "today":
+                        startDate = today.toISOString().split("T")[0];
+                        break;
+                    case "yesterday":
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        startDate = yesterday.toISOString().split("T")[0];
+                        endDate = startDate;
+                        break;
+                    case "last_7":
+                        const week = new Date(today);
+                        week.setDate(week.getDate() - 7);
+                        startDate = week.toISOString().split("T")[0];
+                        break;
+                    case "last_30":
+                        const month = new Date(today);
+                        month.setDate(month.getDate() - 30);
+                        startDate = month.toISOString().split("T")[0];
+                        break;
+                    case "last_90":
+                        const quarter = new Date(today);
+                        quarter.setDate(quarter.getDate() - 90);
+                        startDate = quarter.toISOString().split("T")[0];
+                        break;
+                    case "last_180":
+                        const half = new Date(today);
+                        half.setDate(half.getDate() - 180);
+                        startDate = half.toISOString().split("T")[0];
+                        break;
+                    case "last_365":
+                        const year = new Date(today);
+                        year.setDate(year.getDate() - 365);
+                        startDate = year.toISOString().split("T")[0];
+                        break;
+                    case "ytd":
+                        startDate = `${today.getFullYear()}-01-01`;
+                        break;
+                    case "mtd":
+                        startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+                        break;
+                    case "last_year":
+                        startDate = `${today.getFullYear() - 1}-01-01`;
+                        endDate = `${today.getFullYear() - 1}-12-31`;
+                        break;
+                    case "all_time":
+                        startDate = "2020-01-01"; // Reasonable start date
+                        break;
+                    default:
+                        // Default to last 30 days
+                        const defaultMonth = new Date(today);
+                        defaultMonth.setDate(defaultMonth.getDate() - 30);
+                        startDate = defaultMonth.toISOString().split("T")[0];
+                }
             }
             switch (action) {
-                case "summary":
-                case "by_location":
-                case "detailed": {
+                case "summary": {
+                    // Use RPC function for efficient server-side aggregation (no row limits)
+                    const { data: rpcResult, error: rpcError } = await supabase.rpc("get_sales_analytics", {
+                        p_store_id: storeId || null,
+                        p_start_date: startDate,
+                        p_end_date: endDate,
+                        p_location_id: locationId || null
+                    });
+                    if (rpcError) {
+                        // Fallback to client-side aggregation if RPC not deployed
+                        console.warn("[Analytics] RPC failed, falling back to client-side:", rpcError.message);
+                    }
+                    else if (rpcResult) {
+                        // RPC returned data - use it directly
+                        return {
+                            success: true,
+                            data: {
+                                period: period || (daysBack ? `last_${daysBack}` : "custom"),
+                                dateRange: rpcResult.dateRange,
+                                summary: {
+                                    grossSales: rpcResult.grossSales,
+                                    netSales: rpcResult.netSales,
+                                    totalRevenue: rpcResult.totalRevenue,
+                                    totalCogs: rpcResult.totalCogs,
+                                    totalProfit: rpcResult.totalProfit,
+                                    taxAmount: rpcResult.taxAmount,
+                                    discountAmount: rpcResult.discountAmount,
+                                    shippingAmount: rpcResult.shippingAmount,
+                                    totalOrders: rpcResult.totalOrders,
+                                    completedOrders: rpcResult.completedOrders,
+                                    cancelledOrders: rpcResult.cancelledOrders,
+                                    uniqueCustomers: rpcResult.uniqueCustomers,
+                                    totalQuantity: rpcResult.totalQuantity,
+                                    avgOrderValue: rpcResult.avgOrderValue,
+                                    profitMargin: `${rpcResult.profitMargin}%`,
+                                    avgDailyRevenue: rpcResult.avgDailyRevenue,
+                                    avgDailyOrders: rpcResult.avgDailyOrders
+                                },
+                                rowCount: rpcResult.rowCount
+                            }
+                        };
+                    }
+                    // Fallback: client-side aggregation
                     let q = supabase
                         .from("v_daily_sales")
                         .select("*")
                         .gte("sale_date", startDate)
+                        .lte("sale_date", endDate)
                         .order("sale_date", { ascending: false });
                     if (storeId)
                         q = q.eq("store_id", storeId);
@@ -1192,13 +1392,56 @@ const handlers = {
                         netSales: acc.netSales + parseFloat(day.net_sales || 0),
                         taxAmount: acc.taxAmount + parseFloat(day.total_tax || 0),
                         discountAmount: acc.discountAmount + parseFloat(day.total_discounts || 0),
+                        shippingAmount: acc.shippingAmount + parseFloat(day.total_shipping || 0),
                         totalOrders: acc.totalOrders + parseInt(day.order_count || 0),
                         completedOrders: acc.completedOrders + parseInt(day.completed_orders || 0),
-                        uniqueCustomers: acc.uniqueCustomers + parseInt(day.unique_customers || 0)
+                        cancelledOrders: acc.cancelledOrders + parseInt(day.cancelled_orders || 0),
+                        uniqueCustomers: acc.uniqueCustomers + parseInt(day.unique_customers || 0),
+                        totalCogs: acc.totalCogs + parseFloat(day.total_cogs || 0),
+                        totalProfit: acc.totalProfit + parseFloat(day.total_profit || 0),
+                        totalRevenue: acc.totalRevenue + parseFloat(day.total_revenue || 0)
                     }), {
-                        grossSales: 0, netSales: 0, taxAmount: 0, discountAmount: 0,
-                        totalOrders: 0, completedOrders: 0, uniqueCustomers: 0
+                        grossSales: 0, netSales: 0, taxAmount: 0, discountAmount: 0, shippingAmount: 0,
+                        totalOrders: 0, completedOrders: 0, cancelledOrders: 0, uniqueCustomers: 0,
+                        totalCogs: 0, totalProfit: 0, totalRevenue: 0
                     });
+                    const profitMargin = totals.netSales > 0
+                        ? Math.round((totals.totalProfit / totals.netSales) * 10000) / 100
+                        : 0;
+                    const startD = new Date(startDate);
+                    const endD = new Date(endDate);
+                    const daysDiff = Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    return {
+                        success: true,
+                        data: {
+                            period: period || (daysBack ? `last_${daysBack}` : "custom"),
+                            dateRange: { from: startDate, to: endDate, days: daysDiff },
+                            summary: {
+                                ...totals,
+                                avgOrderValue: totals.totalOrders > 0 ? Math.round((totals.netSales / totals.totalOrders) * 100) / 100 : 0,
+                                profitMargin: `${profitMargin}%`,
+                                avgDailyRevenue: daysDiff > 0 ? Math.round((totals.netSales / daysDiff) * 100) / 100 : 0,
+                                avgDailyOrders: daysDiff > 0 ? Math.round((totals.totalOrders / daysDiff) * 10) / 10 : 0
+                            },
+                            rowCount: data?.length || 0
+                        }
+                    };
+                }
+                case "by_location":
+                case "detailed": {
+                    let q = supabase
+                        .from("v_daily_sales")
+                        .select("*")
+                        .gte("sale_date", startDate)
+                        .lte("sale_date", endDate)
+                        .order("sale_date", { ascending: false });
+                    if (storeId)
+                        q = q.eq("store_id", storeId);
+                    if (locationId)
+                        q = q.eq("location_id", locationId);
+                    const { data, error } = await q;
+                    if (error)
+                        return { success: false, error: error.message };
                     if (action === "by_location") {
                         const byLocation = {};
                         for (const row of data || []) {
@@ -1211,16 +1454,45 @@ const handlers = {
                         }
                         return { success: true, data: { period, byLocation: Object.entries(byLocation).map(([id, s]) => ({ locationId: id, ...s })) } };
                     }
+                    // Detailed action - return daily data with totals
+                    const totals = (data || []).reduce((acc, day) => ({
+                        grossSales: acc.grossSales + parseFloat(day.gross_sales || 0),
+                        netSales: acc.netSales + parseFloat(day.net_sales || 0),
+                        taxAmount: acc.taxAmount + parseFloat(day.total_tax || 0),
+                        discountAmount: acc.discountAmount + parseFloat(day.total_discounts || 0),
+                        shippingAmount: acc.shippingAmount + parseFloat(day.total_shipping || 0),
+                        totalOrders: acc.totalOrders + parseInt(day.order_count || 0),
+                        completedOrders: acc.completedOrders + parseInt(day.completed_orders || 0),
+                        cancelledOrders: acc.cancelledOrders + parseInt(day.cancelled_orders || 0),
+                        uniqueCustomers: acc.uniqueCustomers + parseInt(day.unique_customers || 0),
+                        totalCogs: acc.totalCogs + parseFloat(day.total_cogs || 0),
+                        totalProfit: acc.totalProfit + parseFloat(day.total_profit || 0),
+                        totalRevenue: acc.totalRevenue + parseFloat(day.total_revenue || 0)
+                    }), {
+                        grossSales: 0, netSales: 0, taxAmount: 0, discountAmount: 0, shippingAmount: 0,
+                        totalOrders: 0, completedOrders: 0, cancelledOrders: 0, uniqueCustomers: 0,
+                        totalCogs: 0, totalProfit: 0, totalRevenue: 0
+                    });
+                    const profitMargin = totals.netSales > 0
+                        ? Math.round((totals.totalProfit / totals.netSales) * 10000) / 100
+                        : 0;
+                    const startD = new Date(startDate);
+                    const endD = new Date(endDate);
+                    const daysDiff = Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                     return {
                         success: true,
                         data: {
-                            period,
-                            dateRange: { from: startDate, to: today.toISOString().split("T")[0] },
+                            period: period || (daysBack ? `last_${daysBack}` : "custom"),
+                            dateRange: { from: startDate, to: endDate, days: daysDiff },
                             summary: {
                                 ...totals,
-                                avgOrderValue: totals.totalOrders > 0 ? Math.round((totals.netSales / totals.totalOrders) * 100) / 100 : 0
+                                avgOrderValue: totals.totalOrders > 0 ? Math.round((totals.netSales / totals.totalOrders) * 100) / 100 : 0,
+                                profitMargin: `${profitMargin}%`,
+                                avgDailyRevenue: daysDiff > 0 ? Math.round((totals.netSales / daysDiff) * 100) / 100 : 0,
+                                avgDailyOrders: daysDiff > 0 ? Math.round((totals.totalOrders / daysDiff) * 10) / 10 : 0
                             },
-                            ...(action === "detailed" ? { daily: (data || []).slice(0, 30) } : { trend: (data || []).slice(0, 14) })
+                            daily: (data || []).slice(0, 90),
+                            rowCount: data?.length || 0
                         }
                     };
                 }
@@ -1250,8 +1522,138 @@ const handlers = {
                     }
                     return { success: true, data: byEmployee };
                 }
+                // ==== NEW INTELLIGENCE ACTIONS ====
+                case "customers":
+                case "customer_intelligence": {
+                    // Customer LTV, RFM segmentation, cohorts
+                    const { data, error } = await supabase.rpc("get_customer_intelligence", {
+                        p_store_id: storeId || null
+                    });
+                    if (error)
+                        return { success: false, error: error.message };
+                    return { success: true, data };
+                }
+                case "products":
+                case "product_intelligence": {
+                    // Product velocity, ABC analysis, performance tiers
+                    const { data, error } = await supabase.rpc("get_product_intelligence", {
+                        p_store_id: storeId || null
+                    });
+                    if (error)
+                        return { success: false, error: error.message };
+                    return { success: true, data };
+                }
+                case "inventory_intelligence": {
+                    // Inventory turnover, dead stock, overstock risk
+                    const { data, error } = await supabase.rpc("get_inventory_intelligence", {
+                        p_store_id: storeId || null
+                    });
+                    if (error)
+                        return { success: false, error: error.message };
+                    return { success: true, data };
+                }
+                case "marketing":
+                case "marketing_intelligence": {
+                    // UTM attribution, channel performance, conversion rates
+                    const { data, error } = await supabase.rpc("get_marketing_intelligence", {
+                        p_store_id: storeId || null,
+                        p_start_date: startDate,
+                        p_end_date: endDate
+                    });
+                    if (error)
+                        return { success: false, error: error.message };
+                    return { success: true, data };
+                }
+                case "fraud":
+                case "fraud_detection": {
+                    // Risk scores, suspicious activity patterns
+                    let q = supabase
+                        .from("v_fraud_detection")
+                        .select("*")
+                        .order("risk_score", { ascending: false })
+                        .limit(100);
+                    if (storeId)
+                        q = q.eq("store_id", storeId);
+                    if (args.risk_level)
+                        q = q.eq("risk_level", args.risk_level);
+                    const { data, error } = await q;
+                    if (error)
+                        return { success: false, error: error.message };
+                    const summary = {
+                        totalOrders: data?.length || 0,
+                        highRisk: data?.filter(o => o.risk_level === "high").length || 0,
+                        mediumRisk: data?.filter(o => o.risk_level === "medium").length || 0,
+                        avgRiskScore: data?.length ? Math.round(data.reduce((s, o) => s + o.risk_score, 0) / data.length) : 0,
+                        orders: data
+                    };
+                    return { success: true, data: summary };
+                }
+                case "employee_performance": {
+                    // Detailed employee metrics from v_employee_performance
+                    let q = supabase
+                        .from("v_employee_performance")
+                        .select("*")
+                        .order("total_revenue", { ascending: false });
+                    if (storeId)
+                        q = q.eq("store_id", storeId);
+                    const { data, error } = await q;
+                    if (error)
+                        return { success: false, error: error.message };
+                    return { success: true, data };
+                }
+                case "behavior":
+                case "behavioral_analytics": {
+                    // UX metrics, session quality, bounce rates
+                    let q = supabase
+                        .from("v_behavioral_analytics")
+                        .select("*")
+                        .gte("visit_date", startDate)
+                        .lte("visit_date", endDate);
+                    if (storeId)
+                        q = q.eq("store_id", storeId);
+                    const { data, error } = await q;
+                    if (error)
+                        return { success: false, error: error.message };
+                    // Aggregate
+                    const totals = (data || []).reduce((acc, row) => ({
+                        sessions: acc.sessions + (row.sessions || 0),
+                        pageViews: acc.pageViews + (row.page_views || 0),
+                        rageClicks: acc.rageClicks + (row.total_rage_clicks || 0),
+                        uxIssues: acc.uxIssues + (row.sessions_with_ux_issues || 0)
+                    }), { sessions: 0, pageViews: 0, rageClicks: 0, uxIssues: 0 });
+                    return {
+                        success: true,
+                        data: {
+                            summary: {
+                                ...totals,
+                                avgPagesPerSession: totals.sessions ? Math.round((totals.pageViews / totals.sessions) * 100) / 100 : 0,
+                                uxIssueRate: totals.sessions ? Math.round((totals.uxIssues / totals.sessions) * 10000) / 100 : 0
+                            },
+                            byDevice: data?.reduce((acc, row) => {
+                                const device = row.device_type || "unknown";
+                                if (!acc[device])
+                                    acc[device] = { sessions: 0, pageViews: 0 };
+                                acc[device].sessions += row.sessions || 0;
+                                acc[device].pageViews += row.page_views || 0;
+                                return acc;
+                            }, {})
+                        }
+                    };
+                }
+                case "full":
+                case "business_intelligence": {
+                    // Master intelligence - all metrics in one call
+                    const { data, error } = await supabase.rpc("get_business_intelligence", {
+                        p_store_id: storeId || null,
+                        p_start_date: startDate,
+                        p_end_date: endDate
+                    });
+                    if (error)
+                        return { success: false, error: error.message };
+                    return { success: true, data };
+                }
                 default:
-                    return { success: false, error: `Unknown action: ${action}. Use: summary, by_location, detailed, discover, employee` };
+                    return { success: false, error: `Unknown action: ${action}. Use: summary, by_location, detailed, discover, employee, customers, products, inventory_intelligence, marketing, fraud, employee_performance, behavior, full` };
             }
         }
         catch (err) {
@@ -1518,33 +1920,117 @@ const handlers = {
         }
     },
 };
-async function logToolExecution(supabase, toolName, action, args, result, durationMs, storeId, context) {
+// Generate W3C-compliant span ID (16 hex chars)
+function generateSpanId() {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+// Generate W3C-compliant trace ID (32 hex chars)
+function generateTraceId() {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function logToolExecution(supabase, toolName, action, args, result, durationMs, storeId, context, startTime) {
     try {
-        // Sanitize args - remove sensitive data
-        const sanitizedArgs = { ...args };
-        delete sanitizedArgs.password;
-        delete sanitizedArgs.secret;
-        delete sanitizedArgs.token;
-        delete sanitizedArgs.api_key;
-        const { data } = await supabase.from("audit_logs").insert({
+        // Sanitize args - remove sensitive data (Anthropic best practice: comprehensive pattern matching)
+        const SENSITIVE_PATTERNS = [
+            /key/i,
+            /secret/i,
+            /token/i,
+            /password/i,
+            /auth/i,
+            /credential/i,
+            /bearer/i,
+            /api.?key/i,
+            /private/i
+        ];
+        const sanitizedArgs = {};
+        for (const [key, value] of Object.entries(args)) {
+            if (SENSITIVE_PATTERNS.some(pattern => pattern.test(key))) {
+                sanitizedArgs[key] = "[REDACTED]";
+            }
+            else {
+                sanitizedArgs[key] = value;
+            }
+        }
+        // Generate W3C Trace Context IDs
+        const spanId = context?.spanId || generateSpanId();
+        const traceId = context?.traceId || context?.requestId || generateTraceId();
+        const endTime = new Date();
+        const actualStartTime = startTime || new Date(endTime.getTime() - durationMs);
+        // Build the insert payload with BOTH denormalized columns and JSONB details
+        const corePayload = {
             action: `tool.${toolName}${action ? `.${action}` : ""}`,
             severity: result.success ? "info" : "error",
             store_id: storeId || null,
             user_id: context?.userId || null,
             resource_type: "mcp_tool",
             resource_id: toolName,
-            request_id: context?.requestId || null,
+            request_id: context?.requestId || traceId,
             parent_id: context?.parentId || null,
+            duration_ms: durationMs,
+            error_message: result.error || null,
+            // Denormalized OTEL columns for fast queries/aggregations
+            trace_id: traceId,
+            span_id: spanId,
+            trace_flags: context?.traceFlags ?? 1,
+            span_kind: "INTERNAL",
+            service_name: context?.serviceName || "agent-server",
+            service_version: context?.serviceVersion || "3.0.0",
+            status_code: result.success ? "OK" : "ERROR",
+            start_time: actualStartTime.toISOString(),
+            end_time: endTime.toISOString(),
+            error_type: result.errorType || null,
+            retryable: result.retryable ?? false,
+            // AI telemetry columns (if executing in agent context)
+            model: context?.model || null,
+            input_tokens: context?.inputTokens || null,
+            output_tokens: context?.outputTokens || null,
+            total_cost: context?.totalCost || null,
+            turn_number: context?.turnNumber || null,
+            conversation_id: context?.conversationId || null,
+            // JSONB details for flexible/extended attributes
             details: {
+                // Source and agent info (for UI filtering)
                 source: context?.source || "api",
                 agent_id: context?.agentId || null,
                 agent_name: context?.agentName || null,
+                // Tool execution details (for UI display)
+                tool_input: sanitizedArgs,
+                tool_result: result.success ? (typeof result.data === 'string' ? result.data.slice(0, 1000) : result.data) : null,
+                tool_error: result.error || null,
+                timed_out: result.timedOut || false,
+                // Legacy/backwards compatibility
                 args: sanitizedArgs,
-                result: result.success ? result.data : null
-            },
-            error_message: result.error || null,
-            duration_ms: durationMs
-        }).select("id").single();
+                result: result.success ? result.data : null,
+                // OTEL context embedded (for tools that need full context)
+                otel: {
+                    trace_id: traceId,
+                    span_id: spanId,
+                    parent_span_id: context?.parentSpanId || null,
+                    trace_flags: context?.traceFlags ?? 1,
+                    span_kind: "INTERNAL",
+                    service_name: context?.serviceName || "agent-server",
+                    service_version: context?.serviceVersion || "3.0.0",
+                    status_code: result.success ? "OK" : "ERROR",
+                    error_type: result.errorType || null,
+                    retryable: result.retryable ?? false
+                },
+                // OTEL resource attributes
+                resource_attributes: {
+                    "tool.name": toolName,
+                    "tool.action": action || null,
+                    "ai.agent.id": context?.agentId || null,
+                    "ai.agent.name": context?.agentName || null,
+                    "ai.model": context?.model || null
+                }
+            }
+        };
+        // Insert using existing schema - OTEL data is embedded in details JSONB
+        // This works without any migration and the UI can parse details.otel and details.ai
+        const { data } = await supabase.from("audit_logs").insert(corePayload).select("id").single();
         return data?.id || null;
     }
     catch (err) {
@@ -1557,31 +2043,44 @@ async function logToolExecution(supabase, toolName, action, args, result, durati
 // EXECUTOR
 // ============================================================================
 export async function executeTool(supabase, toolName, args, storeId, context) {
-    const startTime = Date.now();
+    const startDate = new Date();
+    const startTime = startDate.getTime();
     const action = args.action;
     const handler = handlers[toolName];
     if (!handler) {
         const result = {
             success: false,
-            error: `Tool "${toolName}" not found. Available tools: ${Object.keys(handlers).join(", ")}`
+            error: `Tool "${toolName}" not found. Available tools: ${Object.keys(handlers).join(", ")}`,
+            errorType: ToolErrorType.VALIDATION,
+            retryable: false
         };
-        // Log failed tool lookup
-        await logToolExecution(supabase, toolName, action, args, result, Date.now() - startTime, storeId, context);
+        // Log failed tool lookup with OTEL fields
+        await logToolExecution(supabase, toolName, action, args, result, Date.now() - startTime, storeId, context, startDate);
         return result;
     }
     let result;
     try {
         result = await handler(supabase, args, storeId);
+        // If handler returned an error without classification, classify it
+        if (!result.success && !result.errorType) {
+            const classification = classifyError({ message: result.error });
+            result.errorType = classification.errorType;
+            result.retryable = classification.retryable;
+        }
     }
     catch (err) {
+        // Classify the caught error
+        const classification = classifyError(err);
         result = {
             success: false,
-            error: `Tool execution error: ${err}`
+            error: `Tool execution error: ${err.message || err}`,
+            errorType: classification.errorType,
+            retryable: classification.retryable
         };
     }
-    // Log the execution
+    // Log the execution with full OTEL telemetry
     const durationMs = Date.now() - startTime;
-    await logToolExecution(supabase, toolName, action, args, result, durationMs, storeId, context);
+    await logToolExecution(supabase, toolName, action, args, result, durationMs, storeId, context, startDate);
     return result;
 }
 export function getImplementedTools() {
