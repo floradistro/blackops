@@ -4,7 +4,7 @@ import SwiftUI
 // Thread list with mailbox filtering for AI-powered email inbox
 
 struct InboxListView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @Binding var selection: SDSidebarItem?
     @State private var searchText = ""
 

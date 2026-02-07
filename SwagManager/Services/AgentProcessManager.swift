@@ -1,5 +1,27 @@
 import Foundation
 import Combine
+import SwiftUI
+import Darwin
+
+// MARK: - Agent State (Unified)
+// Single source of truth for agent status - prevents multiple @Published mutations
+
+enum AgentState: Equatable {
+    case idle
+    case launching
+    case running
+    case failed(String)
+
+    var isRunning: Bool {
+        if case .running = self { return true }
+        return false
+    }
+
+    var error: String? {
+        if case .failed(let msg) = self { return msg }
+        return nil
+    }
+}
 
 // MARK: - Agent Process Manager
 // Manages the lifecycle of the local Node.js agent server
@@ -9,11 +31,16 @@ import Combine
 class AgentProcessManager: ObservableObject {
     static let shared = AgentProcessManager()
 
-    // MARK: - Published State
+    // MARK: - Published State (SINGLE source of truth)
 
-    @Published private(set) var isRunning = false
+    /// Unified agent state - ONE @Published var to prevent layout recursion
+    @Published private(set) var state: AgentState = .idle
+
+    /// Convenience accessors for backwards compatibility
+    var isRunning: Bool { state.isRunning }
+    var error: String? { state.error }
+
     @Published private(set) var lastOutput: String = ""
-    @Published private(set) var error: String?
 
     // MARK: - Process
 
@@ -37,19 +64,67 @@ class AgentProcessManager: ObservableObject {
         #endif
     }
 
+    // MARK: - State Transition (SINGLE POINT OF MUTATION)
+
+    /// Transition to new state - coalesced, deferred, guarded against duplicates
+    /// Uses withTransaction to suppress animations and prevent layout recursion
+    private func transition(to newState: AgentState, reason: String = "") {
+        // Guard against duplicate emissions - critical for preventing redundant invalidations
+        guard state != newState else {
+            FreezeDebugger.logStateChange("agentState (SKIPPED - same)", old: state, new: newState)
+            return
+        }
+
+        FreezeDebugger.transitionAgentState(
+            newState.isRunning ? .running : (newState.error != nil ? .failed : .idle),
+            reason: reason
+        )
+        FreezeDebugger.logStateChange("agentState", old: state, new: newState)
+
+        // Emit state change with animations disabled to prevent layout recursion
+        // This ensures observing views update without triggering animation passes
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            state = newState
+        }
+    }
+
+    /// Deferred transition - use when called from callbacks that might be during layout
+    private func transitionDeferred(to newState: AgentState, reason: String = "") {
+        // Guard against duplicate emissions BEFORE deferring
+        guard state != newState else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.transition(to: newState, reason: reason)
+        }
+    }
+
     // MARK: - Lifecycle
 
     func start() {
-        guard !isRunning else { return }
+        print("[AgentProcessManager] start() called, isRunning=\(isRunning)")
+        guard !isRunning else {
+            print("[AgentProcessManager] Already running, skipping")
+            return
+        }
 
-        error = nil
+        FreezeDebugger.printRunloopContext("AgentProcessManager.start()")
+
+        // Transition to launching (deferred to avoid layout recursion if called from .task)
+        transitionDeferred(to: .launching, reason: "start() called")
 
         // If port is already in use, just connect to the existing server
-        if isPortInUse(port) {
+        let portInUse = isPortInUse(port)
+        print("[AgentProcessManager] Port \(port) in use: \(portInUse)")
+
+        if portInUse {
             print("[AgentProcessManager] Port \(port) already in use — connecting to existing server")
-            isRunning = true
+            // Set state immediately (not deferred) so AgentClient.connect() sees isRunning=true
+            transition(to: .running, reason: "existing server on port")
             Task {
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s
+                print("[AgentProcessManager] Calling AgentClient.connect()")
                 AgentClient.shared.connect()
             }
             return
@@ -58,13 +133,13 @@ class AgentProcessManager: ObservableObject {
         // Check if npm/node is available
         guard FileManager.default.fileExists(atPath: "/usr/local/bin/node") ||
               FileManager.default.fileExists(atPath: "/opt/homebrew/bin/node") else {
-            error = "Node.js not found. Please install Node.js."
+            transitionDeferred(to: .failed("Node.js not found. Please install Node.js."), reason: "Node.js not found")
             return
         }
 
         // Check if server directory exists
         guard FileManager.default.fileExists(atPath: serverPath) else {
-            error = "Agent server not found at \(serverPath)"
+            transitionDeferred(to: .failed("Agent server not found at \(serverPath)"), reason: "server path not found")
             return
         }
 
@@ -98,42 +173,67 @@ class AgentProcessManager: ObservableObject {
             }
         }
 
-        errorPipe?.fileHandleForReading.readabilityHandler = { [weak self] handle in
+        errorPipe?.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             if let output = String(data: data, encoding: .utf8), !output.isEmpty {
-                Task { @MainActor in
-                    print("[AgentServer Error] \(output)")
-                }
+                print("[AgentServer Error] \(output)")
             }
         }
 
-        // Handle termination
+        // Handle termination - ONE deferred state change
         process?.terminationHandler = { [weak self] process in
-            Task { @MainActor in
-                self?.isRunning = false
-                if process.terminationStatus != 0 {
-                    self?.error = "Agent server exited with code \(process.terminationStatus)"
+            let exitCode = process.terminationStatus
+            // Must dispatch to main since terminationHandler runs on background thread
+            DispatchQueue.main.async {
+                if exitCode != 0 {
+                    self?.transition(to: .failed("Agent server exited with code \(exitCode)"), reason: "process terminated")
+                } else {
+                    self?.transition(to: .idle, reason: "process terminated normally")
                 }
             }
         }
 
         do {
             try process?.run()
-            isRunning = true
-            print("[AgentProcessManager] Started agent server on port \(port)")
+            print("[AgentProcessManager] Launched agent server process...")
 
-            // Give server time to start, then connect client
+            // Wait briefly then verify process is still running
             Task {
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+
+                // Check if process died immediately (e.g., npx not found)
+                guard let proc = self.process, proc.isRunning else {
+                    // ONE state change for failure
+                    let errorMsg = self.state.error ?? "Agent server process exited immediately. Check Node.js installation."
+                    self.transitionDeferred(to: .failed(errorMsg), reason: "process died immediately")
+                    print("[AgentProcessManager] Process died - NOT connecting client")
+                    return
+                }
+
+                // Process is running - ONE state change
+                self.transitionDeferred(to: .running, reason: "process verified running")
+                print("[AgentProcessManager] Agent server running on port \(self.port)")
+
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 more seconds
+
+                // Final check before connecting
+                guard self.isRunning, self.process?.isRunning == true else {
+                    print("[AgentProcessManager] Process stopped - NOT connecting client")
+                    return
+                }
+
                 AgentClient.shared.connect()
             }
         } catch {
-            self.error = "Failed to start agent server: \(error.localizedDescription)"
+            // ONE state change for failure
+            transitionDeferred(to: .failed("Failed to start agent server: \(error.localizedDescription)"), reason: "launch error")
             print("[AgentProcessManager] Error: \(error)")
         }
     }
 
     func stop() {
+        FreezeDebugger.printRunloopContext("AgentProcessManager.stop()")
+
         AgentClient.shared.disconnect()
 
         if let process = process {
@@ -145,7 +245,9 @@ class AgentProcessManager: ObservableObject {
         } else {
             print("[AgentProcessManager] Disconnected from external server")
         }
-        isRunning = false
+
+        // ONE state change
+        transition(to: .idle, reason: "stop() called")
     }
 
     func restart() {
@@ -191,29 +293,35 @@ class AgentProcessManager: ObservableObject {
     // MARK: - Port Check
 
     private func isPortInUse(_ port: Int) -> Bool {
-        let process = Process()
-        let pipe = Pipe()
+        // Use socket connection test instead of lsof (works in app sandbox)
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = in_port_t(port).bigEndian
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
 
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        process.arguments = ["-i", ":\(port)"]
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
-            return !output.isEmpty && output.contains("LISTEN")
-        } catch {
+        let sock = socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else {
+            print("[AgentProcessManager] Failed to create socket")
             return false
         }
+        defer { close(sock) }
+
+        // Try to connect (blocking, but fast if port is open)
+        let result = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+
+        let inUse = (result == 0)
+        print("[AgentProcessManager] Port \(port) in use: \(inUse)")
+        return inUse
     }
 
     /// Call this when external server is detected to clear stale errors
     func clearErrorIfConnected() {
-        if AgentClient.shared.isConnected {
-            error = nil
+        if AgentClient.shared.isConnected && state.error != nil {
+            transition(to: .running, reason: "connected - clearing error")
         }
     }
 }

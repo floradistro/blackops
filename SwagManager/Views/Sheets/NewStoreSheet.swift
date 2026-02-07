@@ -4,7 +4,7 @@ import SwiftUI
 // Minimal monochromatic theme
 
 struct NewStoreSheet: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @ObservedObject var authManager: AuthManager
     @Environment(\.dismiss) private var dismiss
 

@@ -56,17 +56,11 @@ extension EditorStore {
     // MARK: - Clear All Selections
 
     private func clearAllSelections() {
-        selectedCreation = nil
-        selectedProduct = nil
         selectedConversation = nil
         selectedCategory = nil
-        selectedBrowserSession = nil
-        selectedOrder = nil
         selectedLocation = nil
         selectedQueue = nil
-        selectedCustomer = nil
         selectedEmail = nil
-        editedCode = nil
     }
 }
 
@@ -76,33 +70,17 @@ extension OpenTabItem {
     @MainActor
     func activateState(in store: EditorStore) {
         switch self {
-        case .creation(let c):
-            store.selectedCreation = c
-            store.editedCode = c.reactCode
-
-        case .product(let p):
-            store.selectedProduct = p
-
         case .conversation(let c):
             store.selectedConversation = c
 
         case .category(let c):
             store.selectedCategory = c
 
-        case .browserSession(let s):
-            store.selectedBrowserSession = s
-
-        case .order(let o):
-            store.selectedOrder = o
-
         case .location(let l):
             store.selectedLocation = l
 
         case .queue(let l):
             store.selectedQueue = l
-
-        case .customer(let c):
-            store.selectedCustomer = c
 
         case .email(let e):
             store.selectedEmail = e

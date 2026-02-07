@@ -17,15 +17,10 @@ extension EditorStore {
 
             // Collapse all individual sections
             sidebarCatalogExpanded = false
-            sidebarCreationsExpanded = false
             sidebarChatExpanded = false
             sidebarCRMExpanded = false
             sidebarLocationsExpanded = false
-            sidebarQueuesExpanded = false
-            sidebarBrowserExpanded = false
             sidebarEmailsExpanded = false
-            sidebarOrdersExpanded = false
-            sidebarCustomersExpanded = false
 
             // Collapse campaign subsections
             sidebarEmailCampaignsExpanded = false
@@ -40,12 +35,9 @@ extension EditorStore {
     var expandedSectionsCount: Int {
         var count = 0
         if sidebarCatalogExpanded { count += 1 }
-        if sidebarCreationsExpanded { count += 1 }
         if sidebarChatExpanded { count += 1 }
         if sidebarCRMExpanded { count += 1 }
         if sidebarLocationsExpanded { count += 1 }
-        if sidebarQueuesExpanded { count += 1 }
-        if sidebarBrowserExpanded { count += 1 }
         if sidebarEmailsExpanded { count += 1 }
         return count
     }
@@ -56,24 +48,18 @@ extension EditorStore {
         guard expandedSectionsCount > 2 else { return }
 
         withAnimation(.easeOut(duration: 0.2)) {
-            // Never auto-collapse Workspace sections (Queues, Locations)
-            let workspaceSections: [SidebarSection] = [.queues, .locations]
+            // Never auto-collapse Workspace sections (Locations)
+            let workspaceSections: [SidebarSection] = [.locations]
 
             // Collapse sections except workspace and the one just expanded
             if justExpanded != .catalogs && !workspaceSections.contains(.catalogs) {
                 sidebarCatalogExpanded = false
-            }
-            if justExpanded != .creations && !workspaceSections.contains(.creations) {
-                sidebarCreationsExpanded = false
             }
             if justExpanded != .communications && !workspaceSections.contains(.communications) {
                 sidebarChatExpanded = false
             }
             if justExpanded != .crm && !workspaceSections.contains(.crm) {
                 sidebarCRMExpanded = false
-            }
-            if justExpanded != .browser && !workspaceSections.contains(.browser) {
-                sidebarBrowserExpanded = false
             }
             if justExpanded != .emails && !workspaceSections.contains(.emails) {
                 sidebarEmailsExpanded = false
@@ -88,24 +74,14 @@ extension EditorStore {
         switch section {
         case .catalogs:
             sidebarCatalogExpanded = true
-        case .creations:
-            sidebarCreationsExpanded = true
         case .communications:
             sidebarChatExpanded = true
         case .crm:
             sidebarCRMExpanded = true
         case .locations:
             sidebarLocationsExpanded = true
-        case .queues:
-            sidebarQueuesExpanded = true
-        case .browser:
-            sidebarBrowserExpanded = true
         case .emails:
             sidebarEmailsExpanded = true
-        case .orders:
-            sidebarOrdersExpanded = true
-        case .customers:
-            sidebarCustomersExpanded = true
         }
 
         autoCollapseIfNeeded(justExpanded: section)
@@ -116,13 +92,8 @@ extension EditorStore {
 
 enum SidebarSection {
     case catalogs
-    case creations
     case communications
     case crm
     case locations
-    case queues
-    case browser
     case emails
-    case orders
-    case customers
 }

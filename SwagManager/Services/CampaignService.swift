@@ -3,18 +3,15 @@ import Supabase
 
 @MainActor
 class CampaignService {
-    // Use service_role client to bypass RLS for admin operations
-    private let client: SupabaseClient
+    // Singleton - use shared instance to avoid multiple SupabaseClient instances
+    static let shared = CampaignService()
 
-    init() {
-        // Service role key - bypasses RLS, safe for admin operations in desktop app
-        let serviceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk5NzIzMywiZXhwIjoyMDc2NTczMjMzfQ.l0NvBbS2JQWPObtWeVD2M2LD866A2tgLmModARYNnbI"
-
-        client = SupabaseClient(
-            supabaseURL: URL(string: "https://uaednwpxursknmwdeejn.supabase.co")!,
-            supabaseKey: serviceRoleKey
-        )
+    // Use SupabaseService's admin client to bypass RLS for admin operations
+    private var client: SupabaseClient {
+        SupabaseService.shared.adminClient
     }
+
+    private init() {}
 
     // MARK: - Email Campaigns
 

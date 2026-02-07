@@ -110,8 +110,15 @@ struct TelemetryPanel: View {
             }
         }
         .task {
+            FreezeDebugger.printRunloopContext("TelemetryPanel.task START")
+
+            FreezeDebugger.telemetryEvent("fetchConfiguredAgents")
             await telemetry.fetchConfiguredAgents(storeId: storeId)
+
+            FreezeDebugger.telemetryEvent("fetchRecentTraces")
             await telemetry.fetchRecentTraces(storeId: storeId)
+
+            FreezeDebugger.telemetryEvent("startRealtime")
             telemetry.startRealtime(storeId: storeId)
 
             // On appear: auto-select the active conversation if one exists
@@ -119,10 +126,14 @@ struct TelemetryPanel: View {
                telemetry.recentSessions.contains(where: { $0.id == activeId }) {
                 selectedSessionId = activeId
             }
+
+            FreezeDebugger.printRunloopContext("TelemetryPanel.task END")
         }
         .onDisappear {
+            FreezeDebugger.telemetryEvent("stopRealtime (onDisappear)")
             telemetry.stopRealtime()
         }
+        .freezeDebugLifecycle("TelemetryPanel")
         // Auto-select: when a new conversation starts in chat, follow it
         .onChange(of: telemetry.activeConversationId) { _, newId in
             guard let newId = newId else { return }

@@ -10,7 +10,7 @@ import SwiftUI
 import AppKit
 
 struct POSSettingsView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let locationId: UUID
 
     @State private var isAutoPrintEnabled = false

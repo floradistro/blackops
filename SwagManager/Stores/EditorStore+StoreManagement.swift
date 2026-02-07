@@ -9,68 +9,28 @@ import Realtime
 @MainActor
 @Observable
 class EditorStore {
-    // MARK: - Creations State
-    var creations: [Creation] = []
-    var collections: [CreationCollection] = []
-    var collectionItems: [UUID: [UUID]] = [:]
-    var selectedCreation: Creation?
-    var selectedCreationIds: Set<UUID> = []
-    var editedCode: String?
-
-    // MARK: - Catalog State
+    // MARK: - Store State
     var stores: [Store] = []
     var selectedStore: Store?
     var catalogs: [Catalog] = []
     var selectedCatalog: Catalog?
-    var products: [Product] = []
     var categories: [Category] = []
-    var pricingSchemas: [PricingSchema] = []
-    var selectedProduct: Product?
-    var selectedProductIds: Set<UUID> = []
     var isLoadingCatalogs = false
 
     // MARK: - Chat/Conversations State
-    var locations: [Location] = []
-    var selectedLocationIds: Set<UUID> = []
     var conversations: [Conversation] = []
     var selectedConversation: Conversation?
     var isLoadingConversations = false
 
-    // MARK: - Category Config State
-    var selectedCategory: Category?
-
-    // MARK: - Browser Sessions State
-    var browserSessions: [BrowserSession] = []
-    var selectedBrowserSession: BrowserSession?
-    var sidebarBrowserExpanded = false
-    var isLoadingBrowserSessions = false
-
-    // MARK: - Orders State
-    var orders: [Order] = []
-    var selectedOrder: Order?
+    // MARK: - Locations State
+    var locations: [Location] = []
     var selectedLocation: Location?
-    var sidebarOrdersExpanded = false
+    var selectedQueue: Location?
     var sidebarLocationsExpanded = false
-    var isLoadingOrders = false
     var isLoadingLocations = false
 
-    // Orders Realtime State
-    var ordersRealtimeConnected = false
-    @ObservationIgnored var ordersRealtimeChannel: RealtimeChannelV2?
-    @ObservationIgnored var ordersRealtimeTask: Task<Void, Never>?
-
-    // MARK: - Queue State
-    var selectedQueue: Location?
-    var sidebarQueuesExpanded = false
-
-    // MARK: - Customers State
-    var customers: [Customer] = []
-    var selectedCustomer: Customer?
-    var selectedCustomerIds: Set<UUID> = []
-    var sidebarCustomersExpanded = false
-    var customerSearchQuery: String = ""
-    var customerStats: CustomerStats?
-    var isLoadingCustomers = false
+    // MARK: - Category Config State
+    var selectedCategory: Category?
 
     // MARK: - AI Agents State
     var aiAgents: [AIAgent] = []
@@ -126,7 +86,6 @@ class EditorStore {
     var isSaving = false
     var refreshTrigger = UUID()
     var error: String?
-    var sidebarCreationsExpanded = false
     var sidebarCatalogExpanded = false
     var sidebarChatExpanded = false
 
@@ -137,11 +96,7 @@ class EditorStore {
     var infrastructureGroupCollapsed = true
 
     // Sheet states
-    var showNewCreationSheet = false
-    var showNewCollectionSheet = false
     var showNewStoreSheet = false
-    var showNewCatalogSheet = false
-    var showNewCategorySheet = false
 
     @ObservationIgnored var lastSelectedIndex: Int?
 
@@ -151,16 +106,20 @@ class EditorStore {
     @ObservationIgnored let defaultStoreId = UUID(uuidString: "cd2e1122-d511-4edb-be5d-98ef274b4baf")!
 
     init() {
-        // DISABLED: Realtime subscriptions cause main thread blocking
-        // TODO: Re-enable with batched/throttled updates
-        // startRealtimeSubscription()
+        // Note: Realtime subscriptions start when store data is loaded
+        // Not in init to avoid side effects during Environment default creation
+    }
+
+    /// Call this after store is configured and ready
+    /// DISABLED: Realtime subscriptions cause cascading re-renders with @Observable
+    func startSubscriptions() {
+        // startRealtimeSubscription()  // DISABLED - causes performance issues
     }
 
     deinit {
         // Cancel tasks - this is safe from nonisolated context
         // The channel cleanup happens via task cancellation
         realtimeTask?.cancel()
-        ordersRealtimeTask?.cancel()
     }
 }
 
@@ -182,10 +141,6 @@ extension EditorStore {
     func selectStore(_ store: Store) async {
         // Cleanup all realtime subscriptions before switching stores
         stopRealtimeSubscription()
-        await cleanupOrdersRealtime()
-        ordersRealtimeTask?.cancel()
-        ordersRealtimeTask = nil
-        ordersRealtimeConnected = false
         selectedStore = store
 
         // Clear AI telemetry (tool logs, conversation trace, etc.)
@@ -195,30 +150,9 @@ extension EditorStore {
         selectedCatalog = nil
         catalogs = []
         categories = []
-        products = []
-        pricingSchemas = []
-        selectedProduct = nil
-        selectedProductIds = []
         selectedCategory = nil
-        creations = []
-        collections = []
-        collectionItems = [:]
-        selectedCreation = nil
-        selectedCreationIds = []
-        editedCode = nil
-        locations = []
-        selectedLocationIds = []
         conversations = []
         selectedConversation = nil
-        selectedLocation = nil
-        orders = []
-        selectedOrder = nil
-        customers = []
-        selectedCustomer = nil
-        selectedCustomerIds = []
-        customerSearchQuery = ""
-        customerStats = nil
-        selectedQueue = nil
         aiAgents = []
         selectedAIAgent = nil
         userTools = []
@@ -238,8 +172,6 @@ extension EditorStore {
         marketingCampaigns = []
         openTabs = []
         activeTab = nil
-
-        await loadCatalog()
     }
 
     func createStore(name: String, email: String, ownerUserId: UUID?) async {
@@ -260,7 +192,6 @@ extension EditorStore {
             let newStore = try await supabase.createStore(insert)
             stores.append(newStore)
             selectedStore = newStore
-            await loadCatalog()
         } catch {
             self.error = "Failed to create store: \(error.localizedDescription)"
         }
@@ -268,5 +199,35 @@ extension EditorStore {
 
     var currentStoreId: UUID {
         selectedStore?.id ?? defaultStoreId
+    }
+
+    func loadLocations() async {
+        guard let storeId = selectedStore?.id else { return }
+        isLoadingLocations = true
+        do {
+            locations = try await supabase.fetchLocations(storeId: storeId)
+        } catch {
+            self.error = "Failed to load locations: \(error.localizedDescription)"
+        }
+        isLoadingLocations = false
+    }
+}
+
+// MARK: - Environment Support
+// Use @Environment(\.editorStore) in views instead of passing as parameter
+
+private struct EditorStoreKey: EnvironmentKey {
+    static var defaultValue: EditorStore {
+        MainActor.assumeIsolated {
+            _sharedDefault
+        }
+    }
+    @MainActor private static let _sharedDefault = EditorStore()
+}
+
+extension EnvironmentValues {
+    var editorStore: EditorStore {
+        get { self[EditorStoreKey.self] }
+        set { self[EditorStoreKey.self] = newValue }
     }
 }

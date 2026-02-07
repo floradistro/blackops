@@ -163,23 +163,17 @@ struct AIAgent: Codable, Identifiable, Hashable {
 // MARK: - Context Configuration
 
 struct ContextConfig: Codable, Hashable {
-    var includeProducts: Bool?
-    var productCategories: [String]?
     var includeLocations: Bool?
     var locationIds: [String]?
     var includeCustomers: Bool?
     var customerSegments: [String]?
 
     init(
-        includeProducts: Bool? = nil,
-        productCategories: [String]? = nil,
         includeLocations: Bool? = nil,
         locationIds: [String]? = nil,
         includeCustomers: Bool? = nil,
         customerSegments: [String]? = nil
     ) {
-        self.includeProducts = includeProducts
-        self.productCategories = productCategories
         self.includeLocations = includeLocations
         self.locationIds = locationIds
         self.includeCustomers = includeCustomers

@@ -24,7 +24,7 @@ private struct EmailToolParameters: Encodable {
 // Manage email domains and addresses for the store
 
 struct EmailDomainSettingsView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @State private var domains: [StoreEmailDomain] = []
     @State private var addresses: [StoreEmailAddress] = []
     @State private var connectedAccounts: [EmailAccount] = []
@@ -167,13 +167,13 @@ struct EmailDomainSettingsView: View {
             await loadData()
         }
         .sheet(isPresented: $showAddDomain) {
-            AddDomainSheet(store: store) { newDomain in
+            AddDomainSheet { newDomain in
                 domains.append(newDomain)
                 selectedDomain = newDomain
             }
         }
         .sheet(isPresented: $showAddAddress) {
-            AddAddressSheet(store: store, domains: domains) { newAddress in
+            AddAddressSheet(domains: domains) { newAddress in
                 addresses.append(newAddress)
             }
         }
@@ -549,7 +549,7 @@ struct DNSRecordRow: View {
 // MARK: - Add Domain Sheet
 
 struct AddDomainSheet: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let onAdd: (StoreEmailDomain) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -655,7 +655,7 @@ struct AddDomainSheet: View {
 // MARK: - Add Address Sheet
 
 struct AddAddressSheet: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let domains: [StoreEmailDomain]
     let onAdd: (StoreEmailAddress) -> Void
     @Environment(\.dismiss) private var dismiss

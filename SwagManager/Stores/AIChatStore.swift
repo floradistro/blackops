@@ -57,18 +57,56 @@ enum ToolStatus: Equatable {
 }
 
 // MARK: - Streaming Text Buffer
-// Dedicated class for 60fps text streaming without triggering array diffs
+// Throttled updates to prevent 100s of view refreshes per second
+// Batches text updates and publishes at ~30fps max
 
 @MainActor
 class StreamingTextBuffer: ObservableObject {
-    @Published var text: String = ""
+    @Published private(set) var text: String = ""
+
+    private var pendingText: String = ""
+    private var updateTask: Task<Void, Never>?
+    private var lastUpdate: Date = .distantPast
+    private let minInterval: TimeInterval = 0.033 // ~30fps max
 
     func append(_ newText: String) {
-        text += newText
+        pendingText += newText
+
+        // If enough time has passed, update immediately
+        let now = Date()
+        if now.timeIntervalSince(lastUpdate) >= minInterval {
+            flushPending()
+        } else if updateTask == nil {
+            // Schedule a delayed flush
+            updateTask = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(33))
+                guard !Task.isCancelled else { return }
+                self?.flushPending()
+            }
+        }
+    }
+
+    private func flushPending() {
+        guard !pendingText.isEmpty else { return }
+        text += pendingText
+        pendingText = ""
+        lastUpdate = Date()
+        updateTask = nil
     }
 
     func clear() {
+        updateTask?.cancel()
+        updateTask = nil
+        pendingText = ""
         text = ""
+        lastUpdate = .distantPast
+    }
+
+    /// Force flush any pending text (call before finalizing message)
+    func flush() {
+        updateTask?.cancel()
+        updateTask = nil
+        flushPending()
     }
 }
 
@@ -285,7 +323,9 @@ class AIChatStore: ObservableObject {
                     }
                 }
 
+                FreezeDebugger.logStateChange("chatStore.isStreaming", old: self.isStreaming, new: false)
                 self.isStreaming = false
+                FreezeDebugger.logStateChange("chatStore.isGenerating", old: self.isGenerating, new: false)
                 self.isGenerating = false
                 self.conversationId = returnedConversationId
                 self.usage = ChatTokenUsage(
@@ -296,6 +336,9 @@ class AIChatStore: ObservableObject {
             },
             onError: { [weak self] (errorMessage: String) in
                 guard let self = self else { return }
+
+                FreezeDebugger.asyncError("AIChatStore.sendMessage", error: NSError(domain: "Chat", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage]))
+                FreezeDebugger.printRunloopContext("AIChatStore.onError callback")
 
                 self.finalizeStreamingMessage()
 
@@ -311,8 +354,11 @@ class AIChatStore: ObservableObject {
                     self.timeline.append(.error(id: UUID(), message: errorMessage, timestamp: Date()))
                 }
 
+                FreezeDebugger.logStateChange("chatStore.error", old: self.error, new: errorMessage)
                 self.error = errorMessage
+                FreezeDebugger.logStateChange("chatStore.isStreaming", old: self.isStreaming, new: false)
                 self.isStreaming = false
+                FreezeDebugger.logStateChange("chatStore.isGenerating", old: self.isGenerating, new: false)
                 self.isGenerating = false
             },
             onConversationCreated: { [weak self] (conv: ConversationMeta) in
@@ -325,6 +371,9 @@ class AIChatStore: ObservableObject {
 
     private func finalizeStreamingMessage() {
         guard let messageId = currentStreamingMessageId else { return }
+
+        // Flush any pending text before finalizing
+        streamingBuffer.flush()
 
         if let index = timeline.firstIndex(where: { item in
             if case .assistantMessage(let id, _, _, _) = item { return id == messageId }

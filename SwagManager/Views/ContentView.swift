@@ -4,6 +4,7 @@ import SwiftData
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var appState: AppState
+    @State private var store = EditorStore()
 
     var body: some View {
         Group {
@@ -15,6 +16,8 @@ struct ContentView: View {
                 AuthView()
             }
         }
+        .environment(\.editorStore, store)
+        .freezeDebugLifecycle("ContentView")
     }
 
     private var loadingView: some View {
@@ -35,5 +38,5 @@ struct ContentView: View {
     ContentView()
         .environmentObject(AuthManager.shared)
         .environmentObject(AppState.shared)
-        .modelContainer(for: [SDOrder.self, SDLocation.self, SDCustomer.self], inMemory: true)
+        .modelContainer(for: [], inMemory: true)
 }

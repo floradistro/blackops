@@ -132,7 +132,8 @@ final class RealtimeEventBus: ObservableObject {
 
         } catch {
             let errorMsg = error.localizedDescription
-            connectionState = .error(errorMsg)
+            // Defer state change to avoid layout recursion
+            DispatchQueue.main.async { self.connectionState = .error(errorMsg) }
 
             // Schedule retry with exponential backoff
             scheduleReconnect(to: locationId)
@@ -322,11 +323,15 @@ final class RealtimeEventBus: ObservableObject {
     }
 
     private func updateConnectionState() {
-        if activeChannels.isEmpty {
-            connectionState = .disconnected
-        } else {
-            let connectedIds = Set(activeChannels.keys)
-            connectionState = .connected(locationIds: connectedIds)
+        // Defer state changes to avoid layout recursion when called from view lifecycle
+        let isEmpty = activeChannels.isEmpty
+        let connectedIds = Set(activeChannels.keys)
+        DispatchQueue.main.async {
+            if isEmpty {
+                self.connectionState = .disconnected
+            } else {
+                self.connectionState = .connected(locationIds: connectedIds)
+            }
         }
     }
 

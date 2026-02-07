@@ -801,7 +801,8 @@ class TelemetryService: ObservableObject {
             do {
                 try await channel.subscribeWithError()
                 print("[Telemetry] Realtime subscribed successfully!")
-                self.isLive = true
+                // Defer state change to avoid layout recursion
+                DispatchQueue.main.async { self.isLive = true }
 
                 print("[Telemetry] Entering insert loop...")
                 for await insert in inserts {
@@ -811,7 +812,8 @@ class TelemetryService: ObservableObject {
                 print("[Telemetry] Insert loop ended")
             } catch {
                 print("[Telemetry] Realtime error: \(error)")
-                self.isLive = false
+                // Defer state change to avoid layout recursion
+                DispatchQueue.main.async { self.isLive = false }
             }
         }
     }
@@ -828,7 +830,8 @@ class TelemetryService: ObservableObject {
                 await channelToCleanup.unsubscribe()
             }
         }
-        isLive = false
+        // Defer state change to avoid layout recursion when called from view lifecycle
+        DispatchQueue.main.async { self.isLive = false }
     }
 
     /// Handle new span from realtime - decodes in background to avoid blocking main thread
@@ -941,7 +944,9 @@ class TelemetryService: ObservableObject {
     // MARK: - Fetch Recent Traces
 
     func fetchRecentTraces(storeId: UUID?) async {
+        FreezeDebugger.logStateChange("telemetry.isLoading", old: isLoading, new: true)
         isLoading = true
+        FreezeDebugger.logStateChange("telemetry.error", old: error, new: nil as String?)
         error = nil
 
         do {
@@ -1051,10 +1056,13 @@ class TelemetryService: ObservableObject {
             availableAgents = allAgents.sorted()
 
         } catch {
-            self.error = error.localizedDescription
-            print("[Telemetry] Error: \(error)")
+            let errMsg = error.localizedDescription
+            FreezeDebugger.logStateChange("telemetry.error", old: self.error, new: errMsg)
+            self.error = errMsg
+            FreezeDebugger.asyncError("TelemetryService.fetchRecentTraces", error: error)
         }
 
+        FreezeDebugger.logStateChange("telemetry.isLoading", old: isLoading, new: false)
         isLoading = false
     }
 

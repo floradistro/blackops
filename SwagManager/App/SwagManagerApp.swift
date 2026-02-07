@@ -36,11 +36,8 @@ struct SwagManagerApp: App {
 
     init() {
         do {
-            let schema = Schema([
-                SDOrder.self,
-                SDLocation.self,
-                SDCustomer.self
-            ])
+            // Empty schema - orders/locations/customers moved to separate app
+            let schema = Schema([])
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
@@ -169,31 +166,6 @@ struct SwagManagerApp: App {
                 .keyboardShortcut("9", modifiers: .command)
             }
 
-            // Browser commands
-            CommandMenu("Browser") {
-                Button("New Tab") {
-                    NotificationCenter.default.post(name: NSNotification.Name("BrowserNewTab"), object: nil)
-                }
-                .keyboardShortcut("t", modifiers: .command)
-
-                Button("Reload Page") {
-                    NotificationCenter.default.post(name: NSNotification.Name("BrowserReload"), object: nil)
-                }
-                .keyboardShortcut("r", modifiers: .command)
-
-                Divider()
-
-                Button("Back") {
-                    NotificationCenter.default.post(name: NSNotification.Name("BrowserBack"), object: nil)
-                }
-                .keyboardShortcut("[", modifiers: .command)
-
-                Button("Forward") {
-                    NotificationCenter.default.post(name: NSNotification.Name("BrowserForward"), object: nil)
-                }
-                .keyboardShortcut("]", modifiers: .command)
-            }
-
             // File commands
             CommandGroup(replacing: .saveItem) {
                 Button("Save") {
@@ -213,7 +185,4 @@ struct SwagManagerApp: App {
 @MainActor
 class AppState: ObservableObject {
     static let shared = AppState()
-
-    @Published var showNewCreationSheet = false
-    @Published var showNewCollectionSheet = false
 }

@@ -7,7 +7,7 @@ import SwiftData
 
 struct AppleContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var store = EditorStore()
+    @Environment(\.editorStore) private var store
     @State private var syncService = SyncService.shared
 
     @State private var selectedItem: SDSidebarItem? = nil
@@ -17,50 +17,43 @@ struct AppleContentView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            MainSidebar(selection: $selectedItem, store: store, syncService: syncService)
+            MainSidebar(selection: $selectedItem, syncService: syncService)
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 280)
         } detail: {
             NavigationStack(path: $navigationPath) {
-                MainDetailView(selection: $selectedItem, store: store)
+                MainDetailView(selection: $selectedItem)
                     .navigationDestination(for: SDSidebarItem.self) { item in
-                        DetailDestination(item: item, store: store, selection: $selectedItem)
+                        DetailDestination(item: item, selection: $selectedItem)
                     }
             }
         }
+        // Store is injected by ContentView at root level
+        // CRITICAL: Use StableInspectorContent to prevent view churn when toggling
+        // The inspector column still animates in/out, but the AIChatPane stays mounted
+        // once first shown, preventing NSHostingView layout recursion
         .inspector(isPresented: $showAIChat) {
-            AIChatPane()
-                .environment(store)
+            StableInspectorContent(isVisible: showAIChat)
                 .inspectorColumnWidth(min: 320, ideal: 420, max: 600)
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                StoreDropdown(store: store)
+                StoreDropdown()
             }
 
             ToolbarItem(placement: .primaryAction) {
-                if store.isLoading || syncService.isSyncing {
+                if syncService.isSyncing {
                     ProgressView()
                         .controlSize(.small)
                 }
             }
 
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task {
-                        await store.loadStores()
-                        await syncService.syncAll()
-                    }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .help("Refresh all data")
+                RefreshButton(syncService: syncService)
             }
 
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showAIChat.toggle()
-                    }
+                    showAIChat.toggle()
                 } label: {
                     Label("AI Chat", systemImage: showAIChat ? "sidebar.trailing" : "sidebar.trailing")
                 }
@@ -74,120 +67,116 @@ struct AppleContentView: View {
         }
         .task {
             await store.loadStores()
+            store.startSubscriptions()  // Start realtime after store is ready
             if let storeId = store.selectedStore?.id {
                 syncService.configure(modelContext: modelContext, storeId: storeId)
-                await loadAllData()
+                await loadAllData(store: store, syncService: syncService)
             }
         }
         .onChange(of: store.selectedStore?.id) { _, newId in
             if let storeId = newId {
                 syncService.configure(modelContext: modelContext, storeId: storeId)
-                Task { await loadAllData() }
+                Task { await loadAllData(store: store, syncService: syncService) }
             }
         }
+        .freezeDebugLifecycle("AppleContentView")
     }
+}
 
-    /// Load all data for the current store - PHASED for performance
-    /// Phase 1: Critical data for sidebar (fast, blocks UI)
-    /// Phase 2: Secondary data (background, non-blocking)
-    private func loadAllData() async {
-        // PHASE 1: Critical data needed for initial UI render (run in parallel, await all)
-        async let locationsTask: () = store.loadLocations()
-        async let ordersTask: () = store.loadOrders()
-        async let agentsTask: () = store.loadAIAgents()
+// MARK: - Refresh Button (Isolated observation)
+private struct RefreshButton: View {
+    let syncService: SyncService
+    @Environment(\.editorStore) private var store
 
-        _ = await (locationsTask, ordersTask, agentsTask)
-
-        // PHASE 2: Secondary data - fire and forget (don't block UI)
-        // NOTE: loadCatalog() calls loadCatalogs() + loadCatalogData() + loadConversations()
-        // sequentially, so we must NOT call them separately in parallel (causes double-load cascade)
-        Task.detached(priority: .utility) { [store, syncService] in
-            async let syncTask: () = syncService.syncAll()
-            async let catalogTask: () = store.loadCatalog()
-            async let customersTask: () = store.loadCustomers()
-            async let creationsTask: () = store.loadCreations()
-            async let browserTask: () = store.loadBrowserSessions()
-            async let emailsTask: () = store.loadEmailCounts()
-            async let campaignsTask: () = store.loadAllCampaigns()
-
-            _ = await (syncTask, catalogTask, customersTask, creationsTask,
-                       browserTask, emailsTask, campaignsTask)
+    var body: some View {
+        Button {
+            Task {
+                await store.loadStores()
+                await syncService.syncAll()
+            }
+        } label: {
+            Label("Refresh", systemImage: "arrow.clockwise")
         }
+        .help("Refresh all data")
+    }
+}
+
+// MARK: - Load All Data
+/// Load all data for the current store - PHASED for performance
+/// Phase 1: Critical data for sidebar (fast, blocks UI)
+/// Phase 2: Secondary data (background, non-blocking)
+@MainActor
+private func loadAllData(store: EditorStore, syncService: SyncService) async {
+    // PHASE 1: Critical data needed for initial UI render
+    async let agentsTask: () = store.loadAIAgents()
+    async let locationsTask: () = store.loadLocations()
+    _ = await (agentsTask, locationsTask)
+
+    // PHASE 2: Secondary data - fire and forget (don't block UI)
+    Task.detached(priority: .utility) { @Sendable [store, syncService] in
+        async let syncTask: () = syncService.syncAll()
+        async let emailsTask: () = store.loadEmailCounts()
+        async let campaignsTask: () = store.loadAllCampaigns()
+
+        _ = await (syncTask, emailsTask, campaignsTask)
     }
 }
 
 // MARK: - Detail Destination
 // Routes NavigationStack destinations to appropriate detail views
+// Uses @Environment for store access - Apple WWDC23 pattern
 
 struct DetailDestination: View {
     let item: SDSidebarItem
-    var store: EditorStore
     @Binding var selection: SDSidebarItem?
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         switch item {
-        case .orderDetail(let id):
-            OrderDetailWrapper(orderId: id, store: store)
-
         case .locationDetail(let id):
-            LocationDetailWrapper(locationId: id, store: store)
+            LocationDetailWrapper(locationId: id)
 
         case .queue(let locationId):
-            SDLocationQueueView(locationId: locationId)
-
-        case .customerDetail(let id):
-            CustomerDetailWrapper(customerId: id, store: store)
-
-        case .catalogDetail(let id):
-            CatalogDetailView(catalogId: id, store: store)
-
-        case .catalogSettings(let id):
-            CatalogSettingsView(catalogId: id, store: store)
-
-        case .categoryDetail(let id):
-            CategoryDetailView(categoryId: id, store: store)
-
-        case .categorySettings(let id):
-            if let category = store.categories.first(where: { $0.id == id }) {
-                CategoryConfigView(category: category, store: store)
-            } else {
-                Text("Category not found")
-            }
-
-        case .productDetail(let id):
-            ProductDetailWrapper(productId: id, store: store)
-
-        case .creationDetail(let id):
-            CreationDetailWrapper(creationId: id, store: store)
-
-        case .browserSessionDetail(let id):
-            BrowserSessionWrapper(sessionId: id, store: store)
+            LocationQueueView(locationId: locationId)
 
         case .emailDetail(let id):
-            EmailDetailWrapper(emailId: id, store: store)
+            EmailDetailWrapper(emailId: id)
 
         case .inboxThread(let id):
-            ThreadDetailWrapper(threadId: id, store: store)
+            ThreadDetailWrapper(threadId: id)
 
         case .inboxSettings:
-            EmailDomainSettingsView(store: store)
+            EmailDomainSettingsView()
 
         case .emailCampaignDetail(let id):
-            EmailCampaignWrapper(campaignId: id, store: store)
+            EmailCampaignWrapper(campaignId: id)
 
         case .metaCampaignDetail(let id):
-            MetaCampaignWrapper(campaignId: id, store: store)
+            MetaCampaignWrapper(campaignId: id)
 
         case .metaIntegrationDetail(let id):
-            MetaIntegrationWrapper(integrationId: id, store: store)
+            MetaIntegrationWrapper(integrationId: id)
 
         case .agentDetail(let id):
-            AgentDetailWrapper(agentId: id, store: store, selection: $selection)
+            AgentDetailWrapper(agentId: id, selection: $selection)
 
         default:
-            // Section-level items handled by MainDetailView
             EmptyView()
         }
+    }
+}
+
+// MARK: - Stable Inspector Content
+// Since animations are disabled on the toggle, we can mount AIChatPane directly
+// The wrapper still defers @ObservedObject subscriptions via AIChatPaneContent
+
+private struct StableInspectorContent: View {
+    let isVisible: Bool
+
+    var body: some View {
+        // AIChatPane is a lightweight wrapper that defers creating
+        // AIChatPaneContent (with @ObservedObject) until after a delay
+        AIChatPane()
     }
 }
 
@@ -195,5 +184,5 @@ struct DetailDestination: View {
 
 #Preview {
     AppleContentView()
-        .modelContainer(for: [SDOrder.self, SDLocation.self, SDCustomer.self], inMemory: true)
+        .modelContainer(for: [], inMemory: true)
 }

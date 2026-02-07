@@ -7,89 +7,49 @@ import SwiftData
 
 struct MainSidebar: View {
     @Binding var selection: SDSidebarItem?
-    var store: EditorStore
     var syncService: SyncService
+    @Environment(\.editorStore) private var store
 
-    // SwiftData queries
-    @Query(sort: \SDLocation.name) private var allLocations: [SDLocation]
-    @Query(filter: SDOrder.activePredicate, sort: \SDOrder.createdAt, order: .reverse)
-    private var allActiveOrders: [SDOrder]
-
-    // Cached counts (avoid filtering on every render)
-    @State private var locationCount: Int = 0
-    @State private var activeOrderCount: Int = 0
+    // ALL counts are cached - no direct store property access in body
+    @State private var conversationsCount: Int = 0
+    @State private var locationsCount: Int = 0
+    @State private var emailsCount: Int = 0
+    @State private var inboxUnreadCount: Int = 0
+    @State private var agentsCount: Int = 0
 
     var body: some View {
         List(selection: $selection) {
-            // WORKSPACE
-            Section("Workspace") {
-                SidebarRow(
-                    item: .orders,
-                    icon: "shippingbox.fill",
-                    title: "Orders",
-                    badge: activeOrderCount
-                )
-
-                SidebarRow(
-                    item: .locations,
-                    icon: "building.2.fill",
-                    title: "Locations",
-                    badge: locationCount
-                )
-
-                SidebarRow(
-                    item: .customers,
-                    icon: "person.crop.circle.fill",
-                    title: "Customers",
-                    badge: store.customers.count
-                )
-            }
-
             // CONTENT
             Section("Content") {
-                SidebarRow(
-                    item: .catalogs,
-                    icon: "folder.fill",
-                    title: "Catalogs",
-                    badge: store.categories.count
-                )
-
-                SidebarRow(
-                    item: .creations,
-                    icon: "paintbrush.pointed.fill",
-                    title: "Creations",
-                    badge: store.creations.count
-                )
-
                 SidebarRow(
                     item: .teamChat,
                     icon: "message.fill",
                     title: "Team Chat",
-                    badge: store.conversations.count
+                    badge: conversationsCount
                 )
             }
 
             // OPERATIONS
             Section("Operations") {
                 SidebarRow(
-                    item: .browserSessions,
-                    icon: "safari.fill",
-                    title: "Browser",
-                    badge: store.browserSessions.count
+                    item: .locations,
+                    icon: "mappin.and.ellipse",
+                    title: "Locations",
+                    badge: locationsCount
                 )
 
                 SidebarRow(
                     item: .emails,
                     icon: "envelope.fill",
                     title: "Emails",
-                    badge: store.emailTotalCount
+                    badge: emailsCount
                 )
 
                 SidebarRow(
                     item: .inbox,
                     icon: "tray.full.fill",
                     title: "Inbox",
-                    badge: store.inboxTotalUnread
+                    badge: inboxUnreadCount
                 )
             }
 
@@ -99,7 +59,7 @@ struct MainSidebar: View {
                     item: .agents,
                     icon: "gearshape.2.fill",
                     title: "Agents",
-                    badge: store.aiAgents.count
+                    badge: agentsCount
                 )
 
                 SidebarRow(
@@ -113,20 +73,28 @@ struct MainSidebar: View {
         .listStyle(.sidebar)
         .navigationTitle("WhaleTools")
         .task(id: store.selectedStore?.id) {
-            updateCounts()
+            updateAllCounts()
         }
-        .onChange(of: allLocations.count) { _, _ in updateCounts() }
-        .onChange(of: allActiveOrders.count) { _, _ in updateCounts() }
+        // Periodic refresh of counts (every 30 seconds) instead of observing store
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                updateStoreCounts()
+            }
+        }
+        .freezeDebugLifecycle("MainSidebar")
     }
 
-    private func updateCounts() {
-        guard let storeId = store.selectedStore?.id else {
-            locationCount = 0
-            activeOrderCount = 0
-            return
-        }
-        locationCount = allLocations.filter { $0.storeId == storeId }.count
-        activeOrderCount = allActiveOrders.filter { $0.location?.storeId == storeId }.count
+    private func updateAllCounts() {
+        updateStoreCounts()
+    }
+
+    private func updateStoreCounts() {
+        conversationsCount = store.conversations.count
+        locationsCount = store.locations.count
+        emailsCount = store.emailTotalCount
+        inboxUnreadCount = store.inboxTotalUnread
+        agentsCount = store.aiAgents.count
     }
 }
 
@@ -163,7 +131,7 @@ struct SidebarRow: View {
 // Native macOS picker style - no custom styling
 
 struct StoreDropdown: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         Menu {

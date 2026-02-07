@@ -21,8 +21,17 @@ class TeamChatStore {
     var error: String?
     var hasMoreMessages = false
 
-    // MARK: - Grouped Channels
+    // MARK: - Grouped Channels (cached)
+    // Cache invalidated when channels array changes
+    @ObservationIgnored private var _cachedGroupedChannels: [(String, String, [Conversation])]?
+    @ObservationIgnored private var _cachedChannelsHash: Int = 0
+
     var groupedChannels: [(String, String, [Conversation])] {
+        let currentHash = channels.hashValue
+        if let cached = _cachedGroupedChannels, currentHash == _cachedChannelsHash {
+            return cached
+        }
+
         let groups: [(String, String, [String])] = [
             ("Channels", "bubble.left.and.bubble.right", ["team"]),
             ("Locations", "mappin.and.ellipse", ["location"]),
@@ -33,10 +42,9 @@ class TeamChatStore {
             guard !matching.isEmpty else { return nil }
             return (label, icon, matching)
         }
-        print("[TeamChat] groupedChannels: \(result.count) groups, channels count: \(channels.count)")
-        for (label, _, chans) in result {
-            print("[TeamChat]   \(label): \(chans.count) channels")
-        }
+
+        _cachedGroupedChannels = result
+        _cachedChannelsHash = currentHash
         return result
     }
 

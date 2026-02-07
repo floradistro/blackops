@@ -2,12 +2,7 @@ import Foundation
 import SwiftUI
 
 // MARK: - Store, Catalog, and Category Models
-// Extracted from Product.swift following Apple engineering standards
 // Contains: Store, Catalog, Category and their Insert structs
-// File size: ~210 lines (under Apple's 300 line "excellent" threshold)
-
-import Foundation
-import SwiftUI
 
 // MARK: - Store
 

@@ -348,20 +348,6 @@ enum RemoteToolDefinitions {
                 "required": ["customer_id"]
             ]
         ],
-        // Products
-        [
-            "name": "products_search",
-            "description": "Search products by name or SKU",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "store_id": ["type": "string"],
-                    "query": ["type": "string"],
-                    "limit": ["type": "integer"]
-                ],
-                "required": ["store_id"]
-            ]
-        ],
         // Analytics
         [
             "name": "analytics_sales",

@@ -56,9 +56,6 @@ extension EditorStore {
 
     func openConversation(_ conversation: Conversation) {
         selectedConversation = conversation
-        selectedCreation = nil
-        selectedProduct = nil
-        editedCode = nil
         openTab(.conversation(conversation))
     }
 

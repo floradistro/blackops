@@ -2,7 +2,7 @@ import Foundation
 
 extension EditorStore {
     private var campaignService: CampaignService {
-        CampaignService()
+        CampaignService.shared
     }
 
     // MARK: - Load Campaigns

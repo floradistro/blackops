@@ -5,7 +5,7 @@ import SwiftUI
 
 struct ThreadDetailView: View {
     let thread: EmailThread
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @State private var replyText = ""
     @State private var isSending = false
 
@@ -34,13 +34,7 @@ struct ThreadDetailView: View {
                     }
                     .padding()
                 }
-                .onChange(of: store.selectedThreadMessages.count) { _, _ in
-                    if let lastId = store.selectedThreadMessages.last?.id {
-                        withAnimation {
-                            proxy.scrollTo(lastId, anchor: .bottom)
-                        }
-                    }
-                }
+                // REMOVED: onChange of store causes cascading re-renders
             }
 
             Divider()
@@ -309,7 +303,7 @@ struct AIDraftView: View {
 
 struct ThreadDetailWrapper: View {
     let threadId: UUID
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @State private var isLoading = true
     @State private var thread: EmailThread?
 
@@ -319,7 +313,7 @@ struct ThreadDetailWrapper: View {
                 ProgressView("Loading...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let thread {
-                ThreadDetailView(thread: thread, store: store)
+                ThreadDetailView(thread: thread)
             } else {
                 ContentUnavailableView("Thread not found", systemImage: "tray")
             }

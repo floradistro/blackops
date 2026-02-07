@@ -1,11 +1,52 @@
 import SwiftUI
 
-// MARK: - AI Chat Pane
-// Apple-like chat interface with smooth animations and timeline-based messages
+// MARK: - AI Chat Pane (Wrapper)
+// CRITICAL: This wrapper defers creating the actual chat content until layout stabilizes
+// The @ObservedObject subscriptions in AIChatPaneContent are only created after delay
+// This prevents layout recursion when the inspector animates open
 
 struct AIChatPane: View {
+    @State private var isLayoutStable = false
+
+    var body: some View {
+        Group {
+            if isLayoutStable {
+                // Only create AIChatPaneContent after layout stabilizes
+                // This is when @ObservedObject subscriptions get created
+                AIChatPaneContent()
+            } else {
+                // Lightweight placeholder - NO @ObservedObject, NO observations
+                VStack {
+                    Spacer()
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Initializing...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(nsColor: .textBackgroundColor))
+            }
+        }
+        .task {
+            // Wait for layout to fully stabilize before creating content
+            // This ensures @ObservedObject subscriptions don't exist during layout
+            try? await Task.sleep(for: .milliseconds(200))
+            isLayoutStable = true
+        }
+        .freezeDebugLifecycle("AIChatPane")
+    }
+}
+
+// MARK: - AI Chat Pane Content (Actual Implementation)
+// This view has the @ObservedObject subscriptions
+// It's only created AFTER AIChatPane's layout stabilizes
+
+private struct AIChatPaneContent: View {
     @StateObject private var chatStore = AIChatStore()
-    @Environment(EditorStore.self) var editorStore
+    @Environment(\.editorStore) private var editorStore
     @ObservedObject private var agentClient = AgentClient.shared
     @State private var inputText = ""
     @State private var showHistory = false
@@ -146,17 +187,31 @@ struct AIChatPane: View {
             }
         }
         .task {
+            // CRITICAL: Wait for layout to FULLY stabilize before any state mutations
+            // Task.yield() alone isn't enough - we need to wait for the animation to complete
+            // and all layout passes to finish before mutating observable state
+            try? await Task.sleep(for: .milliseconds(100))
+
+            FreezeDebugger.printRunloopContext("AIChatPane.task START (after sleep)")
+
             // Lazy agent start — only connect when chat pane first appears
             if !AgentProcessManager.shared.isRunning {
+                FreezeDebugger.printRunloopContext("AIChatPane.task -> starting agent")
                 AgentProcessManager.shared.start()
             }
+
             await editorStore.loadAIAgents()
+
+            FreezeDebugger.printRunloopContext("AIChatPane.task -> syncAgentState")
             syncAgentState()
             chatStore.storeId = editorStore.selectedStore?.id
+
             // Pre-load conversation history once connected
             if agentClient.isConnected, let storeId = editorStore.selectedStore?.id {
                 agentClient.getConversations(storeId: storeId, limit: 50)
             }
+
+            FreezeDebugger.printRunloopContext("AIChatPane.task END")
         }
         .onChange(of: agentClient.isConnected) { _, connected in
             // Fetch history as soon as WebSocket connects
@@ -191,6 +246,7 @@ struct AIChatPane: View {
                 chatStore.currentAgent = nil
             }
         }
+        .freezeDebugLifecycle("AIChatPaneContent")
     }
 
     private func syncAgentState() {
@@ -600,8 +656,11 @@ private struct ConversationHistoryView: View {
             }
         }
         .onAppear {
-            if let storeId {
-                agentClient.getConversations(storeId: storeId, limit: 50)
+            // Defer to avoid layout recursion
+            Task { @MainActor in
+                if let storeId {
+                    agentClient.getConversations(storeId: storeId, limit: 50)
+                }
             }
         }
     }

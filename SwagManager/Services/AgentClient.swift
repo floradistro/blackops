@@ -1,6 +1,15 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Client Connection State (Unified)
+// Single source of truth for connection status - prevents multiple @Published mutations
+
+struct ClientConnectionState: Equatable {
+    var isConnected: Bool = false
+    var isRunning: Bool = false
+    var currentTool: String? = nil
+}
+
 // MARK: - Agent Client
 // WebSocket client for communicating with local agent server
 // Implements Anthropic multi-turn conversation pattern with persistent storage
@@ -9,10 +18,15 @@ import SwiftUI
 class AgentClient: ObservableObject {
     static let shared = AgentClient()
 
-    // MARK: - Connection State
+    // MARK: - Connection State (UNIFIED - single @Published to prevent layout recursion)
 
-    @Published private(set) var isConnected = false
-    @Published private(set) var isRunning = false
+    @Published private(set) var connectionState = ClientConnectionState()
+
+    /// Convenience accessors for backwards compatibility
+    var isConnected: Bool { connectionState.isConnected }
+    var isRunning: Bool { connectionState.isRunning }
+    var currentTool: String? { connectionState.currentTool }
+
     @Published private(set) var serverVersion: String?
     @Published private(set) var availableTools: [ToolMetadata] = []
 
@@ -23,7 +37,6 @@ class AgentClient: ObservableObject {
 
     // MARK: - Execution State
 
-    @Published private(set) var currentTool: String?
     @Published private(set) var currentModel: String?
     @Published private(set) var executionLogs: [ExecutionLogEntry] = []
     @Published private(set) var debugMessages: [DebugMessage] = []
@@ -60,10 +73,62 @@ class AgentClient: ObservableObject {
         session = URLSession(configuration: .default)
     }
 
+    // MARK: - Port Check
+
+    private func isPortInUse(_ port: Int) -> Bool {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+        process.arguments = ["-i", ":\(port)"]
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            return !output.isEmpty && output.contains("LISTEN")
+        } catch {
+            return false
+        }
+    }
+
+    // MARK: - State Transition Helper
+
+    /// Transition to new connection state with animations disabled
+    /// This prevents layout recursion when observing views update during animations
+    private func transitionState(to newState: ClientConnectionState) {
+        guard connectionState != newState else { return }
+        FreezeDebugger.logStateChange("connectionState", old: connectionState, new: newState)
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            connectionState = newState
+        }
+    }
+
     // MARK: - Connection Management
 
     func connect() {
-        guard webSocket == nil else { return }
+        print("[AgentClient] connect() called, webSocket=\(webSocket != nil ? "exists" : "nil")")
+        guard webSocket == nil else {
+            print("[AgentClient] WebSocket already exists, skipping")
+            return
+        }
+
+        FreezeDebugger.printRunloopContext("AgentClient.connect()")
+
+        // Don't attempt connection if we know the server isn't running
+        // But always try if this is coming from AgentProcessManager detecting an existing server
+        print("[AgentClient] isRunning=\(AgentProcessManager.shared.isRunning), hasEverConnected=\(hasEverConnected)")
+        if !AgentProcessManager.shared.isRunning && !hasEverConnected {
+            // Double-check by looking at the port directly
+            if !isPortInUse(3847) {
+                print("[AgentClient] Skipping connect - agent server not running and port not in use")
+                return
+            }
+            print("[AgentClient] Port 3847 in use - attempting connection to external server")
+        }
 
         let url = URL(string: "ws://localhost:\(serverPort)")!
         webSocket = session?.webSocketTask(with: url)
@@ -73,14 +138,16 @@ class AgentClient: ObservableObject {
     }
 
     func disconnect() {
+        FreezeDebugger.transitionAgentState(.disconnected, reason: "disconnect() called")
+        FreezeDebugger.printRunloopContext("AgentClient.disconnect()")
+
         reconnectTask?.cancel()
         reconnectTask = nil
         reconnectAttempts = 0
         webSocket?.cancel(with: .goingAway, reason: nil)
         webSocket = nil
-        if isConnected {
-            isConnected = false
-        }
+        // ONE state change - use transitionState to disable animations
+        transitionState(to: ClientConnectionState(isConnected: false, isRunning: connectionState.isRunning, currentTool: nil))
         serverVersion = nil
     }
 
@@ -115,7 +182,8 @@ class AgentClient: ObservableObject {
         self.onError = onError
         self.onConversationCreated = onConversationCreated
 
-        isRunning = true
+        // Update connectionState.isRunning - use transitionState to disable animations
+        transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: true, currentTool: nil))
 
         var message: [String: Any] = [
             "type": "query",
@@ -237,7 +305,9 @@ class AgentClient: ObservableObject {
 
         switch type {
         case "ready":
-            isConnected = true
+            FreezeDebugger.transitionAgentState(.connected, reason: "WebSocket ready")
+            // ONE state change - use transitionState to disable animations
+            transitionState(to: ClientConnectionState(isConnected: true, isRunning: connectionState.isRunning, currentTool: connectionState.currentTool))
             hasEverConnected = true
             reconnectAttempts = 0
             serverVersion = json["version"] as? String
@@ -252,7 +322,8 @@ class AgentClient: ObservableObject {
             break
 
         case "started":
-            isRunning = true
+            // ONE state change - use transitionState to disable animations
+            transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: true, currentTool: nil))
             currentModel = json["model"] as? String
             if let convId = json["conversationId"] as? String {
                 currentConversationId = convId
@@ -266,24 +337,15 @@ class AgentClient: ObservableObject {
         case "text":
             if let text = json["text"] as? String {
                 sessionMetrics.textChunks += 1
-                // Track in conversation trace
-                if let lastMsg = conversationTrace.last, lastMsg.role == .assistant {
-                    var updated = lastMsg
-                    updated.content += text
-                    conversationTrace[conversationTrace.count - 1] = updated
-                } else {
-                    conversationTrace.append(ConversationMessage(
-                        role: .assistant,
-                        content: text,
-                        timestamp: Date()
-                    ))
-                }
+                // NOTE: Conversation trace updates are batched - only update on done/tool events
+                // This prevents 100s of array mutations during streaming
                 onText?(text)
             }
 
         case "tool_start":
             if let tool = json["tool"] as? String {
-                currentTool = tool
+                // Update currentTool via connectionState - use transitionState to disable animations
+                transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: connectionState.isRunning, currentTool: tool))
                 let input = json["input"] as? [String: Any] ?? [:]
                 pendingToolStart = Date()
                 pendingToolInput = input
@@ -335,11 +397,12 @@ class AgentClient: ObservableObject {
 
                 onToolResult?(tool, success, result, error)
             }
-            currentTool = nil
+            // Clear currentTool after tool result - use transitionState to disable animations
+            transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: connectionState.isRunning, currentTool: nil))
 
         case "done":
-            isRunning = false
-            currentTool = nil
+            // ONE state change - clear isRunning and currentTool - use transitionState to disable animations
+            transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: false, currentTool: nil))
             let status = json["status"] as? String ?? "unknown"
             let conversationId = json["conversationId"] as? String ?? currentConversationId ?? ""
             var usage = TokenUsage(inputTokens: 0, outputTokens: 0, totalCost: 0)
@@ -370,15 +433,17 @@ class AgentClient: ObservableObject {
             debugMessages.append(debugMsg)
 
         case "error":
-            isRunning = false
-            currentTool = nil
+            // ONE state change - clear isRunning and currentTool - use transitionState to disable animations
+            transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: false, currentTool: nil))
             let error = json["error"] as? String ?? "Unknown error"
+            FreezeDebugger.asyncError("AgentClient query", error: NSError(domain: "Agent", code: -1, userInfo: [NSLocalizedDescriptionKey: error]))
             onError?(error)
             clearCallbacks()
 
         case "aborted":
-            isRunning = false
-            currentTool = nil
+            // ONE state change - clear isRunning and currentTool - use transitionState to disable animations
+            transitionState(to: ClientConnectionState(isConnected: connectionState.isConnected, isRunning: false, currentTool: nil))
+            FreezeDebugger.taskCancelled("AgentClient query (aborted)")
             onError?("Aborted")
             clearCallbacks()
 
@@ -408,25 +473,40 @@ class AgentClient: ObservableObject {
     }
 
     private func handleDisconnect() {
-        // Guard redundant @Published updates — prevents unnecessary view re-renders
-        if isConnected { isConnected = false }
-        if isRunning { isRunning = false }
-        if currentTool != nil { currentTool = nil }
+        FreezeDebugger.transitionAgentState(.disconnected, reason: "WebSocket disconnected")
+        FreezeDebugger.printRunloopContext("AgentClient.handleDisconnect()")
+
+        // Defer state mutations off current runloop to avoid layout recursion
+        // CRITICAL: ONE state change instead of THREE - use transitionState to disable animations
+        let newState = ClientConnectionState(isConnected: false, isRunning: false, currentTool: nil)
+        if connectionState != newState {
+            DispatchQueue.main.async { [weak self] in
+                self?.transitionState(to: newState)
+            }
+        }
         webSocket = nil
 
         reconnectAttempts += 1
 
-        // Only auto-reconnect if we previously had a successful connection
-        // and haven't exceeded max attempts. Prevents infinite loop when server is down.
-        guard hasEverConnected, reconnectAttempts <= maxReconnectAttempts else { return }
+        // Safety checks before attempting reconnect:
+        // 1. Must have connected successfully before
+        // 2. Haven't exceeded max attempts
+        // 3. Agent process is still running
+        guard hasEverConnected,
+              reconnectAttempts <= maxReconnectAttempts,
+              AgentProcessManager.shared.isRunning else {
+            print("[AgentClient] Not reconnecting - server not running or max attempts reached")
+            return
+        }
 
         // Exponential backoff: 2s, 4s, 8s, 16s, 30s (capped)
         let delay = min(UInt64(pow(2.0, Double(reconnectAttempts))) * 1_000_000_000, 30_000_000_000)
+        print("[AgentClient] Reconnecting in \(delay / 1_000_000_000)s (attempt \(reconnectAttempts)/\(maxReconnectAttempts))")
 
         reconnectTask = Task {
             try? await Task.sleep(nanoseconds: delay)
-            if !Task.isCancelled {
-                connect()
+            if !Task.isCancelled && AgentProcessManager.shared.isRunning {
+                self.connect()
             }
         }
     }

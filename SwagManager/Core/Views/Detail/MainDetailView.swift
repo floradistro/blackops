@@ -3,141 +3,87 @@ import SwiftData
 
 // MARK: - Main Detail View
 // Routes top-level sidebar selections to section content views
-// Detail items are pushed via NavigationStack (handled by DetailDestination)
+// Uses @Environment for store access - Apple WWDC23 pattern
 
 struct MainDetailView: View {
     @Binding var selection: SDSidebarItem?
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         Group {
             switch selection {
-            // WORKSPACE - Section views
-            case .orders:
-                AllOrdersListView()
-
-            case .locations:
-                AllLocationsListView()
-
-            case .customers:
-                CustomersListView(store: store)
-
             // CONTENT - Section views
-            case .catalogs:
-                CatalogsListView(store: store, selection: $selection)
-
-            case .catalogDetail(let id):
-                CatalogDetailView(catalogId: id, store: store)
-
-            case .catalogSettings(let id):
-                CatalogSettingsView(catalogId: id, store: store)
-
-            case .categoryDetail(let id):
-                CategoryDetailView(categoryId: id, store: store)
-
-            case .categorySettings(let id):
-                if let category = store.categories.first(where: { $0.id == id }) {
-                    CategoryConfigView(category: category, store: store)
-                } else {
-                    Text("Category not found")
-                }
-
-            case .catalog:
-                CatalogContentView(store: store, selection: $selection)
-
-            case .creations:
-                CreationsContentView(store: store, selection: $selection)
-
             case .teamChat:
                 TeamChatView(storeId: store.selectedStore?.id)
 
             // OPERATIONS - Section views
-            case .browserSessions:
-                BrowserSessionsListView(store: store, selection: $selection)
+            case .locations:
+                LocationsListView(selection: $selection, storeId: store.currentStoreId)
+
+            case .locationDetail(let id):
+                LocationDetailWrapper(locationId: id)
+
+            case .queue(let locationId):
+                LocationQueueView(locationId: locationId)
 
             case .emails:
-                EmailsListView(store: store, selection: $selection)
+                EmailsListView(selection: $selection, storeId: store.currentStoreId)
 
             case .inbox:
-                InboxListView(store: store, selection: $selection)
+                InboxListView(selection: $selection)
 
             case .inboxThread(let id):
-                ThreadDetailWrapper(threadId: id, store: store)
+                ThreadDetailWrapper(threadId: id)
 
             case .inboxSettings:
-                EmailDomainSettingsView(store: store)
+                EmailDomainSettingsView()
 
             // CRM - Section views
             case .emailCampaigns:
-                CRMEmailCampaignsView(store: store, selection: $selection)
+                CRMEmailCampaignsView(selection: $selection, storeId: store.currentStoreId)
 
             case .metaCampaigns:
-                CRMMetaCampaignsView(store: store, selection: $selection)
+                CRMMetaCampaignsView(selection: $selection, storeId: store.currentStoreId)
 
             case .metaIntegrations:
-                CRMMetaIntegrationsView(store: store, selection: $selection)
+                CRMMetaIntegrationsView(selection: $selection, storeId: store.currentStoreId)
 
             // AI - Section views
             case .aiChat:
-                WelcomeView(store: store)
+                WelcomeView()
 
             case .agents:
-                AgentsListView(store: store, selection: $selection)
+                AgentsListView(selection: $selection, storeId: store.currentStoreId)
 
             case .telemetry:
                 TelemetryPanel(storeId: store.selectedStore?.id)
 
-            // Detail items - These are pushed via NavigationStack, but we handle them
-            // here as fallback for direct sidebar selection (from old saved state)
-            case .orderDetail(let id):
-                OrderDetailWrapper(orderId: id, store: store)
-
-            case .locationDetail(let id):
-                LocationDetailWrapper(locationId: id, store: store)
-
-            case .queue(let locationId):
-                SDLocationQueueView(locationId: locationId)
-
-            case .customerDetail(let id):
-                CustomerDetailWrapper(customerId: id, store: store)
-
-            case .productDetail(let id):
-                ProductDetailWrapper(productId: id, store: store)
-
-            case .creationDetail(let id):
-                CreationDetailWrapper(creationId: id, store: store)
-
-            case .browserSessionDetail(let id):
-                BrowserSessionWrapper(sessionId: id, store: store)
-
+            // Detail items
             case .emailDetail(let id):
-                EmailDetailWrapper(emailId: id, store: store)
+                EmailDetailWrapper(emailId: id)
 
             case .emailCampaignDetail(let id):
-                EmailCampaignWrapper(campaignId: id, store: store)
+                EmailCampaignWrapper(campaignId: id)
 
             case .metaCampaignDetail(let id):
-                MetaCampaignWrapper(campaignId: id, store: store)
+                MetaCampaignWrapper(campaignId: id)
 
             case .metaIntegrationDetail(let id):
-                MetaIntegrationWrapper(integrationId: id, store: store)
+                MetaIntegrationWrapper(integrationId: id)
 
             case .agentDetail(let id):
-                AgentDetailWrapper(agentId: id, store: store, selection: $selection)
+                AgentDetailWrapper(agentId: id, selection: $selection)
 
             case .none:
-                WelcomeView(store: store)
+                WelcomeView()
             }
         }
+        .freezeDebugLifecycle("MainDetailView")
     }
 }
 
 // MARK: - Welcome View
-// Minimal native macOS empty state
-
 struct WelcomeView: View {
-    var store: EditorStore
-
     var body: some View {
         ContentUnavailableView {
             Label("WhaleTools", systemImage: "hammer.fill")

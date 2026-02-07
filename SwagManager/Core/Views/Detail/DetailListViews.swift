@@ -4,729 +4,13 @@ import SwiftData
 // MARK: - Section Content Views
 // Clean, minimal list views for each section
 
-// MARK: - Orders Section
-
-struct AllOrdersListView: View {
-    @Query(sort: \SDOrder.createdAt, order: .reverse) private var orders: [SDOrder]
-    @State private var searchText = ""
-    @State private var statusFilter: String? = nil
-    @State private var cachedFilteredOrders: [SDOrder] = []
-    @State private var searchDebounceTask: Task<Void, Never>?
-
-    var body: some View {
-        List {
-            ForEach(cachedFilteredOrders) { order in
-                NavigationLink(value: SDSidebarItem.orderDetail(order.id)) {
-                    OrderListRow(order: order)
-                }
-            }
-        }
-        .listStyle(.inset)
-        .searchable(text: $searchText, prompt: "Search orders")
-        .navigationTitle("Orders")
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    Button("All") { statusFilter = nil }
-                    Divider()
-                    ForEach(["pending", "confirmed", "preparing", "ready", "completed", "cancelled"], id: \.self) { status in
-                        Button(status.capitalized) { statusFilter = status }
-                    }
-                } label: {
-                    Label(statusFilter?.capitalized ?? "Filter", systemImage: "line.3.horizontal.decrease.circle")
-                }
-            }
-        }
-        .task { updateFilteredOrders() }
-        .onChange(of: searchText) { _, _ in
-            searchDebounceTask?.cancel()
-            searchDebounceTask = Task {
-                try? await Task.sleep(for: .milliseconds(150))
-                guard !Task.isCancelled else { return }
-                updateFilteredOrders()
-            }
-        }
-        .onChange(of: statusFilter) { _, _ in updateFilteredOrders() }
-        .onChange(of: orders.count) { _, _ in updateFilteredOrders() }
-    }
-
-    private func updateFilteredOrders() {
-        cachedFilteredOrders = orders.filter { order in
-            let matchesSearch = searchText.isEmpty ||
-                order.displayTitle.localizedCaseInsensitiveContains(searchText) ||
-                order.orderNumber.localizedCaseInsensitiveContains(searchText)
-            let matchesStatus = statusFilter == nil || order.status == statusFilter
-            return matchesSearch && matchesStatus
-        }
-    }
-}
-
-struct OrderListRow: View {
-    let order: SDOrder
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(order.orderNumber)
-                        .font(.system(.subheadline, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                    if !order.displayTitle.contains("#") {
-                        Text(order.displayTitle)
-                            .font(.subheadline.weight(.medium))
-                    }
-                }
-                Text(order.createdAt, style: .relative)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-
-            Text(order.displayTotal)
-                .font(.subheadline.weight(.medium).monospacedDigit())
-
-            OrderStatusBadge(status: order.status)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Locations Section
-
-struct AllLocationsListView: View {
-    @Query(sort: \SDLocation.name) private var locations: [SDLocation]
-
-    var body: some View {
-        List {
-            ForEach(locations) { location in
-                NavigationLink(value: SDSidebarItem.locationDetail(location.id)) {
-                    LocationListRow(location: location)
-                }
-            }
-        }
-        .listStyle(.inset)
-        .navigationTitle("Locations")
-    }
-}
-
-struct LocationListRow: View {
-    let location: SDLocation
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(location.isActive ? Color.green : Color.gray.opacity(0.4))
-                .frame(width: 8, height: 8)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(location.name)
-                    .font(.subheadline.weight(.medium))
-                if let city = location.city, let state = location.state {
-                    Text("\(city), \(state)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            if location.activeOrderCount > 0 {
-                Text("\(location.activeOrderCount) orders")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            NavigationLink(value: SDSidebarItem.queue(location.id)) {
-                Image(systemName: "person.3.sequence")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Customers Section
-
-struct CustomersListView: View {
-    var store: EditorStore
-    @State private var searchText = ""
-    @State private var cachedFilteredCustomers: [Customer] = []
-    @State private var searchDebounceTask: Task<Void, Never>?
-
-    var body: some View {
-        List {
-            ForEach(cachedFilteredCustomers) { customer in
-                NavigationLink(value: SDSidebarItem.customerDetail(customer.id)) {
-                    CustomerListRow(customer: customer)
-                }
-            }
-        }
-        .listStyle(.inset)
-        .searchable(text: $searchText, prompt: "Search customers")
-        .navigationTitle("Customers")
-        .task {
-            if store.customers.isEmpty {
-                await store.loadCustomers()
-            }
-            updateFilteredCustomers()
-        }
-        .onChange(of: searchText) { _, _ in
-            searchDebounceTask?.cancel()
-            searchDebounceTask = Task {
-                try? await Task.sleep(for: .milliseconds(150))
-                guard !Task.isCancelled else { return }
-                updateFilteredCustomers()
-            }
-        }
-        .onChange(of: store.customers.count) { _, _ in updateFilteredCustomers() }
-    }
-
-    private func updateFilteredCustomers() {
-        if searchText.isEmpty {
-            cachedFilteredCustomers = store.customers
-        } else {
-            cachedFilteredCustomers = store.customers.filter {
-                $0.displayName.localizedCaseInsensitiveContains(searchText) ||
-                ($0.email?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                ($0.phone?.localizedCaseInsensitiveContains(searchText) ?? false)
-            }
-        }
-    }
-}
-
-struct CustomerListRow: View {
-    let customer: Customer
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(Color.blue.opacity(0.15))
-                .frame(width: 32, height: 32)
-                .overlay {
-                    Text(customer.initials)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.blue)
-                }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(customer.displayName)
-                    .font(.subheadline.weight(.medium))
-                if let email = customer.email {
-                    Text(email)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(customer.formattedTotalSpent)
-                    .font(.caption.monospacedDigit())
-                if let tier = customer.loyaltyTier, !tier.isEmpty {
-                    Text(tier.capitalized)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-// MARK: - Catalog Section
-
-struct CatalogContentView: View {
-    var store: EditorStore
-    @Binding var selection: SDSidebarItem?
-    @State private var searchText = ""
-    @State private var selectedProductIds: Set<UUID> = []
-    @State private var isEditMode = false
-    @State private var showArchived = false
-    @State private var isProcessing = false
-    @State private var isLoadingArchived = false
-
-    // Cached display data
-    @State private var displayProducts: [Product] = []
-    // Archived products fetched on-demand from DB (not kept in store.products)
-    @State private var archivedProducts: [Product] = []
-    @State private var archivedCount: Int = 0
-    // Debounce task for search
-    @State private var searchDebounceTask: Task<Void, Never>?
-
-    var body: some View {
-        List(selection: isEditMode ? $selectedProductIds : .constant(Set<UUID>())) {
-            if isEditMode && !selectedProductIds.isEmpty {
-                Section {
-                    bulkActionBar
-                }
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets())
-            }
-
-            if isLoadingArchived {
-                HStack {
-                    Spacer()
-                    ProgressView("Loading archived products...")
-                        .controlSize(.small)
-                    Spacer()
-                }
-                .listRowSeparator(.hidden)
-            } else if displayProducts.isEmpty {
-                if showArchived {
-                    ContentUnavailableView("No Archived Products", systemImage: "archivebox",
-                        description: Text("Archived products will appear here"))
-                        .listRowSeparator(.hidden)
-                } else if store.products.isEmpty {
-                    ContentUnavailableView("No Products", systemImage: "square.grid.2x2",
-                        description: Text("Products will appear here"))
-                        .listRowSeparator(.hidden)
-                } else {
-                    ContentUnavailableView("No Products Found", systemImage: "magnifyingglass",
-                        description: Text("Try a different search term"))
-                        .listRowSeparator(.hidden)
-                }
-            } else {
-                ForEach(displayProducts) { product in
-                    if isEditMode {
-                        ProductListRow(product: product, showArchiveBadge: showArchived)
-                            .tag(product.id)
-                    } else {
-                        NavigationLink(value: SDSidebarItem.productDetail(product.id)) {
-                            ProductListRow(product: product, showArchiveBadge: showArchived)
-                        }
-                        .contextMenu {
-                            productContextMenu(for: product)
-                        }
-                    }
-                }
-            }
-        }
-        .listStyle(.inset)
-        .searchable(text: $searchText, prompt: "Search products")
-        .navigationTitle(showArchived ? "Archived" : "Catalog")
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    showArchived.toggle()
-                    selectedProductIds.removeAll()
-                } label: {
-                    Label(
-                        showArchived ? "Show Active" : "Show Archived",
-                        systemImage: showArchived ? "tray.full" : "archivebox"
-                    )
-                }
-                .help(showArchived ? "Show active products" : "Show archived (\(archivedCount))")
-
-                Button {
-                    withAnimation {
-                        isEditMode.toggle()
-                        if !isEditMode {
-                            selectedProductIds.removeAll()
-                        }
-                    }
-                } label: {
-                    Text(isEditMode ? "Done" : "Select")
-                }
-            }
-        }
-        .task {
-            updateDisplayProducts()
-            await fetchArchivedCount()
-        }
-        .onChange(of: searchText) { _, newValue in
-            // Debounce search to avoid main thread blocking on every keystroke
-            searchDebounceTask?.cancel()
-            searchDebounceTask = Task {
-                try? await Task.sleep(for: .milliseconds(150))
-                guard !Task.isCancelled else { return }
-                updateDisplayProducts()
-            }
-        }
-        .onChange(of: showArchived) { _, newValue in
-            if newValue {
-                Task { await fetchArchivedProducts() }
-            } else {
-                archivedProducts = []
-                updateDisplayProducts()
-            }
-        }
-        .onChange(of: store.products.count) { _, _ in
-            if !showArchived { updateDisplayProducts() }
-        }
-        .onChange(of: isEditMode) { _, newValue in
-            if !newValue { selectedProductIds.removeAll() }
-        }
-    }
-
-    // MARK: - Bulk Action Bar
-
-    @ViewBuilder
-    private var bulkActionBar: some View {
-        HStack(spacing: 16) {
-            Text("\(selectedProductIds.count) selected")
-                .font(.subheadline.weight(.medium))
-
-            Spacer()
-
-            if isProcessing {
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                if showArchived {
-                    Button {
-                        Task { await bulkUnarchive() }
-                    } label: {
-                        Label("Restore", systemImage: "arrow.uturn.backward")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                } else {
-                    Button {
-                        Task { await bulkArchive() }
-                    } label: {
-                        Label("Archive", systemImage: "archivebox")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
-                }
-
-                Button {
-                    selectedProductIds.removeAll()
-                } label: {
-                    Text("Cancel")
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color(nsColor: .controlBackgroundColor))
-    }
-
-    // MARK: - Data
-
-    private func updateDisplayProducts() {
-        let source = showArchived ? archivedProducts : store.products
-        let search = searchText
-        if search.isEmpty {
-            displayProducts = source
-        } else {
-            displayProducts = source.filter { product in
-                product.name.localizedCaseInsensitiveContains(search) ||
-                (product.sku?.localizedCaseInsensitiveContains(search) ?? false)
-            }
-        }
-    }
-
-    /// Lightweight count query — no JSON decoding of product rows
-    private func fetchArchivedCount() async {
-        do {
-            let response = try await store.supabase.client
-                .from("products")
-                .select("id", head: true, count: .exact)
-                .eq("store_id", value: store.currentStoreId)
-                .eq("status", value: "archived")
-                .execute()
-            archivedCount = response.count ?? 0
-        } catch {
-            archivedCount = 0
-        }
-    }
-
-    /// Fetch archived products on-demand from DB (only when user toggles)
-    private func fetchArchivedProducts() async {
-        isLoadingArchived = true
-        do {
-            archivedProducts = try await store.supabase.products.fetchProducts(
-                storeId: store.currentStoreId,
-                status: "archived",
-                excludeStatus: nil
-            )
-            updateDisplayProducts()
-        } catch {
-            archivedProducts = []
-        }
-        isLoadingArchived = false
-    }
-
-    private func bulkArchive() async {
-        guard !selectedProductIds.isEmpty else { return }
-        isProcessing = true
-        await store.bulkUpdateProductStatus(ids: Array(selectedProductIds), status: "archived")
-        selectedProductIds.removeAll()
-        isProcessing = false
-        isEditMode = false
-        await fetchArchivedCount()
-    }
-
-    private func bulkUnarchive() async {
-        guard !selectedProductIds.isEmpty else { return }
-        isProcessing = true
-        await store.bulkUpdateProductStatus(ids: Array(selectedProductIds), status: "published")
-        selectedProductIds.removeAll()
-        isProcessing = false
-        isEditMode = false
-        // Refresh archived list since some were restored
-        await fetchArchivedProducts()
-        await fetchArchivedCount()
-    }
-
-    @ViewBuilder
-    private func productContextMenu(for product: Product) -> some View {
-        if product.status == "archived" {
-            Button {
-                Task { await store.bulkUpdateProductStatus(ids: [product.id], status: "published") }
-            } label: {
-                Label("Restore", systemImage: "arrow.uturn.backward")
-            }
-        } else {
-            Button {
-                Task { await store.bulkUpdateProductStatus(ids: [product.id], status: "archived") }
-            } label: {
-                Label("Archive", systemImage: "archivebox")
-            }
-        }
-
-        Divider()
-
-        if product.status != "published" {
-            Button {
-                Task { await store.bulkUpdateProductStatus(ids: [product.id], status: "published") }
-            } label: {
-                Label("Publish", systemImage: "checkmark.circle")
-            }
-        }
-
-        if product.status != "draft" {
-            Button {
-                Task { await store.bulkUpdateProductStatus(ids: [product.id], status: "draft") }
-            } label: {
-                Label("Set as Draft", systemImage: "pencil.circle")
-            }
-        }
-
-        Divider()
-
-        Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(product.id.uuidString, forType: .string)
-        } label: {
-            Label("Copy ID", systemImage: "doc.on.doc")
-        }
-
-        if let sku = product.sku {
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(sku, forType: .string)
-            } label: {
-                Label("Copy SKU", systemImage: "barcode")
-            }
-        }
-    }
-}
-
-struct ProductListRow: View {
-    let product: Product
-    var showArchiveBadge: Bool = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack(alignment: .bottomTrailing) {
-                // PERF: CachedAsyncImage uses NSCache instead of re-fetching per scroll
-                CachedAsyncImage(
-                    url: product.featuredImage.flatMap { URL(string: $0) },
-                    size: 40
-                )
-
-                if showArchiveBadge {
-                    Image(systemName: "archivebox.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white)
-                        .padding(3)
-                        .background(Color.orange)
-                        .clipShape(Circle())
-                        .offset(x: 4, y: 4)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(product.name)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    if let sku = product.sku {
-                        Text(sku)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    if product.status == "draft" {
-                        Text("Draft")
-                            .font(.caption2)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.2))
-                            .foregroundStyle(.orange)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(product.displayPrice)
-                    .font(.subheadline.monospacedDigit())
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(product.stockStatusColor)
-                        .frame(width: 6, height: 6)
-                    Text(product.stockQuantity.map { "\($0)" } ?? "—")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-// MARK: - Creations Section
-
-struct CreationsContentView: View {
-    var store: EditorStore
-    @Binding var selection: SDSidebarItem?
-    @State private var searchText = ""
-    @State private var cachedFilteredCreations: [Creation] = []
-    @State private var searchDebounceTask: Task<Void, Never>?
-
-    var body: some View {
-        Group {
-            if store.creations.isEmpty {
-                ContentUnavailableView("No Creations", systemImage: "wand.and.stars", description: Text("React components and templates"))
-            } else {
-                List {
-                    ForEach(cachedFilteredCreations) { creation in
-                        NavigationLink(value: SDSidebarItem.creationDetail(creation.id)) {
-                            CreationListRow(creation: creation)
-                        }
-                    }
-                }
-                .listStyle(.inset)
-                .searchable(text: $searchText, prompt: "Search creations")
-            }
-        }
-        .navigationTitle("Creations")
-        .task { updateFilteredCreations() }
-        .onChange(of: searchText) { _, _ in
-            searchDebounceTask?.cancel()
-            searchDebounceTask = Task {
-                try? await Task.sleep(for: .milliseconds(150))
-                guard !Task.isCancelled else { return }
-                updateFilteredCreations()
-            }
-        }
-        .onChange(of: store.creations.count) { _, _ in updateFilteredCreations() }
-    }
-
-    private func updateFilteredCreations() {
-        if searchText.isEmpty {
-            cachedFilteredCreations = store.creations
-        } else {
-            cachedFilteredCreations = store.creations.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-    }
-}
-
-struct CreationListRow: View {
-    let creation: Creation
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: creation.creationType.icon)
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .frame(width: 32)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(creation.name)
-                    .font(.subheadline.weight(.medium))
-                Text(creation.creationType.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if creation.status == .published {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-// MARK: - Browser Sessions Section
-
-struct BrowserSessionsListView: View {
-    var store: EditorStore
-    @Binding var selection: SDSidebarItem?
-
-    var body: some View {
-        Group {
-            if store.browserSessions.isEmpty {
-                ContentUnavailableView("No Browser Sessions", systemImage: "globe", description: Text("Browser sessions will appear here"))
-            } else {
-                List {
-                    ForEach(store.browserSessions) { session in
-                        NavigationLink(value: SDSidebarItem.browserSessionDetail(session.id)) {
-                            BrowserSessionListRow(session: session)
-                        }
-                    }
-                }
-                .listStyle(.inset)
-            }
-        }
-        .navigationTitle("Browser Sessions")
-    }
-}
-
-struct BrowserSessionListRow: View {
-    let session: BrowserSession
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(session.isActive ? Color.green : Color.gray.opacity(0.4))
-                .frame(width: 8, height: 8)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.displayName)
-                    .font(.subheadline.weight(.medium))
-                if let url = session.currentUrl {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
 // MARK: - Emails Section
+// Uses EditorStore for data that doesn't have a service method yet
 
 struct EmailsListView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @Binding var selection: SDSidebarItem?
+    let storeId: UUID  // For future use when service methods are added
 
     var body: some View {
         List {
@@ -783,10 +67,12 @@ struct EmailListRow: View {
 }
 
 // MARK: - Agents Section
+// Uses EditorStore for data that doesn't have a service method yet
 
 struct AgentsListView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @Binding var selection: SDSidebarItem?
+    let storeId: UUID  // For future use when service methods are added
 
     var body: some View {
         Group {
@@ -847,88 +133,13 @@ struct TeamChatPlaceholderView: View {
     }
 }
 
-// MARK: - Queue View
-
-struct SDLocationQueueView: View {
-    let locationId: UUID
-    @StateObject private var queueStore: LocationQueueStore
-
-    init(locationId: UUID) {
-        self.locationId = locationId
-        _queueStore = StateObject(wrappedValue: LocationQueueStore.shared(for: locationId))
-    }
-
-    var body: some View {
-        Group {
-            if queueStore.isLoading && queueStore.queue.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if queueStore.queue.isEmpty {
-                ContentUnavailableView("No Customers", systemImage: "person.3.sequence", description: Text("Queue is empty"))
-            } else {
-                List {
-                    ForEach(queueStore.queue) { entry in
-                        QueueEntryRow(entry: entry)
-                    }
-                }
-                .listStyle(.inset)
-            }
-        }
-        .navigationTitle("Queue")
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    Task { await queueStore.loadQueue() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-            }
-        }
-        .task(id: locationId) {
-            await queueStore.loadQueue()
-            queueStore.subscribeToRealtime()
-        }
-        .onDisappear {
-            queueStore.unsubscribeFromRealtime()
-        }
-    }
-}
-
-struct QueueEntryRow: View {
-    let entry: QueueEntry
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text("#\(entry.position)")
-                .font(.headline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 36)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.customerName ?? "Customer")
-                    .font(.subheadline.weight(.medium))
-                if let phone = entry.customerPhone {
-                    Text(phone)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            Text(entry.addedAt, style: .relative)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
 // MARK: - CRM Views
+// Uses EditorStore for data that doesn't have service methods yet
 
 struct CRMEmailCampaignsView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @Binding var selection: SDSidebarItem?
+    let storeId: UUID  // For future use
 
     var body: some View {
         if store.emailCampaigns.isEmpty {
@@ -947,8 +158,9 @@ struct CRMEmailCampaignsView: View {
 }
 
 struct CRMMetaCampaignsView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @Binding var selection: SDSidebarItem?
+    let storeId: UUID  // For future use
 
     var body: some View {
         if store.metaCampaigns.isEmpty {
@@ -967,8 +179,9 @@ struct CRMMetaCampaignsView: View {
 }
 
 struct CRMMetaIntegrationsView: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @Binding var selection: SDSidebarItem?
+    let storeId: UUID  // For future use
 
     var body: some View {
         if store.metaIntegrations.isEmpty {
@@ -982,6 +195,162 @@ struct CRMMetaIntegrationsView: View {
             }
             .listStyle(.inset)
             .navigationTitle("Meta Integrations")
+        }
+    }
+}
+
+// MARK: - Locations Section
+
+struct LocationsListView: View {
+    @Environment(\.editorStore) private var store
+    @Binding var selection: SDSidebarItem?
+    let storeId: UUID
+
+    var body: some View {
+        Group {
+            if store.locations.isEmpty {
+                ContentUnavailableView("No Locations", systemImage: "mappin.and.ellipse", description: Text("Locations will appear here"))
+            } else {
+                List {
+                    ForEach(store.locations) { location in
+                        NavigationLink(value: SDSidebarItem.locationDetail(location.id)) {
+                            LocationListRow(location: location)
+                        }
+                        .contextMenu {
+                            Button {
+                                selection = .queue(location.id)
+                            } label: {
+                                Label("Open Queue", systemImage: "list.bullet")
+                            }
+                        }
+                    }
+                }
+                .listStyle(.inset)
+            }
+        }
+        .navigationTitle("Locations")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task { await store.loadLocations() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+            }
+        }
+    }
+}
+
+struct LocationListRow: View {
+    let location: Location
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(location.isActive == true ? Color.green : Color.gray.opacity(0.4))
+                .frame(width: 8, height: 8)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(location.name)
+                    .font(.subheadline.weight(.medium))
+                if let address = location.address {
+                    Text(address)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            if let city = location.city, let state = location.state {
+                Text("\(city), \(state)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+struct LocationDetailWrapper: View {
+    let locationId: UUID
+    @Environment(\.editorStore) private var store
+
+    var body: some View {
+        if let location = store.locations.first(where: { $0.id == locationId }) {
+            LocationDetailView(location: location)
+        } else {
+            ContentUnavailableView("Location not found", systemImage: "mappin.slash")
+        }
+    }
+}
+
+struct LocationDetailView: View {
+    let location: Location
+
+    var body: some View {
+        SettingsContainer {
+            SettingsDetailHeader(
+                title: location.name,
+                subtitle: location.address,
+                icon: "mappin.and.ellipse"
+            )
+
+            SettingsGroup(header: "Details") {
+                if let address = location.address {
+                    SettingsRow(label: "Address", value: address)
+                }
+                if let city = location.city {
+                    SettingsRow(label: "City", value: city)
+                        .settingsDivider()
+                }
+                if let state = location.state {
+                    SettingsRow(label: "State", value: state)
+                        .settingsDivider()
+                }
+                if let zip = location.zip {
+                    SettingsRow(label: "ZIP", value: zip)
+                        .settingsDivider()
+                }
+            }
+
+            SettingsGroup(header: "Contact") {
+                if let phone = location.phone {
+                    SettingsRow(label: "Phone", value: phone)
+                }
+                if let email = location.email {
+                    SettingsRow(label: "Email", value: email)
+                        .settingsDivider()
+                }
+            }
+
+            SettingsGroup(header: "Status") {
+                SettingsRow(label: "Active", value: location.isActive == true ? "Yes" : "No")
+            }
+        }
+        .navigationTitle(location.name)
+    }
+}
+
+// MARK: - Location Queue View
+
+struct LocationQueueView: View {
+    let locationId: UUID
+    @Environment(\.editorStore) private var store
+
+    var body: some View {
+        if let location = store.locations.first(where: { $0.id == locationId }) {
+            VStack {
+                Text("Queue for \(location.name)")
+                    .font(.headline)
+                    .padding()
+
+                ContentUnavailableView("Queue View", systemImage: "list.bullet", description: Text("Queue management coming soon"))
+            }
+            .navigationTitle("\(location.name) Queue")
+        } else {
+            ContentUnavailableView("Location not found", systemImage: "mappin.slash")
         }
     }
 }

@@ -5,7 +5,7 @@ import SwiftUI
 
 struct MetaCampaignDetailPanel: View {
     let campaign: MetaCampaign
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     @State private var isRefreshing = false
 
     var body: some View {

@@ -51,6 +51,7 @@ struct AuthView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            FreezeDebugger.onAppear("AuthView")
             // FORCE the window to become key - multiple attempts
             for delay in [0.1, 0.3, 0.5] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
@@ -66,6 +67,9 @@ struct AuthView: View {
                     }
                 }
             }
+        }
+        .onDisappear {
+            FreezeDebugger.onDisappear("AuthView")
         }
     }
 

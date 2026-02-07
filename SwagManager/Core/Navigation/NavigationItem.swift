@@ -5,28 +5,13 @@ import SwiftData
 // Single enum for all navigation in the app
 
 enum NavigationItem: Hashable {
-    // Workspace
-    case orders
-    case order(SDOrder)
-    case location(SDLocation)
-    case queue(SDLocation)
-
     // Content
-    case catalog
-    case products
-    case creations
     case teamChat
-
-    // Operations
-    case browserSessions
 
     // AI
     case agents
     case aiChat
     case email
-
-    // Detail views
-    case customer(SDCustomer)
 }
 
 // MARK: - Navigation Path (for programmatic navigation)

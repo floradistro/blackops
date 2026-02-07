@@ -34,7 +34,7 @@ enum EditorTab: String, CaseIterable {
 // MARK: - Minimal Tab Bar (VS Code / Terminal style)
 
 struct MinimalTabBar: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         HStack(spacing: 0) {
@@ -71,9 +71,7 @@ struct MinimalTabBar: View {
     }
 
     private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
-        if case .creation(let c) = tab, c.id == store.selectedCreation?.id {
-            return store.hasUnsavedChanges
-        }
+        // No creation tabs - unsaved changes tracked elsewhere
         return false
     }
 }
@@ -161,7 +159,7 @@ struct MinimalTab: View {
 // MARK: - Toolbar Tab Strip (Legacy)
 
 struct ToolbarTabStrip: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         HStack(spacing: 0) {
@@ -181,9 +179,7 @@ struct ToolbarTabStrip: View {
     }
 
     private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
-        if case .creation(let c) = tab, c.id == store.selectedCreation?.id {
-            return store.hasUnsavedChanges
-        }
+        // No creation tabs - unsaved changes tracked elsewhere
         return false
     }
 }
@@ -318,7 +314,7 @@ struct EditorModeStrip: View {
 // MARK: - Open Tab Bar (Legacy - kept for reference)
 
 struct OpenTabBar: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -350,9 +346,7 @@ struct OpenTabBar: View {
     }
 
     private func tabHasUnsavedChanges(_ tab: OpenTabItem) -> Bool {
-        if case .creation(let c) = tab, c.id == store.selectedCreation?.id {
-            return store.hasUnsavedChanges
-        }
+        // No creation tabs - unsaved changes tracked elsewhere
         return false
     }
 }
@@ -421,89 +415,7 @@ struct OpenTabButton: View {
     }
 }
 
-// MARK: - Editor Tab Bar (VSCode-style)
-
-struct EditorTabBar: View {
-    let creation: Creation?
-    @Binding var selectedTab: EditorTab
-    @Binding var sidebarCollapsed: Bool
-    let hasUnsavedChanges: Bool
-    let onSave: () -> Void
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // Show sidebar button (only when collapsed)
-            if sidebarCollapsed {
-                Button {
-                    withAnimation(.easeOut(duration: 0.15)) { sidebarCollapsed = false }
-                } label: {
-                    Image(systemName: "sidebar.left")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 36, height: 36)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                Rectangle()
-                    .fill(DesignSystem.Colors.border)
-                    .frame(width: 1, height: 18)
-                    .padding(.trailing, 8)
-            }
-
-            // Tabs
-            HStack(spacing: 2) {
-                ForEach(EditorTab.allCases, id: \.self) { tab in
-                    TabButton(
-                        tab: tab,
-                        isSelected: selectedTab == tab,
-                        hasChanges: tab == .code && hasUnsavedChanges
-                    ) {
-                        withAnimation(.easeOut(duration: 0.1)) { selectedTab = tab }
-                    }
-                }
-            }
-
-            Spacer()
-
-            // File info & save
-            if let creation = creation {
-                HStack(spacing: 12) {
-                    // File name
-                    HStack(spacing: 5) {
-                        if hasUnsavedChanges {
-                            Circle()
-                                .fill(Color.orange)
-                                .frame(width: 5, height: 5)
-                        }
-                        Text(creation.name)
-                            .font(.system(size: 11))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-                            .lineLimit(1)
-                    }
-
-                    // Save button
-                    Button {
-                        onSave()
-                    } label: {
-                        Image(systemName: "arrow.down.doc")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(hasUnsavedChanges ? .primary : DesignSystem.Colors.textQuaternary)
-                            .frame(width: 28, height: 28)
-                            .background(hasUnsavedChanges ? DesignSystem.Colors.surfaceElevated : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut("s", modifiers: .command)
-                }
-                .padding(.trailing, 8)
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: 38)
-        .background(DesignSystem.Colors.surfaceTertiary)
-    }
-}
+// MARK: - Tab Button
 
 struct TabButton: View {
     let tab: EditorTab

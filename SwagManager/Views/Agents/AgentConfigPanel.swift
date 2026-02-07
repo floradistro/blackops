@@ -5,7 +5,7 @@ import SwiftUI
 // PERFORMANCE: Uses child views with @StateObject to isolate reactive updates
 
 struct AgentConfigPanel: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let agent: AIAgent
     @Binding var selection: SDSidebarItem?
 
@@ -25,10 +25,11 @@ struct AgentConfigPanel: View {
     @State private var isSaving = false
 
     private let models = [
-        ("claude-sonnet-4-20250514", "Claude Sonnet 4", "Fast & capable"),
-        ("claude-opus-4-6-20260201", "Claude Opus 4.6", "Most powerful"),
+        ("claude-opus-4-6", "Claude Opus 4.6", "Most powerful"),
+        ("claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", "Fast & intelligent"),
         ("claude-opus-4-5-20251101", "Claude Opus 4.5", "Previous flagship"),
-        ("claude-3-5-haiku-20241022", "Claude Haiku 3.5", "Fastest")
+        ("claude-sonnet-4-20250514", "Claude Sonnet 4", "Fast & capable"),
+        ("claude-haiku-4-5-20251001", "Claude Haiku 4.5", "Fastest")
     ]
 
     var body: some View {
@@ -59,12 +60,12 @@ struct AgentConfigPanel: View {
                 Divider()
 
                 // Custom User Tools - create your own tools
-                CustomToolsSection(store: store)
+                CustomToolsSection()
 
                 Divider()
 
                 // Triggers - automate tool execution
-                TriggersSection(store: store)
+                TriggersSection()
 
                 Divider()
 
@@ -366,16 +367,19 @@ private struct ToolToggle: View {
 }
 
 // MARK: - Agent Header Section (Isolated)
-// Observes AgentClient and ProcessManager without causing parent re-renders
+// CRITICAL: Uses snapshot state to prevent layout recursion when chat panel opens
+// Instead of @ObservedObject (which causes immediate re-renders), we use @State
+// snapshots that only update via explicit timer, avoiding layout conflicts
 
 private struct AgentHeaderSection: View {
     let name: String
     let description: String
     let isActive: Bool
 
-    // Observe reactive objects only in this child view
-    @ObservedObject private var agentClient = AgentClient.shared
-    @ObservedObject private var processManager = AgentProcessManager.shared
+    // Use @State snapshots instead of @ObservedObject to prevent layout recursion
+    // These are updated via timer, not immediately on object change
+    @State private var isConnected = false
+    @State private var isServerRunning = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -397,9 +401,9 @@ private struct AgentHeaderSection: View {
                 HStack(spacing: 12) {
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(agentClient.isConnected ? Color.primary : Color.secondary.opacity(0.3))
+                            .fill(isConnected ? Color.primary : Color.secondary.opacity(0.3))
                             .frame(width: 5, height: 5)
-                        Text(agentClient.isConnected ? "connected" : "offline")
+                        Text(isConnected ? "connected" : "offline")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.tertiary)
                     }
@@ -418,6 +422,21 @@ private struct AgentHeaderSection: View {
             // Server Control - minimal
             serverControlSection
         }
+        .onAppear {
+            updateSnapshot()
+        }
+        .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
+            updateSnapshot()
+        }
+    }
+
+    private func updateSnapshot() {
+        // Update snapshots on a timer to avoid layout recursion
+        // The actual shared objects are only accessed here, not observed
+        let newConnected = AgentClient.shared.isConnected
+        let newRunning = AgentProcessManager.shared.isRunning
+        if isConnected != newConnected { isConnected = newConnected }
+        if isServerRunning != newRunning { isServerRunning = newRunning }
     }
 
     private var serverControlSection: some View {
@@ -429,20 +448,20 @@ private struct AgentHeaderSection: View {
 
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(agentClient.isConnected ? Color.primary : Color.secondary.opacity(0.3))
+                        .fill(isConnected ? Color.primary : Color.secondary.opacity(0.3))
                         .frame(width: 6, height: 6)
-                    Text(agentClient.isConnected ? "online" : "offline")
+                    Text(isConnected ? "online" : "offline")
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(agentClient.isConnected ? .primary : .tertiary)
+                        .foregroundStyle(isConnected ? .primary : .tertiary)
                 }
 
                 Spacer()
 
                 // Server control buttons - minimal text
                 HStack(spacing: 10) {
-                    if processManager.isRunning {
+                    if isServerRunning {
                         Button {
-                            processManager.restart()
+                            AgentProcessManager.shared.restart()
                         } label: {
                             Text("restart")
                                 .font(.system(size: 10, design: .monospaced))
@@ -451,14 +470,14 @@ private struct AgentHeaderSection: View {
                         .foregroundStyle(.secondary)
 
                         Button {
-                            processManager.stop()
+                            AgentProcessManager.shared.stop()
                         } label: {
                             Text("stop")
                                 .font(.system(size: 10, design: .monospaced))
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
-                    } else if agentClient.isConnected {
+                    } else if isConnected {
                         Button {
                             killExternalServer()
                         } label: {
@@ -469,7 +488,7 @@ private struct AgentHeaderSection: View {
                         .foregroundStyle(.secondary)
 
                         Button {
-                            agentClient.disconnect()
+                            AgentClient.shared.disconnect()
                         } label: {
                             Text("disconnect")
                                 .font(.system(size: 10, design: .monospaced))
@@ -478,7 +497,7 @@ private struct AgentHeaderSection: View {
                         .foregroundStyle(.secondary)
                     } else {
                         Button {
-                            processManager.start()
+                            AgentProcessManager.shared.start()
                         } label: {
                             Text("start")
                                 .font(.system(size: 10, design: .monospaced))
@@ -487,9 +506,9 @@ private struct AgentHeaderSection: View {
                         .controlSize(.small)
                     }
 
-                    if !agentClient.isConnected && !processManager.isRunning {
+                    if !isConnected && !isServerRunning {
                         Button {
-                            agentClient.connect()
+                            AgentClient.shared.connect()
                         } label: {
                             Text("connect")
                                 .font(.system(size: 10, design: .monospaced))
@@ -500,14 +519,14 @@ private struct AgentHeaderSection: View {
                 }
             }
 
-            if let error = processManager.error {
+            if let error = AgentProcessManager.shared.error {
                 Text(error)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
-            if !processManager.lastOutput.isEmpty {
-                Text(processManager.lastOutput)
+            if !AgentProcessManager.shared.lastOutput.isEmpty {
+                Text(AgentProcessManager.shared.lastOutput)
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
@@ -515,22 +534,8 @@ private struct AgentHeaderSection: View {
         }
         .padding(12)
         .background(Color.primary.opacity(0.02))
-        .onAppear {
-            processManager.clearErrorIfConnected()
-            if !agentClient.isConnected {
-                agentClient.connect()
-            } else if agentClient.availableTools.isEmpty {
-                agentClient.requestTools()
-            }
-        }
-        .onChange(of: agentClient.isConnected) { _, connected in
-            if connected {
-                processManager.clearErrorIfConnected()
-                if agentClient.availableTools.isEmpty {
-                    agentClient.requestTools()
-                }
-            }
-        }
+        // NOTE: Removed .onAppear and .onChange(of: agentClient.isConnected) to prevent
+        // observation-based layout recursion when chat panel opens
     }
 
     private func killExternalServer() {
@@ -539,7 +544,7 @@ private struct AgentHeaderSection: View {
         process.arguments = ["-c", "lsof -ti :3847 | xargs kill -9 2>/dev/null"]
         try? process.run()
         process.waitUntilExit()
-        agentClient.disconnect()
+        AgentClient.shared.disconnect()
     }
 }
 
@@ -984,9 +989,7 @@ private struct AgentToolsSection: View {
         case "inventory": return "Inventory"
         case "orders": return "Orders"
         case "customers": return "Customers"
-        case "products": return "Products"
         case "analytics": return "Analytics"
-        case "browser": return "Browser"
         case "images": return "Images"
         case "email": return "Email"
         case "build": return "Build"
@@ -1026,8 +1029,9 @@ private struct AgentToolsSection: View {
 // MARK: - Custom Tools Section (User-Created Tools)
 
 private struct CustomToolsSection: View {
-    var store: EditorStore
-    @State private var isExpanded = true
+    @Environment(\.editorStore) private var store
+    @State private var tools: [UserTool] = []
+    @State private var isLoading = true
     @State private var showCreateSheet = false
     @State private var editingTool: UserTool?
     @State private var deletingTool: UserTool?
@@ -1039,7 +1043,7 @@ private struct CustomToolsSection: View {
                 Text("CUSTOM TOOLS")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.tertiary)
-                Text("\(store.userTools.count)")
+                Text("\(tools.count)")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 Spacer()
@@ -1053,11 +1057,11 @@ private struct CustomToolsSection: View {
                 .foregroundStyle(.secondary)
             }
 
-            if store.isLoadingUserTools {
+            if isLoading {
                 Text("loading...")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.tertiary)
-            } else if store.userTools.isEmpty {
+            } else if tools.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("No tools defined")
                         .font(.system(size: 11, design: .monospaced))
@@ -1080,37 +1084,45 @@ private struct CustomToolsSection: View {
                 .background(Color.primary.opacity(0.02))
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260))], spacing: 8) {
-                    ForEach(store.userTools) { tool in
+                    ForEach(tools) { tool in
                         UserToolCard(
                             tool: tool,
-                            store: store,
                             onEdit: { editingTool = tool },
                             onDelete: {
                                 deletingTool = tool
                                 showDeleteConfirm = true
-                            }
+                            },
+                            onRefresh: loadTools
                         )
                     }
                 }
             }
         }
-        .onAppear {
-            Task { await store.loadUserTools() }
+        .task { await loadTools() }
+        .sheet(isPresented: $showCreateSheet, onDismiss: { Task { await loadTools() } }) {
+            UserToolEditorSheet(tool: nil)
         }
-        .sheet(isPresented: $showCreateSheet) {
-            UserToolEditorSheet(store: store, tool: nil)
-        }
-        .sheet(item: $editingTool) { tool in
-            UserToolEditorSheet(store: store, tool: tool)
+        .sheet(item: $editingTool, onDismiss: { Task { await loadTools() } }) { tool in
+            UserToolEditorSheet(tool: tool)
         }
         .alert("Delete Tool?", isPresented: $showDeleteConfirm, presenting: deletingTool) { tool in
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                Task { _ = await store.deleteUserTool(tool) }
+                Task {
+                    _ = await store.deleteUserTool(tool)
+                    await loadTools()
+                }
             }
         } message: { tool in
             Text("This will permanently delete \"\(tool.displayName)\" and any associated triggers.")
         }
+    }
+
+    private func loadTools() async {
+        isLoading = true
+        await store.loadUserTools()
+        tools = store.userTools
+        isLoading = false
     }
 }
 
@@ -1118,9 +1130,10 @@ private struct CustomToolsSection: View {
 
 private struct UserToolCard: View {
     let tool: UserTool
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let onEdit: () -> Void
     let onDelete: () -> Void
+    var onRefresh: (() async -> Void)?
 
     @State private var showTestSheet = false
     @State private var testInput: String = "{}"
@@ -1347,7 +1360,10 @@ private struct UserToolCard: View {
 // MARK: - Triggers Section
 
 private struct TriggersSection: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
+    @State private var triggers: [UserTrigger] = []
+    @State private var tools: [UserTool] = []
+    @State private var isLoading = true
     @State private var showCreateSheet = false
     @State private var editingTrigger: UserTrigger?
     @State private var deletingTrigger: UserTrigger?
@@ -1359,7 +1375,7 @@ private struct TriggersSection: View {
                 Text("TRIGGERS")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.tertiary)
-                Text("\(store.userTriggers.count)")
+                Text("\(triggers.count)")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 Spacer()
@@ -1371,17 +1387,21 @@ private struct TriggersSection: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .disabled(store.userTools.isEmpty)
+                .disabled(tools.isEmpty)
             }
 
-            if store.userTools.isEmpty {
+            if isLoading {
+                Text("loading...")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+            } else if tools.isEmpty {
                 Text("Create a tool first to add triggers")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.primary.opacity(0.02))
-            } else if store.userTriggers.isEmpty {
+            } else if triggers.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("No triggers defined")
                         .font(.system(size: 11, design: .monospaced))
@@ -1404,10 +1424,10 @@ private struct TriggersSection: View {
                 .background(Color.primary.opacity(0.02))
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260))], spacing: 8) {
-                    ForEach(store.userTriggers) { trigger in
+                    ForEach(triggers) { trigger in
                         TriggerCard(
                             trigger: trigger,
-                            tool: store.userTools.first { $0.id == trigger.toolId },
+                            tool: tools.first { $0.id == trigger.toolId },
                             onEdit: { editingTrigger = trigger },
                             onDelete: {
                                 deletingTrigger = trigger
@@ -1421,23 +1441,32 @@ private struct TriggersSection: View {
                 }
             }
         }
-        .onAppear {
-            Task { await store.loadUserTriggers() }
+        .task { await loadData() }
+        .sheet(isPresented: $showCreateSheet, onDismiss: { Task { await loadData() } }) {
+            TriggerEditorSheet(trigger: nil)
         }
-        .sheet(isPresented: $showCreateSheet) {
-            TriggerEditorSheet(store: store, trigger: nil)
-        }
-        .sheet(item: $editingTrigger) { trigger in
-            TriggerEditorSheet(store: store, trigger: trigger)
+        .sheet(item: $editingTrigger, onDismiss: { Task { await loadData() } }) { trigger in
+            TriggerEditorSheet(trigger: trigger)
         }
         .alert("Delete Trigger?", isPresented: $showDeleteConfirm, presenting: deletingTrigger) { trigger in
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                Task { _ = await store.deleteUserTrigger(trigger) }
+                Task {
+                    _ = await store.deleteUserTrigger(trigger)
+                    await loadData()
+                }
             }
         } message: { trigger in
             Text("This will permanently delete the trigger \"\(trigger.name)\".")
         }
+    }
+
+    private func loadData() async {
+        isLoading = true
+        await store.loadUserTriggers()
+        triggers = store.userTriggers
+        tools = store.userTools
+        isLoading = false
     }
 }
 
@@ -1546,7 +1575,7 @@ private struct TriggerCard: View {
 // MARK: - User Tool Editor Sheet
 
 private struct UserToolEditorSheet: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let tool: UserTool?
     @Environment(\.dismiss) private var dismiss
 
@@ -1598,15 +1627,10 @@ private struct UserToolEditorSheet: View {
     private let availableTables = [
         ("orders", "Customer orders"),
         ("order_items", "Line items in orders"),
-        ("products", "Product catalog"),
-        ("product_variants", "Product size/color variants"),
         ("customers", "Customer profiles"),
         ("customer_loyalty", "Loyalty points & tiers"),
         ("inventory", "Stock levels by location"),
         ("locations", "Store locations"),
-        ("categories", "Product categories"),
-        ("collections", "Product collections"),
-        ("pricing_schemas", "Pricing rules"),
         ("carts", "Active shopping carts"),
         ("cart_items", "Items in carts")
     ]
@@ -2337,7 +2361,7 @@ private struct InputParameterRow: View {
 // MARK: - Trigger Editor Sheet
 
 private struct TriggerEditorSheet: View {
-    var store: EditorStore
+    @Environment(\.editorStore) private var store
     let trigger: UserTrigger?
     @Environment(\.dismiss) private var dismiss
 
@@ -2359,14 +2383,10 @@ private struct TriggerEditorSheet: View {
     private let availableTables = [
         ("orders", "Customer orders"),
         ("order_items", "Line items in orders"),
-        ("products", "Product catalog"),
-        ("product_variants", "Product size/color variants"),
         ("customers", "Customer profiles"),
         ("customer_loyalty", "Loyalty points & tiers"),
         ("inventory", "Stock levels by location"),
         ("locations", "Store locations"),
-        ("categories", "Product categories"),
-        ("collections", "Product collections"),
         ("carts", "Active shopping carts"),
         ("cart_items", "Items in carts")
     ]
