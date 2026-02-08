@@ -345,20 +345,51 @@ struct TelemetrySpan: Identifiable, Codable {
 
         switch action {
         case "adjust":
-            let productId = input["product_id"] as? String ?? "?"
             let adjustment = input["adjustment"] as? Int ?? 0
             let sign = adjustment >= 0 ? "+" : ""
+
+            // Try to get product name from result
+            if let result = toolResult as? [String: Any],
+               let product = result["product"] as? [String: Any],
+               let name = product["name"] as? String {
+                return "\(name): \(sign)\(adjustment) units"
+            }
+
+            // Fallback to product_id
+            let productId = input["product_id"] as? String ?? "?"
             return "Product #\(productId.prefix(8)): \(sign)\(adjustment) units"
 
         case "set":
-            let productId = input["product_id"] as? String ?? "?"
             let quantity = input["quantity"] as? Int ?? 0
-            return "Set Product #\(productId.prefix(8)) → \(quantity) units"
+
+            if let result = toolResult as? [String: Any],
+               let product = result["product"] as? [String: Any],
+               let name = product["name"] as? String {
+                return "\(name) → \(quantity) units"
+            }
+
+            let productId = input["product_id"] as? String ?? "?"
+            return "Product #\(productId.prefix(8)) → \(quantity) units"
 
         case "transfer":
-            let productId = input["product_id"] as? String ?? "?"
             let qty = input["quantity"] as? Int ?? 0
-            return "Transferred \(qty) units of #\(productId.prefix(8))"
+            let fromLoc = input["from_location_id"] as? String ?? "?"
+            let toLoc = input["to_location_id"] as? String ?? "?"
+
+            // Try to get location names from result
+            if let result = toolResult as? [String: Any] {
+                let fromName = (result["from_location"] as? [String: Any])?["name"] as? String ?? String(fromLoc.prefix(8))
+                let toName = (result["to_location"] as? [String: Any])?["name"] as? String ?? String(toLoc.prefix(8))
+
+                if let product = result["product"] as? [String: Any],
+                   let productName = product["name"] as? String {
+                    return "\(productName) (\(qty) units): \(fromName) → \(toName)"
+                }
+
+                return "\(qty) units: \(fromName) → \(toName)"
+            }
+
+            return "Transferred \(qty) units"
 
         default:
             return nil
@@ -370,20 +401,55 @@ struct TelemetrySpan: Identifiable, Codable {
 
         switch action {
         case "create":
+            // Show location names and items
+            let fromLoc = input["from_location_id"] as? String ?? "?"
+            let toLoc = input["to_location_id"] as? String ?? "?"
+
             if let items = input["items"] as? [[String: Any]] {
                 let count = items.count
-                return "Created transfer: \(count) item\(count == 1 ? "" : "s")"
+                let totalQty = items.compactMap { $0["quantity"] as? Int }.reduce(0, +)
+
+                // Try to get location names from result
+                if let result = toolResult as? [String: Any] {
+                    let fromName = (result["from_location"] as? [String: Any])?["name"] as? String ?? String(fromLoc.prefix(8))
+                    let toName = (result["to_location"] as? [String: Any])?["name"] as? String ?? String(toLoc.prefix(8))
+
+                    // Show first item as preview
+                    if let firstItem = items.first,
+                       let productId = firstItem["product_id"] as? String {
+                        let qty = firstItem["quantity"] as? Int ?? 0
+                        let moreText = count > 1 ? " +\(count - 1) more" : ""
+                        return "\(fromName) → \(toName): \(qty) units of #\(productId.prefix(8))\(moreText)"
+                    }
+
+                    return "\(fromName) → \(toName): \(count) item\(count == 1 ? "" : "s"), \(totalQty) total units"
+                }
+
+                return "Transfer: \(count) item\(count == 1 ? "" : "s"), \(totalQty) units"
             }
             return "Created transfer"
 
         case "receive":
-            if let result = toolResult as? [String: Any],
-               let id = result["id"] as? String {
-                return "Received transfer #\(id.prefix(8))"
+            if let result = toolResult as? [String: Any] {
+                if let items = (result["items"] as? [[String: Any]]) {
+                    let count = items.count
+                    let toName = (result["to_location"] as? [String: Any])?["name"] as? String
+                    if let toName = toName {
+                        return "Received at \(toName): \(count) item\(count == 1 ? "" : "s")"
+                    }
+                }
+                if let id = result["id"] as? String {
+                    return "Received transfer #\(id.prefix(8))"
+                }
             }
             return "Received transfer"
 
         case "cancel":
+            if let result = toolResult as? [String: Any],
+               let items = result["items"] as? [[String: Any]] {
+                let count = items.count
+                return "Cancelled transfer: \(count) item\(count == 1 ? "" : "s") returned to stock"
+            }
             return "Cancelled transfer"
 
         default:
@@ -397,17 +463,34 @@ struct TelemetrySpan: Identifiable, Codable {
         switch action {
         case "create":
             let name = input["name"] as? String ?? "New product"
+            let sku = input["sku"] as? String
+            if let sku = sku {
+                return "Created: \(name) (\(sku))"
+            }
             return "Created: \(name)"
 
         case "update":
             if let result = toolResult as? [String: Any],
                let name = result["name"] as? String {
+                let changes = [
+                    input["name"] != nil ? "name" : nil,
+                    input["base_price"] != nil ? "price" : nil
+                ].compactMap { $0 }
+                if !changes.isEmpty {
+                    return "Updated \(name): \(changes.joined(separator: ", "))"
+                }
                 return "Updated: \(name)"
             }
             return "Updated product"
 
         case "find":
             if let result = toolResult as? [[String: Any]] {
+                let names = result.prefix(3).compactMap { $0["name"] as? String }
+                if !names.isEmpty {
+                    let preview = names.joined(separator: ", ")
+                    let more = result.count > 3 ? " +\(result.count - 3) more" : ""
+                    return "Found \(result.count): \(preview)\(more)"
+                }
                 return "Found \(result.count) product\(result.count == 1 ? "" : "s")"
             }
             return nil
@@ -423,6 +506,20 @@ struct TelemetrySpan: Identifiable, Codable {
         switch action {
         case "find":
             if let result = toolResult as? [[String: Any]] {
+                // Show first few order numbers
+                let orderNums = result.prefix(3).compactMap { $0["order_number"] as? String }
+                if !orderNums.isEmpty {
+                    let preview = orderNums.joined(separator: ", ")
+                    let more = result.count > 3 ? " +\(result.count - 3)" : ""
+
+                    // Calculate total value if available
+                    let totalValue = result.compactMap { $0["total"] as? Double }.reduce(0, +)
+                    if totalValue > 0 {
+                        return "Found \(result.count): \(preview)\(more) • $\(String(format: "%.0f", totalValue)) total"
+                    }
+
+                    return "Found \(result.count): \(preview)\(more)"
+                }
                 return "Found \(result.count) order\(result.count == 1 ? "" : "s")"
             }
             return nil
@@ -430,7 +527,22 @@ struct TelemetrySpan: Identifiable, Codable {
         case "get":
             if let result = toolResult as? [String: Any],
                let orderNum = result["order_number"] as? String {
-                return "Order #\(orderNum)"
+                let total = result["total"] as? Double
+                let status = result["status"] as? String
+                let customer = (result["customer"] as? [String: Any])?["full_name"] as? String
+
+                var parts: [String] = ["#\(orderNum)"]
+                if let customer = customer {
+                    parts.append(customer)
+                }
+                if let status = status {
+                    parts.append(status)
+                }
+                if let total = total {
+                    parts.append("$\(String(format: "%.2f", total))")
+                }
+
+                return parts.joined(separator: " • ")
             }
             return nil
 
@@ -447,10 +559,34 @@ struct TelemetrySpan: Identifiable, Codable {
             let name = [input["first_name"] as? String, input["last_name"] as? String]
                 .compactMap { $0 }
                 .joined(separator: " ")
-            return "Created customer: \(name)"
+            let email = input["email"] as? String
+            if let email = email {
+                return "Created: \(name) (\(email))"
+            }
+            return "Created: \(name)"
+
+        case "update":
+            if let result = toolResult as? [String: Any],
+               let fullName = result["full_name"] as? String {
+                let changes = [
+                    input["email"] != nil ? "email" : nil,
+                    input["phone"] != nil ? "phone" : nil
+                ].compactMap { $0 }
+                if !changes.isEmpty {
+                    return "Updated \(fullName): \(changes.joined(separator: ", "))"
+                }
+                return "Updated: \(fullName)"
+            }
+            return "Updated customer"
 
         case "find":
             if let result = toolResult as? [[String: Any]] {
+                let names = result.prefix(3).compactMap { $0["full_name"] as? String }
+                if !names.isEmpty {
+                    let preview = names.joined(separator: ", ")
+                    let more = result.count > 3 ? " +\(result.count - 3)" : ""
+                    return "Found \(result.count): \(preview)\(more)"
+                }
                 return "Found \(result.count) customer\(result.count == 1 ? "" : "s")"
             }
             return nil
@@ -481,32 +617,69 @@ struct TelemetrySpan: Identifiable, Codable {
     private func formatAnalyticsActivity(action: String?) -> String? {
         guard let result = toolResult as? [String: Any] else { return nil }
 
+        // Extract date range context
+        var dateContext = ""
+        if let dateRange = result["dateRange"] as? [String: Any],
+           let start = dateRange["start"] as? String,
+           let end = dateRange["end"] as? String {
+            // Format dates nicely: "2026-02-01" -> "Feb 1"
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            if let startDate = formatter.date(from: start),
+               let endDate = formatter.date(from: end) {
+                formatter.dateFormat = "MMM d"
+                let startStr = formatter.string(from: startDate)
+                let endStr = formatter.string(from: endDate)
+                dateContext = "\(startStr)-\(endStr) • "
+            }
+        } else if let period = result["period"] as? String {
+            let periodMap: [String: String] = [
+                "last_7": "Last 7 days",
+                "last_30": "Last 30 days",
+                "last_90": "Last 90 days",
+                "last_365": "Last year"
+            ]
+            dateContext = (periodMap[period] ?? period) + " • "
+        }
+
         switch action {
         case "summary":
             // Check for nested summary object first
             if let summary = result["summary"] as? [String: Any] {
                 if let revenue = summary["total_revenue"] as? Double,
                    let orders = summary["order_count"] as? Int {
-                    return "\(orders) orders, $\(String(format: "%.0f", revenue)) revenue"
+                    return "\(dateContext)\(orders) orders, $\(String(format: "%.0f", revenue))"
                 }
                 if let revenue = summary["net_sales"] as? Double {
-                    return "$\(String(format: "%.0f", revenue)) revenue"
+                    return "\(dateContext)$\(String(format: "%.0f", revenue)) revenue"
                 }
             }
             // Also check top-level
             if let revenue = result["total_revenue"] as? Double,
                let orders = result["order_count"] as? Int {
-                return "\(orders) orders, $\(String(format: "%.0f", revenue)) revenue"
+                return "\(dateContext)\(orders) orders, $\(String(format: "%.0f", revenue))"
             }
             // Fallback: show row count if available
             if let rowCount = result["rowCount"] as? Int {
-                return "Analyzed \(rowCount) record\(rowCount == 1 ? "" : "s")"
+                return "\(dateContext)\(rowCount) sales record\(rowCount == 1 ? "" : "s")"
+            }
+            return nil
+
+        case "by_location":
+            if let data = result["data"] as? [[String: Any]] {
+                let locations = data.prefix(3).compactMap { ($0["location"] as? [String: Any])?["name"] as? String }
+                if !locations.isEmpty {
+                    let preview = locations.joined(separator: ", ")
+                    let more = data.count > 3 ? " +\(data.count - 3)" : ""
+                    return "\(dateContext)\(preview)\(more)"
+                }
+                return "\(dateContext)\(data.count) location\(data.count == 1 ? "" : "s")"
             }
             return nil
 
         default:
             if let data = result["data"] as? [[String: Any]] {
-                return "Analyzed \(data.count) record\(data.count == 1 ? "" : "s")"
+                return "\(dateContext)\(data.count) record\(data.count == 1 ? "" : "s")"
             }
             return nil
         }
