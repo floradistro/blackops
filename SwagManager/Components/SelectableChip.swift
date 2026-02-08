@@ -135,24 +135,6 @@ extension SelectableChip where T == Int {
     }
 }
 
-// MARK: - Location Chip
-
-extension SelectableChip where T == UUID {
-    /// Location chip using Location model
-    init(
-        location: Location,
-        isSelected: Bool,
-        color: Color = .indigo,
-        onToggle: @escaping (UUID) -> Void
-    ) {
-        self.item = location.id
-        self.label = location.name
-        self.isSelected = isSelected
-        self.color = color
-        self.onToggle = onToggle
-    }
-}
-
 // MARK: - Chip Group
 
 /// A flow layout group of selectable chips

@@ -46,6 +46,9 @@ public struct DesignSystem {
         // Monospace variants
         public static let monoBody = Font.system(size: 14, weight: .regular, design: .monospaced)
         public static let monoCaption = Font.system(size: 12, weight: .regular, design: .monospaced)
+        public static let monoSmall = Font.system(size: 9, weight: .medium, design: .monospaced)
+        public static let monoLabel = Font.system(size: 10, weight: .medium, design: .monospaced)
+        public static let monoHeader = Font.system(size: 10, weight: .semibold, design: .monospaced)
 
         // Button text
         public static let button = Font.system(size: 15, weight: .semibold)
@@ -102,6 +105,58 @@ public struct DesignSystem {
         public static let selection = Color.white.opacity(0.08)
         public static let selectionActive = Color(red: 0.35, green: 0.68, blue: 1.0).opacity(0.20)
         public static let selectionSubtle = Color.white.opacity(0.04)
+
+        // MARK: - Telemetry (OTEL-style palette)
+        public enum Telemetry {
+            // Status colors
+            static let success = Color(red: 0.2, green: 0.7, blue: 0.4)
+            static let error = Color(red: 0.9, green: 0.3, blue: 0.3)
+            static let warning = Color(red: 0.95, green: 0.7, blue: 0.2)
+            static let info = Color(red: 0.4, green: 0.6, blue: 0.9)
+
+            // Latency colors
+            static let latencyFast = Color(red: 0.2, green: 0.7, blue: 0.4)
+            static let latencyMedium = Color(red: 0.95, green: 0.7, blue: 0.2)
+            static let latencySlow = Color(red: 0.9, green: 0.3, blue: 0.3)
+
+            // Source colors
+            static let sourceClaude = Color(red: 0.8, green: 0.5, blue: 0.2)
+            static let sourceApp = Color(red: 0.4, green: 0.6, blue: 0.9)
+            static let sourceAPI = Color(red: 0.6, green: 0.4, blue: 0.8)
+            static let sourceEdge = Color(red: 0.2, green: 0.7, blue: 0.7)
+
+            // JSON syntax colors
+            static let jsonKey = Color(red: 0.6, green: 0.4, blue: 0.8)
+            static let jsonString = Color(red: 0.2, green: 0.7, blue: 0.4)
+            static let jsonNumber = Color(red: 0.4, green: 0.6, blue: 0.9)
+            static let jsonBool = Color(red: 0.9, green: 0.5, blue: 0.2)
+
+            static func forLatency(_ ms: Double?) -> Color {
+                guard let ms = ms else { return .secondary }
+                if ms < 100 { return latencyFast }
+                if ms < 500 { return latencyMedium }
+                return latencySlow
+            }
+
+            static func forSource(_ source: String) -> Color {
+                switch source {
+                case "claude_code": return sourceClaude
+                case "swag_manager": return sourceApp
+                case "api": return sourceAPI
+                case "edge_function": return sourceEdge
+                default: return .secondary
+                }
+            }
+
+            static func forSeverity(_ severity: String) -> Color {
+                switch severity {
+                case "error", "critical": return error
+                case "warning": return warning
+                case "info": return info
+                default: return success
+                }
+            }
+        }
     }
 
     // MARK: - Glass Materials
@@ -202,120 +257,3 @@ extension View {
     }
 }
 
-// MARK: - Legacy Theme Compatibility Layer
-// Keep existing Theme references working during migration
-
-extension DesignSystem {
-    // Legacy compatibility
-    public static let glassThin = Materials.thin
-    public static let glass = Materials.thin
-    public static let glassMedium = Materials.regular
-    public static let glassThick = Materials.thick
-    public static let glassUltraThick = Materials.ultraThick
-
-    public static let bg = Colors.surfacePrimary
-    public static let bgSecondary = Colors.surfaceSecondary
-    public static let bgTertiary = Colors.surfaceTertiary
-    public static let bgElevated = Colors.surfaceElevated
-    public static let bgHover = Colors.surfaceHover
-    public static let bgActive = Colors.surfaceActive
-
-    public static let border = Colors.border
-    public static let borderSubtle = Colors.borderSubtle
-
-    public static let text = Colors.textPrimary
-    public static let textSecondary = Colors.textSecondary
-    public static let textTertiary = Colors.textTertiary
-    public static let textQuaternary = Colors.textQuaternary
-
-    public static let accent = Colors.accent
-    public static let green = Colors.green
-    public static let yellow = Colors.yellow
-    public static let orange = Colors.orange
-    public static let red = Colors.error
-    public static let blue = Colors.blue
-    public static let purple = Colors.purple
-    public static let cyan = Colors.cyan
-
-    public static let selection = Colors.selection
-    public static let selectionActive = Colors.selectionActive
-    public static let selectionSubtle = Colors.selectionSubtle
-
-    public static let animationFast = Animation.fast
-    public static let animationMedium = Animation.medium
-    public static let animationSlow = Animation.slow
-    public static let spring = Animation.spring
-
-    public static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight)
-    }
-
-    public static func monoFont(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .monospaced)
-    }
-}
-
-// MARK: - Backward Compatibility (Legacy Theme → DesignSystem)
-
-/// Legacy Theme typealias for backward compatibility
-/// All Theme.* references now use DesignSystem
-public typealias Theme = DesignSystem.LegacyTheme
-
-public extension DesignSystem {
-    struct LegacyTheme {
-        // Glass Materials
-        public static let glassThin = Materials.thin
-        public static let glass = Materials.regular
-        public static let glassMedium = Materials.regular
-        public static let glassThick = Materials.thick
-        public static let glassUltraThick = Materials.ultraThick
-
-        // Backgrounds
-        public static let bg = Colors.surfacePrimary
-        public static let bgSecondary = Colors.surfaceSecondary
-        public static let bgTertiary = Colors.surfaceTertiary
-        public static let bgElevated = Colors.surfaceElevated
-        public static let bgHover = Colors.surfaceHover
-        public static let bgActive = Colors.surfaceActive
-
-        // Borders
-        public static let border = Colors.border
-        public static let borderSubtle = Colors.borderSubtle
-
-        // Text
-        public static let text = Colors.textPrimary
-        public static let textSecondary = Colors.textSecondary
-        public static let textTertiary = Colors.textTertiary
-        public static let textQuaternary = Colors.textQuaternary
-
-        // Accents
-        public static let accent = Colors.accent
-        public static let green = Colors.success
-        public static let yellow = Colors.warning
-        public static let orange = Colors.warning
-        public static let red = Colors.error
-        public static let blue = Colors.accent
-        public static let purple = Color(red: 0.68, green: 0.52, blue: 0.95)
-        public static let cyan = Color(red: 0.35, green: 0.82, blue: 0.88)
-
-        // Selection
-        public static let selection = Colors.selection
-        public static let selectionActive = Colors.selectionActive
-        public static let selectionSubtle = Colors.selectionSubtle
-
-        // Animations
-        public static let animationFast = Animation.fast
-        public static let animationMedium = Animation.medium
-        public static let animationSlow = Animation.slow
-        public static let spring = Animation.spring
-
-        // Fonts
-        public static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-            DesignSystem.font(size, weight: weight)
-        }
-
-        public static func monoFont(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-            DesignSystem.monoFont(size, weight: weight)
-        }
-    }
-}

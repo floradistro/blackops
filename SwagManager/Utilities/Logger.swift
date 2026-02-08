@@ -27,11 +27,8 @@ struct AppLogger {
     static let ui = Logger(subsystem: subsystem, category: "UI")
     static let network = Logger(subsystem: subsystem, category: "Network")
     static let auth = Logger(subsystem: subsystem, category: "Auth")
-    static let realtime = Logger(subsystem: subsystem, category: "Realtime")
     static let store = Logger(subsystem: subsystem, category: "Store")
     static let agent = Logger(subsystem: subsystem, category: "Agent")
-    static let cart = Logger(subsystem: subsystem, category: "Cart")
-    static let order = Logger(subsystem: subsystem, category: "Order")
 
     // Quick logging functions
     static func debug(_ message: String, category: Logger = ui) {

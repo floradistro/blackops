@@ -61,7 +61,7 @@ struct NewStoreSheet: View {
                         .cornerRadius(6)
                 }
 
-                Text("The store will be your workspace for managing products, creations, and settings.")
+                Text("The store will be your workspace for managing AI agents and tools.")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.primary.opacity(0.4))
             }

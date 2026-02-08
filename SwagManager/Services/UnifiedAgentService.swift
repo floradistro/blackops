@@ -32,7 +32,6 @@ class UnifiedAgentService: ObservableObject {
         systemPrompt: String,
         storeId: UUID?,
         includeLocalTools: Bool = true,
-        includeRemoteTools: Bool = true,
         onText: @escaping (String) -> Void,
         onToolStart: @escaping (String) -> Void,
         onToolResult: @escaping (String, Bool, String) -> Void,
@@ -47,10 +46,6 @@ class UnifiedAgentService: ObservableObject {
         if includeLocalTools {
             tools.append(contentsOf: LocalToolService.toolDefinitions)
         }
-        if includeRemoteTools {
-            tools.append(contentsOf: RemoteToolDefinitions.all)
-        }
-
         // Build messages
         var messages: [[String: Any]] = [
             ["role": "user", "content": prompt]
@@ -280,99 +275,3 @@ class UnifiedAgentService: ObservableObject {
     }
 }
 
-// MARK: - Remote Tool Definitions
-
-enum RemoteToolDefinitions {
-    static let all: [[String: Any]] = [
-        // Inventory
-        [
-            "name": "inventory_summary",
-            "description": "Get inventory summary grouped by category, location, or product",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "store_id": ["type": "string"],
-                    "group_by": ["type": "string", "enum": ["category", "location", "product"]],
-                    "location_id": ["type": "string"]
-                ],
-                "required": ["store_id"]
-            ]
-        ],
-        // Orders
-        [
-            "name": "orders_list",
-            "description": "List orders with optional filters",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "store_id": ["type": "string"],
-                    "status": ["type": "string"],
-                    "limit": ["type": "integer"]
-                ],
-                "required": ["store_id"]
-            ]
-        ],
-        [
-            "name": "order_details",
-            "description": "Get full order details",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "order_id": ["type": "string"]
-                ],
-                "required": ["order_id"]
-            ]
-        ],
-        // Customers
-        [
-            "name": "customers_search",
-            "description": "Search customers by name, email, or phone",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "store_id": ["type": "string"],
-                    "query": ["type": "string"],
-                    "limit": ["type": "integer"]
-                ],
-                "required": ["store_id", "query"]
-            ]
-        ],
-        [
-            "name": "customer_details",
-            "description": "Get customer profile with order history",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "customer_id": ["type": "string"]
-                ],
-                "required": ["customer_id"]
-            ]
-        ],
-        // Analytics
-        [
-            "name": "analytics_sales",
-            "description": "Get sales analytics for a time period",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "store_id": ["type": "string"],
-                    "start_date": ["type": "string"],
-                    "end_date": ["type": "string"]
-                ],
-                "required": ["store_id", "start_date", "end_date"]
-            ]
-        ],
-        // Locations
-        [
-            "name": "locations_list",
-            "description": "List all locations for a store",
-            "input_schema": [
-                "type": "object",
-                "properties": [
-                    "store_id": ["type": "string"]
-                ],
-                "required": ["store_id"]
-            ]
-        ]
-    ]
-}

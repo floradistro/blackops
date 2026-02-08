@@ -1,10 +1,8 @@
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var appState: AppState
-    @State private var store = EditorStore()
+    @Environment(\.editorStore) private var store
 
     var body: some View {
         Group {
@@ -16,7 +14,6 @@ struct ContentView: View {
                 AuthView()
             }
         }
-        .environment(\.editorStore, store)
         .freezeDebugLifecycle("ContentView")
     }
 
@@ -37,6 +34,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environmentObject(AuthManager.shared)
-        .environmentObject(AppState.shared)
-        .modelContainer(for: [], inMemory: true)
 }

@@ -29,8 +29,9 @@ xcuserdata/
 .env.*
 *.local
 
-# Node modules
+# Node modules & build output
 node_modules/
+dist/
 
 # Secrets - do not commit
 *.pem

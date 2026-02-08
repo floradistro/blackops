@@ -1,9 +1,7 @@
 import SwiftUI
-import SwiftData
 
 // MARK: - Main Detail View
-// Routes top-level sidebar selections to section content views
-// Uses @Environment for store access - Apple WWDC23 pattern
+// Routes sidebar selections to content views
 
 struct MainDetailView: View {
     @Binding var selection: SDSidebarItem?
@@ -12,67 +10,14 @@ struct MainDetailView: View {
     var body: some View {
         Group {
             switch selection {
-            // CONTENT - Section views
-            case .teamChat:
-                TeamChatView(storeId: store.selectedStore?.id)
-
-            // OPERATIONS - Section views
-            case .locations:
-                LocationsListView(selection: $selection, storeId: store.currentStoreId)
-
-            case .locationDetail(let id):
-                LocationDetailWrapper(locationId: id)
-
-            case .queue(let locationId):
-                LocationQueueView(locationId: locationId)
-
-            case .emails:
-                EmailsListView(selection: $selection, storeId: store.currentStoreId)
-
-            case .inbox:
-                InboxListView(selection: $selection)
-
-            case .inboxThread(let id):
-                ThreadDetailWrapper(threadId: id)
-
-            case .inboxSettings:
-                EmailDomainSettingsView()
-
-            // CRM - Section views
-            case .emailCampaigns:
-                CRMEmailCampaignsView(selection: $selection, storeId: store.currentStoreId)
-
-            case .metaCampaigns:
-                CRMMetaCampaignsView(selection: $selection, storeId: store.currentStoreId)
-
-            case .metaIntegrations:
-                CRMMetaIntegrationsView(selection: $selection, storeId: store.currentStoreId)
-
-            // AI - Section views
-            case .aiChat:
-                WelcomeView()
-
             case .agents:
                 AgentsListView(selection: $selection, storeId: store.currentStoreId)
 
+            case .agentDetail(let id):
+                AgentDetailWrapper(agentId: id)
+
             case .telemetry:
                 TelemetryPanel(storeId: store.selectedStore?.id)
-
-            // Detail items
-            case .emailDetail(let id):
-                EmailDetailWrapper(emailId: id)
-
-            case .emailCampaignDetail(let id):
-                EmailCampaignWrapper(campaignId: id)
-
-            case .metaCampaignDetail(let id):
-                MetaCampaignWrapper(campaignId: id)
-
-            case .metaIntegrationDetail(let id):
-                MetaIntegrationWrapper(integrationId: id)
-
-            case .agentDetail(let id):
-                AgentDetailWrapper(agentId: id, selection: $selection)
 
             case .none:
                 WelcomeView()
@@ -82,14 +27,71 @@ struct MainDetailView: View {
     }
 }
 
+// MARK: - Agents List
+
+struct AgentsListView: View {
+    @Environment(\.editorStore) private var store
+    @Binding var selection: SDSidebarItem?
+    let storeId: UUID
+
+    var body: some View {
+        Group {
+            if store.aiAgents.isEmpty {
+                ContentUnavailableView("No AI Agents", systemImage: "cpu", description: Text("Create agents to automate tasks"))
+            } else {
+                List {
+                    ForEach(store.aiAgents) { agent in
+                        NavigationLink(value: SDSidebarItem.agentDetail(agent.id)) {
+                            AgentListRow(agent: agent)
+                        }
+                    }
+                }
+                .listStyle(.inset)
+            }
+        }
+        .navigationTitle("")
+    }
+}
+
+struct AgentListRow: View {
+    let agent: AIAgent
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: agent.displayIcon)
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(agent.displayName)
+                    .font(.subheadline.weight(.medium))
+                if let prompt = agent.systemPrompt {
+                    Text(String(prompt.prefix(60)))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            Circle()
+                .fill(agent.isActive ? DesignSystem.Colors.success : DesignSystem.Colors.textQuaternary)
+                .frame(width: 8, height: 8)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 // MARK: - Welcome View
 struct WelcomeView: View {
     var body: some View {
         ContentUnavailableView {
-            Label("WhaleTools", systemImage: "hammer.fill")
+            Label("Agent Manager", systemImage: "cpu")
         } description: {
-            Text("Select an item from the sidebar")
+            Text("Select an agent from the sidebar")
         }
-        .navigationTitle("Home")
+        .navigationTitle("")
     }
 }

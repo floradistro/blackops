@@ -133,20 +133,16 @@ class LocalToolService {
         }
     }
 
-    // MARK: - File Operations
+    // MARK: - File Operations (background I/O)
 
     private func readFile(_ input: [String: Any]) async -> ToolResult {
         guard let path = input["path"] as? String else {
             return ToolResult(success: false, output: "Missing path parameter")
         }
-
-        let url = URL(fileURLWithPath: path)
-
-        do {
+        return await backgroundIO {
+            let url = URL(fileURLWithPath: path)
             let content = try String(contentsOf: url, encoding: .utf8)
-            return ToolResult(success: true, output: content)
-        } catch {
-            return ToolResult(success: false, output: "Error reading file: \(error.localizedDescription)")
+            return content
         }
     }
 
@@ -155,19 +151,14 @@ class LocalToolService {
               let content = input["content"] as? String else {
             return ToolResult(success: false, output: "Missing path or content parameter")
         }
-
-        let url = URL(fileURLWithPath: path)
-
-        do {
-            // Create parent directories if needed
+        return await backgroundIO {
+            let url = URL(fileURLWithPath: path)
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
             try content.write(to: url, atomically: true, encoding: .utf8)
-            return ToolResult(success: true, output: "File written successfully: \(path)")
-        } catch {
-            return ToolResult(success: false, output: "Error writing file: \(error.localizedDescription)")
+            return "File written successfully: \(path)"
         }
     }
 
@@ -177,22 +168,15 @@ class LocalToolService {
               let newString = input["new_string"] as? String else {
             return ToolResult(success: false, output: "Missing path, old_string, or new_string parameter")
         }
-
-        let url = URL(fileURLWithPath: path)
-
-        do {
+        return await backgroundIO {
+            let url = URL(fileURLWithPath: path)
             var content = try String(contentsOf: url, encoding: .utf8)
-
             guard content.contains(oldString) else {
-                return ToolResult(success: false, output: "old_string not found in file")
+                throw ToolError.notFound("old_string not found in file")
             }
-
             content = content.replacingOccurrences(of: oldString, with: newString)
             try content.write(to: url, atomically: true, encoding: .utf8)
-
-            return ToolResult(success: true, output: "File edited successfully: \(path)")
-        } catch {
-            return ToolResult(success: false, output: "Error editing file: \(error.localizedDescription)")
+            return "File edited successfully: \(path)"
         }
     }
 
@@ -200,11 +184,9 @@ class LocalToolService {
         guard let path = input["path"] as? String else {
             return ToolResult(success: false, output: "Missing path parameter")
         }
-
         let recursive = input["recursive"] as? Bool ?? false
-        let url = URL(fileURLWithPath: path)
-
-        do {
+        return await backgroundIO {
+            let url = URL(fileURLWithPath: path)
             let contents: [URL]
             if recursive {
                 contents = try FileManager.default.subpathsOfDirectory(atPath: path)
@@ -216,15 +198,35 @@ class LocalToolService {
                     options: [.skipsHiddenFiles]
                 )
             }
-
             let listing = contents.map { url -> String in
                 let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
                 return "\(isDir ? "📁" : "📄") \(url.lastPathComponent)"
             }.joined(separator: "\n")
+            return listing.isEmpty ? "(empty directory)" : listing
+        }
+    }
 
-            return ToolResult(success: true, output: listing.isEmpty ? "(empty directory)" : listing)
-        } catch {
-            return ToolResult(success: false, output: "Error listing directory: \(error.localizedDescription)")
+    // MARK: - Background I/O Helper
+
+    private enum ToolError: Error {
+        case notFound(String)
+    }
+
+    private nonisolated func backgroundIO(_ work: @Sendable @escaping () throws -> String) async -> ToolResult {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let output = try work()
+                    continuation.resume(returning: ToolResult(success: true, output: output))
+                } catch let error as ToolError {
+                    switch error {
+                    case .notFound(let msg):
+                        continuation.resume(returning: ToolResult(success: false, output: msg))
+                    }
+                } catch {
+                    continuation.resume(returning: ToolResult(success: false, output: "Error: \(error.localizedDescription)"))
+                }
+            }
         }
     }
 
@@ -270,32 +272,37 @@ class LocalToolService {
     }
 
     private func runShellCommand(_ command: String, workingDirectory: String? = nil) async -> ToolResult {
-        let process = Process()
-        let pipe = Pipe()
+        // Run process on background thread to avoid blocking UI
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                let pipe = Pipe()
 
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command]
-        process.standardOutput = pipe
-        process.standardError = pipe
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = ["-c", command]
+                process.standardOutput = pipe
+                process.standardError = pipe
 
-        if let wd = workingDirectory {
-            process.currentDirectoryURL = URL(fileURLWithPath: wd)
-        }
+                if let wd = workingDirectory {
+                    process.currentDirectoryURL = URL(fileURLWithPath: wd)
+                }
 
-        do {
-            try process.run()
-            process.waitUntilExit()
+                do {
+                    try process.run()
+                    process.waitUntilExit()
 
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
 
-            if process.terminationStatus == 0 {
-                return ToolResult(success: true, output: output.isEmpty ? "(no output)" : output)
-            } else {
-                return ToolResult(success: false, output: "Exit code \(process.terminationStatus): \(output)")
+                    if process.terminationStatus == 0 {
+                        continuation.resume(returning: ToolResult(success: true, output: output.isEmpty ? "(no output)" : output))
+                    } else {
+                        continuation.resume(returning: ToolResult(success: false, output: "Exit code \(process.terminationStatus): \(output)"))
+                    }
+                } catch {
+                    continuation.resume(returning: ToolResult(success: false, output: "Error running command: \(error.localizedDescription)"))
+                }
             }
-        } catch {
-            return ToolResult(success: false, output: "Error running command: \(error.localizedDescription)")
         }
     }
 }

@@ -1,12 +1,15 @@
 // agent-chat/index.ts
-// Production-ready Claude Agent endpoint with streaming and tool execution
-// Follows Anthropic SDK best practices
+// Production agent endpoint with SSE streaming
+// Tools loaded from ai_tool_registry — same as MCP server
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.30.1";
 
-// Types
+// ============================================================================
+// TYPES
+// ============================================================================
+
 interface AgentConfig {
   id: string;
   name: string;
@@ -21,513 +24,787 @@ interface AgentConfig {
   can_modify: boolean;
 }
 
-interface ToolDefinition {
+interface ToolDef {
   name: string;
   description: string;
-  input_schema: {
-    type: "object";
-    properties: Record<string, unknown>;
-    required?: string[];
-  };
+  input_schema: Record<string, unknown>;
 }
 
 interface StreamEvent {
   type: "text" | "tool_start" | "tool_result" | "error" | "done" | "usage";
   text?: string;
   name?: string;
-  args?: Record<string, unknown>;
   result?: unknown;
   success?: boolean;
   error?: string;
-  usage?: {
-    input_tokens: number;
-    output_tokens: number;
-  };
+  usage?: { input_tokens: number; output_tokens: number };
 }
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
-});
+// ============================================================================
+// TOOL REGISTRY (loaded from database)
+// ============================================================================
 
-// Core tool definitions that map to actual RPC functions
-const TOOL_DEFINITIONS: ToolDefinition[] = [
-  // Inventory Tools
-  {
-    name: "inventory_summary",
-    description: "Get inventory summary grouped by category, location, or product. Shows total quantities and product counts.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        group_by: {
-          type: "string",
-          enum: ["category", "location", "product"],
-          description: "How to group results"
-        },
-        location_id: { type: "string", description: "Filter by location UUID" },
-        include_zero_stock: { type: "boolean", description: "Include zero stock items" }
-      },
-      required: ["store_id"]
-    }
-  },
-  {
-    name: "inventory_adjust",
-    description: "Adjust inventory quantity for a product at a location. Use for corrections, shrinkage, or found stock.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        product_id: { type: "string", description: "Product UUID" },
-        location_id: { type: "string", description: "Location UUID" },
-        quantity_change: { type: "integer", description: "Amount to add (positive) or remove (negative)" },
-        reason: { type: "string", description: "Reason for adjustment" }
-      },
-      required: ["store_id", "product_id", "location_id", "quantity_change", "reason"]
-    }
-  },
-  {
-    name: "inventory_transfer",
-    description: "Transfer inventory between locations.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        product_id: { type: "string", description: "Product UUID" },
-        from_location_id: { type: "string", description: "Source location UUID" },
-        to_location_id: { type: "string", description: "Destination location UUID" },
-        quantity: { type: "integer", description: "Amount to transfer" }
-      },
-      required: ["store_id", "product_id", "from_location_id", "to_location_id", "quantity"]
-    }
-  },
+let cachedTools: ToolDef[] = [];
+let cacheTime = 0;
 
-  // Order Tools
-  {
-    name: "orders_list",
-    description: "List orders with optional filters. Returns recent orders by default.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        status: {
-          type: "string",
-          enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
-          description: "Filter by status"
-        },
-        customer_id: { type: "string", description: "Filter by customer UUID" },
-        location_id: { type: "string", description: "Filter by location UUID" },
-        limit: { type: "integer", description: "Max results (default 20)" },
-        offset: { type: "integer", description: "Pagination offset" }
-      },
-      required: ["store_id"]
-    }
-  },
-  {
-    name: "order_details",
-    description: "Get full details of a specific order including items, customer, and status history.",
-    input_schema: {
-      type: "object",
-      properties: {
-        order_id: { type: "string", description: "Order UUID" }
-      },
-      required: ["order_id"]
-    }
-  },
+async function loadTools(supabase: SupabaseClient): Promise<ToolDef[]> {
+  if (cachedTools.length > 0 && Date.now() - cacheTime < 60_000) return cachedTools;
 
-  // Customer Tools
-  {
-    name: "customers_search",
-    description: "Search customers by name, email, or phone.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        query: { type: "string", description: "Search query (name, email, or phone)" },
-        limit: { type: "integer", description: "Max results (default 20)" }
-      },
-      required: ["store_id", "query"]
-    }
-  },
-  {
-    name: "customer_details",
-    description: "Get customer profile including order history and loyalty points.",
-    input_schema: {
-      type: "object",
-      properties: {
-        customer_id: { type: "string", description: "Customer UUID" }
-      },
-      required: ["customer_id"]
-    }
-  },
-  {
-    name: "customer_loyalty_adjust",
-    description: "Add or subtract loyalty points for a customer.",
-    input_schema: {
-      type: "object",
-      properties: {
-        customer_id: { type: "string", description: "Customer UUID" },
-        points: { type: "integer", description: "Points to add (positive) or subtract (negative)" },
-        reason: { type: "string", description: "Reason for adjustment" }
-      },
-      required: ["customer_id", "points", "reason"]
-    }
-  },
+  const { data, error } = await supabase
+    .from("ai_tool_registry")
+    .select("name, description, definition")
+    .eq("is_active", true);
 
-  // Product Tools
-  {
-    name: "products_search",
-    description: "Search products by name, SKU, or category.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        query: { type: "string", description: "Search query" },
-        category_id: { type: "string", description: "Filter by category UUID" },
-        in_stock_only: { type: "boolean", description: "Only show in-stock products" },
-        limit: { type: "integer", description: "Max results (default 20)" }
-      },
-      required: ["store_id"]
-    }
-  },
-  {
-    name: "product_details",
-    description: "Get full product details including variants, pricing, and inventory.",
-    input_schema: {
-      type: "object",
-      properties: {
-        product_id: { type: "string", description: "Product UUID" }
-      },
-      required: ["product_id"]
-    }
-  },
+  if (error || !data) return cachedTools;
 
-  // Analytics Tools
-  {
-    name: "analytics_sales",
-    description: "Get sales analytics for a time period.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        start_date: { type: "string", description: "Start date (YYYY-MM-DD)" },
-        end_date: { type: "string", description: "End date (YYYY-MM-DD)" },
-        group_by: {
-          type: "string",
-          enum: ["day", "week", "month"],
-          description: "Time grouping"
-        },
-        location_id: { type: "string", description: "Filter by location" }
-      },
-      required: ["store_id", "start_date", "end_date"]
-    }
-  },
-  {
-    name: "analytics_inventory",
-    description: "Get inventory analytics including velocity and low stock alerts.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" },
-        location_id: { type: "string", description: "Filter by location" }
-      },
-      required: ["store_id"]
-    }
-  },
+  cachedTools = data.map(t => ({
+    name: t.name,
+    description: t.description || t.definition?.description || t.name,
+    input_schema: t.definition?.input_schema || { type: "object", properties: {} }
+  }));
+  cacheTime = Date.now();
+  return cachedTools;
+}
 
-  // Location Tools
-  {
-    name: "locations_list",
-    description: "List all locations for a store.",
-    input_schema: {
-      type: "object",
-      properties: {
-        store_id: { type: "string", description: "Store UUID" }
-      },
-      required: ["store_id"]
-    }
+function getToolsForAgent(agent: AgentConfig, allTools: ToolDef[]): ToolDef[] {
+  if (agent.enabled_tools?.length > 0) {
+    return allTools.filter(t => agent.enabled_tools.includes(t.name));
   }
-];
+  return allTools;
+}
 
-// Map tool names to RPC function names
-const TOOL_TO_RPC: Record<string, string> = {
-  // Inventory
-  "inventory_summary": "inventory_summary_by_location",
-  "inventory_adjust": "adjust_inventory_ai",
-  "inventory_transfer": "transfer_inventory_ai",
+// ============================================================================
+// TOOL EXECUTOR — consolidated tools, same interface as MCP executor
+// ============================================================================
 
-  // Orders - use direct table queries
-  "orders_list": "__direct_query__",
-  "order_details": "__direct_query__",
-
-  // Customers - use direct table queries
-  "customers_search": "__direct_query__",
-  "customer_details": "__direct_query__",
-  "customer_loyalty_adjust": "adjust_customer_loyalty_points",
-
-  // Products - use direct table queries
-  "products_search": "__direct_query__",
-  "product_details": "__direct_query__",
-
-  // Analytics
-  "analytics_sales": "analytics_query",
-  "analytics_inventory": "get_inventory_velocity",
-
-  // Locations
-  "locations_list": "__direct_query__"
-};
-
-// Execute a tool call with telemetry logging
 async function executeTool(
   supabase: SupabaseClient,
   toolName: string,
   args: Record<string, unknown>,
-  traceId?: string,
-  storeId?: string
+  storeId?: string,
+  traceId?: string
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
   const startTime = Date.now();
+  const action = args.action as string | undefined;
   let result: { success: boolean; data?: unknown; error?: string };
 
   try {
-    const rpcName = TOOL_TO_RPC[toolName];
+    switch (toolName) {
+      // ---- INVENTORY ----
+      case "inventory":
+        result = await handleInventory(supabase, args, storeId);
+        break;
+      case "inventory_query":
+        result = await handleInventoryQuery(supabase, args, storeId);
+        break;
+      case "inventory_audit":
+        result = await handleInventoryAudit(supabase, args, storeId);
+        break;
 
-    if (!rpcName) {
-      result = { success: false, error: `Unknown tool: ${toolName}` };
-    } else if (rpcName === "__direct_query__") {
-      result = await executeDirectQuery(supabase, toolName, args);
-    } else {
-      const { data, error } = await supabase.rpc(rpcName, args);
-      result = error ? { success: false, error: error.message } : { success: true, data };
+      // ---- SUPPLY CHAIN ----
+      case "purchase_orders":
+        result = await handlePurchaseOrders(supabase, args, storeId);
+        break;
+      case "transfers":
+        result = await handleTransfers(supabase, args, storeId);
+        break;
+
+      // ---- CATALOG ----
+      case "products":
+        result = await handleProducts(supabase, args, storeId);
+        break;
+      case "collections":
+        result = await handleCollections(supabase, args, storeId);
+        break;
+
+      // ---- CRM ----
+      case "customers":
+        result = await handleCustomers(supabase, args, storeId);
+        break;
+      case "orders":
+        result = await handleOrders(supabase, args, storeId);
+        break;
+
+      // ---- ANALYTICS ----
+      case "analytics":
+        result = await handleAnalytics(supabase, args, storeId);
+        break;
+
+      // ---- OPERATIONS ----
+      case "locations":
+        result = await handleLocations(supabase, args, storeId);
+        break;
+      case "suppliers":
+        result = await handleSuppliers(supabase, args, storeId);
+        break;
+      case "email":
+        result = await handleEmail(supabase, args, storeId);
+        break;
+      case "documents":
+        result = { success: true, data: { message: "Document generation not available in edge function" } };
+        break;
+      case "alerts":
+        result = await handleAlerts(supabase, args, storeId);
+        break;
+      case "audit_trail":
+        result = await handleAuditTrail(supabase, args, storeId);
+        break;
+
+      default:
+        result = { success: false, error: `Unknown tool: ${toolName}` };
     }
   } catch (err) {
     result = { success: false, error: String(err) };
   }
 
-  // Log to audit_logs for unified telemetry
-  const durationMs = Date.now() - startTime;
+  // Log to audit_logs
   try {
     await supabase.from("audit_logs").insert({
-      action: `tool.${toolName}`,
+      action: `tool.${toolName}${action ? `.${action}` : ""}`,
       severity: result.success ? "info" : "error",
-      store_id: storeId || args.store_id || null,
+      store_id: storeId || null,
       resource_type: "mcp_tool",
       resource_id: toolName,
       request_id: traceId || null,
-      details: {
-        source: "edge_function",
-        args: args,
-        result: result.success ? result.data : null
-      },
+      details: { source: "edge_function", args },
       error_message: result.error || null,
-      duration_ms: durationMs
+      duration_ms: Date.now() - startTime
     });
-  } catch {
-    // Don't fail tool call if logging fails
-  }
+  } catch { /* don't fail tool call if logging fails */ }
 
   return result;
 }
 
-// Execute direct table queries for tools that don't have RPC functions
-async function executeDirectQuery(
-  supabase: SupabaseClient,
-  toolName: string,
-  args: Record<string, unknown>
-): Promise<{ success: boolean; data?: unknown; error?: string }> {
-  try {
-    switch (toolName) {
-      case "orders_list": {
-        let query = supabase
-          .from("orders")
-          .select(`
-            id, order_number, status, total, created_at,
-            customer:customers(id, full_name, email),
-            location:locations(id, name)
-          `)
-          .eq("store_id", args.store_id as string)
-          .order("created_at", { ascending: false })
-          .limit((args.limit as number) || 20);
+// ============================================================================
+// TOOL HANDLERS
+// ============================================================================
 
-        if (args.status) query = query.eq("status", args.status);
-        if (args.customer_id) query = query.eq("customer_id", args.customer_id);
-        if (args.location_id) query = query.eq("location_id", args.location_id);
-        if (args.offset) query = query.range(args.offset as number, (args.offset as number) + ((args.limit as number) || 20) - 1);
-
-        const { data, error } = await query;
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      case "order_details": {
-        const { data, error } = await supabase
-          .from("orders")
-          .select(`
-            *,
-            customer:customers(*),
-            location:locations(id, name),
-            items:order_items(*, product:products(id, name, sku))
-          `)
-          .eq("id", args.order_id as string)
-          .single();
-
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      case "customers_search": {
-        const query = args.query as string;
-        const { data, error } = await supabase
-          .from("customers")
-          .select("id, full_name, email, phone, loyalty_points, created_at")
-          .eq("store_id", args.store_id as string)
-          .or(`full_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
-          .limit((args.limit as number) || 20);
-
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      case "customer_details": {
-        const { data, error } = await supabase
-          .from("customers")
-          .select(`
-            *,
-            orders:orders(id, order_number, total, status, created_at)
-          `)
-          .eq("id", args.customer_id as string)
-          .single();
-
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      case "products_search": {
-        let query = supabase
-          .from("products")
-          .select("id, name, sku, price, category_id, status")
-          .eq("store_id", args.store_id as string)
-          .limit((args.limit as number) || 20);
-
-        if (args.query) {
-          const q = args.query as string;
-          query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`);
-        }
-        if (args.category_id) query = query.eq("category_id", args.category_id);
-
-        const { data, error } = await query;
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      case "product_details": {
-        const { data, error } = await supabase
-          .from("products")
-          .select(`
-            *,
-            variants:product_variants(*),
-            inventory:inventory(location_id, quantity)
-          `)
-          .eq("id", args.product_id as string)
-          .single();
-
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      case "locations_list": {
-        const { data, error } = await supabase
-          .from("locations")
-          .select("id, name, address, is_active")
-          .eq("store_id", args.store_id as string)
-          .eq("is_active", true);
-
-        if (error) return { success: false, error: error.message };
-        return { success: true, data };
-      }
-
-      default:
-        return { success: false, error: `No direct query handler for: ${toolName}` };
+async function handleInventory(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "adjust": {
+      // Get current inventory
+      const { data: current } = await sb.from("inventory")
+        .select("quantity").eq("store_id", sid)
+        .eq("product_id", args.product_id as string)
+        .eq("location_id", args.location_id as string).single();
+      const oldQty = current?.quantity || 0;
+      const newQty = oldQty + (args.adjustment as number);
+      const { data, error } = await sb.from("inventory")
+        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.location_id, quantity: newQty },
+          { onConflict: "store_id,product_id,location_id" })
+        .select().single();
+      if (error) return { success: false, error: error.message };
+      // Log adjustment
+      await sb.from("inventory_adjustments").insert({
+        store_id: sid, product_id: args.product_id, location_id: args.location_id,
+        previous_quantity: oldQty, new_quantity: newQty,
+        adjustment: args.adjustment, reason: args.reason || "API adjustment"
+      }).catch(() => {});
+      return { success: true, data: { ...data, previous_quantity: oldQty } };
     }
-  } catch (err) {
-    return { success: false, error: String(err) };
+    case "set": {
+      const { data, error } = await sb.from("inventory")
+        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.location_id, quantity: args.quantity },
+          { onConflict: "store_id,product_id,location_id" })
+        .select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "transfer": {
+      // Deduct from source
+      const { data: src } = await sb.from("inventory")
+        .select("quantity").eq("store_id", sid)
+        .eq("product_id", args.product_id as string)
+        .eq("location_id", args.from_location_id as string).single();
+      const srcQty = src?.quantity || 0;
+      const qty = args.quantity as number;
+      if (srcQty < qty) return { success: false, error: `Insufficient stock: have ${srcQty}, need ${qty}` };
+      await sb.from("inventory")
+        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.from_location_id, quantity: srcQty - qty },
+          { onConflict: "store_id,product_id,location_id" });
+      // Add to destination
+      const { data: dst } = await sb.from("inventory")
+        .select("quantity").eq("store_id", sid)
+        .eq("product_id", args.product_id as string)
+        .eq("location_id", args.to_location_id as string).single();
+      const dstQty = dst?.quantity || 0;
+      await sb.from("inventory")
+        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.to_location_id, quantity: dstQty + qty },
+          { onConflict: "store_id,product_id,location_id" });
+      return { success: true, data: { transferred: qty, from: args.from_location_id, to: args.to_location_id } };
+    }
+    default:
+      return { success: false, error: `Unknown inventory action: ${args.action}` };
   }
 }
 
-// Load agent configuration
-async function loadAgentConfig(
-  supabase: SupabaseClient,
-  agentId: string
-): Promise<AgentConfig | null> {
-  const { data, error } = await supabase
-    .from("ai_agent_config")
-    .select("*")
-    .eq("id", agentId)
-    .single();
+async function handleInventoryQuery(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "summary": {
+      const { data, error } = await sb.from("inventory")
+        .select("*, product:products(name, sku), location:locations(name)")
+        .eq("store_id", sid);
+      if (error) return { success: false, error: error.message };
+      // Group by location
+      const byLocation: Record<string, { location_name: string; items: number; total_qty: number }> = {};
+      for (const row of data || []) {
+        const locId = row.location_id;
+        if (!byLocation[locId]) byLocation[locId] = { location_name: (row as any).location?.name || locId, items: 0, total_qty: 0 };
+        byLocation[locId].items++;
+        byLocation[locId].total_qty += row.quantity || 0;
+      }
+      return { success: true, data: { total_items: data?.length || 0, by_location: Object.values(byLocation) } };
+    }
+    case "velocity": {
+      const params: Record<string, unknown> = { p_store_id: sid };
+      if (args.location_id) params.p_location_id = args.location_id;
+      const { data, error } = await sb.rpc("get_inventory_velocity", params);
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "by_location": {
+      let q = sb.from("inventory").select("*, product:products(name, sku), location:locations(name)")
+        .eq("store_id", sid);
+      if (args.location_id) q = q.eq("location_id", args.location_id as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "in_stock": {
+      const { data, error } = await sb.from("inventory")
+        .select("*, product:products(name, sku), location:locations(name)")
+        .eq("store_id", sid).gt("quantity", 0);
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown inventory_query action: ${args.action}` };
+  }
+}
 
+async function handleInventoryAudit(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "start": {
+      // Create audit record directly
+      const { data, error } = await sb.from("inventory_audits")
+        .insert({ store_id: sid, location_id: args.location_id, status: "in_progress", started_at: new Date().toISOString() })
+        .select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "count": {
+      const { data, error } = await sb.from("inventory_audit_items")
+        .update({ counted_quantity: args.counted })
+        .eq("audit_id", args.audit_id).eq("product_id", args.product_id).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "complete": {
+      const { data, error } = await sb.from("inventory_audits")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("id", args.audit_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "summary": {
+      const { data, error } = await sb.from("inventory_audits")
+        .select("*, items:inventory_audit_items(*)").eq("store_id", sid)
+        .order("created_at", { ascending: false }).limit(args.limit as number || 5);
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown inventory_audit action: ${args.action}` };
+  }
+}
+
+async function handlePurchaseOrders(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "list": {
+      let q = sb.from("purchase_orders").select("*, supplier:suppliers(name), location:locations(name)")
+        .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 25);
+      if (args.status) q = q.eq("status", args.status as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "get": {
+      const { data, error } = await sb.from("purchase_orders")
+        .select("*, items:purchase_order_items(*, product:products(name, sku)), supplier:suppliers(*)")
+        .eq("id", args.purchase_order_id as string).single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "create": {
+      const { data, error } = await sb.from("purchase_orders")
+        .insert({ store_id: sid, supplier_id: args.supplier_id, location_id: args.location_id,
+          expected_delivery_date: args.expected_delivery_date, notes: args.notes, status: "draft" })
+        .select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "approve": {
+      const { data, error } = await sb.from("purchase_orders")
+        .update({ status: "approved" }).eq("id", args.purchase_order_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "receive": {
+      const { data, error } = await sb.from("purchase_orders")
+        .update({ status: "received" }).eq("id", args.purchase_order_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "cancel": {
+      const { data, error } = await sb.from("purchase_orders")
+        .update({ status: "cancelled" }).eq("id", args.purchase_order_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown purchase_orders action: ${args.action}` };
+  }
+}
+
+async function handleTransfers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "list": {
+      let q = sb.from("inventory_transfers")
+        .select("*, from_location:locations!from_location_id(name), to_location:locations!to_location_id(name)")
+        .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 25);
+      if (args.status) q = q.eq("status", args.status as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "create": {
+      // Create transfer header
+      const { data: transfer, error } = await sb.from("inventory_transfers")
+        .insert({ store_id: sid, from_location_id: args.from_location_id, to_location_id: args.to_location_id,
+          notes: args.notes, status: "pending" })
+        .select().single();
+      if (error) return { success: false, error: error.message };
+      // Insert items and deduct from source
+      const items = args.items as Array<{ product_id: string; quantity: number }>;
+      if (items?.length) {
+        const itemRows = items.map(i => ({ transfer_id: transfer.id, product_id: i.product_id, quantity: i.quantity }));
+        await sb.from("inventory_transfer_items").insert(itemRows);
+        for (const item of items) {
+          const { data: src } = await sb.from("inventory").select("quantity")
+            .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", args.from_location_id as string).single();
+          const newQty = (src?.quantity || 0) - item.quantity;
+          await sb.from("inventory").upsert(
+            { store_id: sid, product_id: item.product_id, location_id: args.from_location_id, quantity: newQty },
+            { onConflict: "store_id,product_id,location_id" });
+        }
+      }
+      return { success: true, data: transfer };
+    }
+    case "get": {
+      const { data, error } = await sb.from("inventory_transfers")
+        .select("*, items:inventory_transfer_items(*, product:products(name, sku))")
+        .eq("id", args.transfer_id as string).single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "receive": {
+      // Get transfer and items
+      const { data: transfer } = await sb.from("inventory_transfers")
+        .select("*, items:inventory_transfer_items(*)").eq("id", args.transfer_id as string).single();
+      if (!transfer) return { success: false, error: "Transfer not found" };
+      // Add to destination inventory
+      for (const item of (transfer as any).items || []) {
+        const { data: dst } = await sb.from("inventory").select("quantity")
+          .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", transfer.to_location_id).single();
+        const newQty = (dst?.quantity || 0) + item.quantity;
+        await sb.from("inventory").upsert(
+          { store_id: sid, product_id: item.product_id, location_id: transfer.to_location_id, quantity: newQty },
+          { onConflict: "store_id,product_id,location_id" });
+      }
+      const { data, error } = await sb.from("inventory_transfers")
+        .update({ status: "received" }).eq("id", args.transfer_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "cancel": {
+      // Get transfer and restore source inventory
+      const { data: transfer } = await sb.from("inventory_transfers")
+        .select("*, items:inventory_transfer_items(*)").eq("id", args.transfer_id as string).single();
+      if (!transfer) return { success: false, error: "Transfer not found" };
+      for (const item of (transfer as any).items || []) {
+        const { data: src } = await sb.from("inventory").select("quantity")
+          .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", transfer.from_location_id).single();
+        const newQty = (src?.quantity || 0) + item.quantity;
+        await sb.from("inventory").upsert(
+          { store_id: sid, product_id: item.product_id, location_id: transfer.from_location_id, quantity: newQty },
+          { onConflict: "store_id,product_id,location_id" });
+      }
+      const { data, error } = await sb.from("inventory_transfers")
+        .update({ status: "cancelled" }).eq("id", args.transfer_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown transfers action: ${args.action}` };
+  }
+}
+
+async function handleProducts(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "find": {
+      let q = sb.from("products").select("id, name, sku, price, status, category_id")
+        .eq("store_id", sid).limit(args.limit as number || 25);
+      if (args.query) q = q.or(`name.ilike.%${args.query}%,sku.ilike.%${args.query}%`);
+      if (args.category) q = q.eq("category_id", args.category as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "create": {
+      const { data, error } = await sb.from("products")
+        .insert({ store_id: sid, name: args.name, sku: args.sku, price: args.base_price })
+        .select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "update": {
+      const updates: Record<string, unknown> = {};
+      if (args.name) updates.name = args.name;
+      if (args.base_price) updates.price = args.base_price;
+      const { data, error } = await sb.from("products")
+        .update(updates).eq("id", args.product_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown products action: ${args.action}` };
+  }
+}
+
+async function handleCollections(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "find": {
+      let q = sb.from("creation_collections").select("*").eq("store_id", sid);
+      if (args.name) q = q.ilike("name", `%${args.name}%`);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "create": {
+      const { data, error } = await sb.from("creation_collections")
+        .insert({ store_id: sid, name: args.name }).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown collections action: ${args.action}` };
+  }
+}
+
+async function handleCustomers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "find": {
+      let q = sb.from("customers").select("id, full_name, email, phone, created_at")
+        .eq("store_id", sid).limit(args.limit as number || 25);
+      if (args.query) q = q.or(`full_name.ilike.%${args.query}%,email.ilike.%${args.query}%,phone.ilike.%${args.query}%`);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "create": {
+      const { data, error } = await sb.from("customers")
+        .insert({ store_id: sid, first_name: args.first_name, last_name: args.last_name,
+          email: args.email, phone: args.phone }).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "update": {
+      const updates: Record<string, unknown> = {};
+      if (args.first_name) updates.first_name = args.first_name;
+      if (args.last_name) updates.last_name = args.last_name;
+      if (args.email) updates.email = args.email;
+      if (args.phone) updates.phone = args.phone;
+      const { data, error } = await sb.from("customers")
+        .update(updates).eq("id", args.customer_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown customers action: ${args.action}` };
+  }
+}
+
+async function handleOrders(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "find": {
+      let q = sb.from("orders")
+        .select("id, order_number, status, total, created_at, customer:customers(id, full_name, email)")
+        .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 25);
+      if (args.status) q = q.eq("status", args.status as string);
+      if (args.customer_id) q = q.eq("customer_id", args.customer_id as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "get": {
+      const { data, error } = await sb.from("orders")
+        .select("*, customer:customers(*), items:order_items(*, product:products(id, name, sku))")
+        .eq("id", args.order_id as string).single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown orders action: ${args.action}` };
+  }
+}
+
+async function handleAnalytics(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  // Resolve date range from period/days_back
+  const getDateRange = () => {
+    const end = args.end_date as string || new Date().toISOString().split("T")[0];
+    if (args.start_date) return { start: args.start_date as string, end };
+    if (args.days_back) {
+      const d = new Date(); d.setDate(d.getDate() - (args.days_back as number));
+      return { start: d.toISOString().split("T")[0], end };
+    }
+    const periodDays: Record<string, number> = {
+      today: 0, yesterday: 1, last_7: 7, last_30: 30, last_90: 90,
+      last_180: 180, last_365: 365, all_time: 3650
+    };
+    const days = periodDays[args.period as string] ?? 30;
+    const d = new Date(); d.setDate(d.getDate() - days);
+    return { start: d.toISOString().split("T")[0], end };
+  };
+
+  switch (args.action) {
+    case "summary": {
+      const params: Record<string, unknown> = { p_store_id: sid };
+      const { start, end } = getDateRange();
+      params.p_start_date = start;
+      params.p_end_date = end;
+      if (args.location_id) params.p_location_id = args.location_id;
+      const { data, error } = await sb.rpc("get_sales_analytics", params);
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "by_location": {
+      const { start, end } = getDateRange();
+      let q = sb.from("v_daily_sales").select("*").eq("store_id", sid)
+        .gte("sale_date", start).lte("sale_date", end);
+      if (args.location_id) q = q.eq("location_id", args.location_id as string);
+      const { data, error } = await q;
+      if (error) return { success: false, error: error.message };
+      // Group by location
+      const byLoc: Record<string, { location_id: string; revenue: number; orders: number }> = {};
+      for (const row of data || []) {
+        const lid = row.location_id;
+        if (!byLoc[lid]) byLoc[lid] = { location_id: lid, revenue: 0, orders: 0 };
+        byLoc[lid].revenue += row.net_sales || row.total_sales || 0;
+        byLoc[lid].orders += row.order_count || 0;
+      }
+      return { success: true, data: Object.values(byLoc) };
+    }
+    case "detailed": {
+      const { start, end } = getDateRange();
+      let q = sb.from("v_daily_sales").select("*").eq("store_id", sid)
+        .gte("sale_date", start).lte("sale_date", end).order("sale_date", { ascending: false });
+      if (args.location_id) q = q.eq("location_id", args.location_id as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "employee": {
+      const { data, error } = await sb.rpc("employee_analytics", { p_store_id: sid });
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "discover": {
+      const { data, error } = await sb.rpc("get_analytics_summary", { p_store_id: sid });
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    default:
+      return { success: false, error: `Unknown analytics action: ${args.action}` };
+  }
+}
+
+async function handleLocations(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  let q = sb.from("locations").select("id, name, address, is_active, type").eq("store_id", sid);
+  if (args.is_active !== undefined) q = q.eq("is_active", args.is_active as boolean);
+  if (args.name) q = q.ilike("name", `%${args.name}%`);
+  const { data, error } = await q;
+  return error ? { success: false, error: error.message } : { success: true, data };
+}
+
+async function handleSuppliers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  let q = sb.from("suppliers").select("id, name, email, phone, contact_name").eq("store_id", sid);
+  if (args.name) q = q.ilike("name", `%${args.name}%`);
+  const { data, error } = await q;
+  return error ? { success: false, error: error.message } : { success: true, data };
+}
+
+async function handleEmail(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  switch (args.action) {
+    case "inbox": {
+      let q = sb.from("email_threads").select("*, latest_message:email_inbox(subject, from_email, created_at)")
+        .eq("store_id", sid).order("updated_at", { ascending: false }).limit(args.limit as number || 25);
+      if (args.status) q = q.eq("status", args.status as string);
+      if (args.mailbox) q = q.eq("mailbox", args.mailbox as string);
+      if (args.priority) q = q.eq("priority", args.priority as string);
+      const { data, error } = await q;
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "inbox_get": {
+      const { data, error } = await sb.from("email_threads")
+        .select("*, messages:email_inbox(*)").eq("id", args.thread_id as string).single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "send": {
+      // Invoke send-email edge function
+      const sbUrl = Deno.env.get("SUPABASE_URL")!;
+      const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      try {
+        const resp = await fetch(`${sbUrl}/functions/v1/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sbKey}` },
+          body: JSON.stringify({ to: args.to, subject: args.subject, html: args.html, text: args.text, storeId: sid })
+        });
+        const result = await resp.json();
+        return resp.ok ? { success: true, data: result } : { success: false, error: result.error || "Send failed" };
+      } catch (err) {
+        return { success: false, error: `Email send failed: ${err}` };
+      }
+    }
+    case "send_template": {
+      const sbUrl = Deno.env.get("SUPABASE_URL")!;
+      const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      try {
+        const resp = await fetch(`${sbUrl}/functions/v1/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sbKey}` },
+          body: JSON.stringify({ to: args.to, template: args.template, template_data: args.template_data, storeId: sid })
+        });
+        const result = await resp.json();
+        return resp.ok ? { success: true, data: result } : { success: false, error: result.error || "Send failed" };
+      } catch (err) {
+        return { success: false, error: `Template send failed: ${err}` };
+      }
+    }
+    case "list": {
+      const { data, error } = await sb.from("email_sends").select("*")
+        .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 50);
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "get": {
+      const { data, error } = await sb.from("email_sends")
+        .select("*").eq("id", args.email_id as string).single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "templates": {
+      const { data, error } = await sb.from("email_templates").select("*")
+        .eq("store_id", sid).eq("is_active", true);
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "inbox_reply": {
+      const sbUrl = Deno.env.get("SUPABASE_URL")!;
+      const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      try {
+        const resp = await fetch(`${sbUrl}/functions/v1/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sbKey}` },
+          body: JSON.stringify({ to: args.to, subject: args.subject, html: args.html, text: args.text, thread_id: args.thread_id, storeId: sid })
+        });
+        const result = await resp.json();
+        return resp.ok ? { success: true, data: result } : { success: false, error: result.error || "Reply failed" };
+      } catch (err) {
+        return { success: false, error: `Reply failed: ${err}` };
+      }
+    }
+    case "inbox_update": {
+      const updates: Record<string, unknown> = {};
+      if (args.status) updates.status = args.status;
+      if (args.priority) updates.priority = args.priority;
+      if (args.intent) updates.ai_intent = args.intent;
+      if (args.ai_summary) updates.ai_summary = args.ai_summary;
+      const { data, error } = await sb.from("email_threads")
+        .update(updates).eq("id", args.thread_id as string).select().single();
+      return error ? { success: false, error: error.message } : { success: true, data };
+    }
+    case "inbox_stats": {
+      const { data, error } = await sb.from("email_threads")
+        .select("status, mailbox, priority").eq("store_id", sid);
+      if (error) return { success: false, error: error.message };
+      const stats = {
+        total: data.length,
+        by_status: groupBy(data, "status"),
+        by_mailbox: groupBy(data, "mailbox"),
+        by_priority: groupBy(data, "priority")
+      };
+      return { success: true, data: stats };
+    }
+    default:
+      return { success: false, error: `Unknown email action: ${args.action}` };
+  }
+}
+
+async function handleAlerts(sb: SupabaseClient, _args: Record<string, unknown>, storeId?: string) {
+  const sid = storeId as string;
+  const alerts: Array<{ type: string; severity: string; message: string; data?: unknown }> = [];
+
+  // Low stock alerts (quantity < 10)
+  const { data: lowStock } = await sb.from("inventory")
+    .select("quantity, product:products(name, sku), location:locations(name)")
+    .eq("store_id", sid).lt("quantity", 10).gt("quantity", 0);
+  for (const item of lowStock || []) {
+    alerts.push({
+      type: "low_stock", severity: "warning",
+      message: `Low stock: ${(item as any).product?.name || "Unknown"} (${item.quantity} remaining) at ${(item as any).location?.name || "Unknown"}`,
+      data: item
+    });
+  }
+
+  // Out of stock
+  const { data: outOfStock } = await sb.from("inventory")
+    .select("product:products(name, sku), location:locations(name)")
+    .eq("store_id", sid).eq("quantity", 0);
+  for (const item of outOfStock || []) {
+    alerts.push({
+      type: "out_of_stock", severity: "critical",
+      message: `Out of stock: ${(item as any).product?.name || "Unknown"} at ${(item as any).location?.name || "Unknown"}`,
+      data: item
+    });
+  }
+
+  // Pending orders
+  const { data: pendingOrders } = await sb.from("orders")
+    .select("id, order_number, total, created_at")
+    .eq("store_id", sid).eq("status", "pending");
+  if (pendingOrders?.length) {
+    alerts.push({
+      type: "pending_orders", severity: "info",
+      message: `${pendingOrders.length} pending orders requiring attention`,
+      data: { count: pendingOrders.length, orders: pendingOrders.slice(0, 5) }
+    });
+  }
+
+  return { success: true, data: { total: alerts.length, alerts } };
+}
+
+async function handleAuditTrail(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
+  const sid = (args.store_id || storeId) as string;
+  const { data, error } = await sb.from("audit_logs").select("*")
+    .eq("store_id", sid).order("created_at", { ascending: false })
+    .limit(args.limit as number || 25);
+  return error ? { success: false, error: error.message } : { success: true, data };
+}
+
+function groupBy(arr: Record<string, unknown>[], key: string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of arr) {
+    const val = (item[key] as string) || "unknown";
+    counts[val] = (counts[val] || 0) + 1;
+  }
+  return counts;
+}
+
+// ============================================================================
+// AGENT LOADER
+// ============================================================================
+
+async function loadAgentConfig(supabase: SupabaseClient, agentId: string): Promise<AgentConfig | null> {
+  const { data, error } = await supabase.from("ai_agent_config").select("*").eq("id", agentId).single();
   if (error || !data) return null;
   return data as AgentConfig;
 }
 
-// Get tools for agent based on capabilities
-function getToolsForAgent(agent: AgentConfig): ToolDefinition[] {
-  // Filter tools based on agent capabilities
-  const readOnlyTools = ["inventory_summary", "orders_list", "order_details",
-    "customers_search", "customer_details", "products_search", "product_details",
-    "analytics_sales", "analytics_inventory", "locations_list"];
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 
-  const writeTools = ["inventory_adjust", "inventory_transfer", "customer_loyalty_adjust"];
+const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
 
-  let allowedTools = [...readOnlyTools];
-
-  if (agent.can_modify) {
-    allowedTools = [...allowedTools, ...writeTools];
-  }
-
-  // If agent has specific enabled_tools, use those
-  if (agent.enabled_tools && agent.enabled_tools.length > 0) {
-    allowedTools = allowedTools.filter(t => agent.enabled_tools.includes(t));
-  }
-
-  return TOOL_DEFINITIONS.filter(t => allowedTools.includes(t.name));
-}
-
-// Log execution trace
-async function logExecution(
-  supabase: SupabaseClient,
-  agentId: string,
-  storeId: string,
-  userMessage: string,
-  finalResponse: string,
-  success: boolean,
-  turnCount: number,
-  toolCalls: number,
-  inputTokens: number,
-  outputTokens: number,
-  error?: string
-): Promise<void> {
-  try {
-    await supabase.from("agent_execution_traces").insert({
-      agent_id: agentId,
-      store_id: storeId,
-      user_message: userMessage,
-      final_response: finalResponse,
-      success,
-      turn_count: turnCount,
-      tool_calls: toolCalls,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      error,
-      duration_ms: 0  // Could track actual duration
-    });
-  } catch {
-    // Don't fail the request if logging fails
-    console.error("Failed to log execution trace");
-  }
-}
-
-// Main handler
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
@@ -540,8 +817,7 @@ serve(async (req: Request) => {
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
+      status: 405, headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -549,49 +825,34 @@ serve(async (req: Request) => {
     const { agentId, storeId, message, conversationHistory } = await req.json();
 
     if (!agentId || !message) {
-      return new Response(
-        JSON.stringify({ error: "agentId and message are required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "agentId and message required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
-    // Initialize Supabase client with service role for tool execution
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Load agent config
     const agent = await loadAgentConfig(supabase, agentId);
     if (!agent) {
-      return new Response(
-        JSON.stringify({ error: "Agent not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Agent not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } });
     }
 
-    // Get tools for this agent
-    const tools = getToolsForAgent(agent);
-
-    // Generate trace ID for this conversation - links all tool calls
+    // Load tools from registry, filter for this agent
+    const allTools = await loadTools(supabase);
+    const tools = getToolsForAgent(agent, allTools);
     const traceId = crypto.randomUUID();
 
-    // Build system prompt with store context
+    // Build system prompt
     let systemPrompt = agent.system_prompt || "You are a helpful assistant.";
-    if (storeId) {
-      systemPrompt += `\n\nYou are operating for store_id: ${storeId}. Always include this in tool calls that require it.`;
-    }
-    if (!agent.can_modify) {
-      systemPrompt += "\n\nIMPORTANT: You have read-only access. Do not attempt to modify any data.";
-    }
+    if (storeId) systemPrompt += `\n\nYou are operating for store_id: ${storeId}. Always include this in tool calls that require it.`;
+    if (!agent.can_modify) systemPrompt += "\n\nIMPORTANT: You have read-only access. Do not attempt to modify any data.";
 
-    // Build messages array
     const messages: Anthropic.MessageParam[] = [
       ...(conversationHistory || []),
       { role: "user", content: message }
     ];
 
-    // Set up SSE stream
+    // SSE stream
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
@@ -599,27 +860,18 @@ serve(async (req: Request) => {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
         };
 
-        let turnCount = 0;
-        let toolCallCount = 0;
-        let totalInputTokens = 0;
-        let totalOutputTokens = 0;
-        let finalResponse = "";
-        let continueLoop = true;
+        let turnCount = 0, toolCallCount = 0, totalIn = 0, totalOut = 0;
+        let finalResponse = "", continueLoop = true;
 
         try {
           while (continueLoop && turnCount < (agent.max_tool_calls || 10)) {
             turnCount++;
 
-            // Call Claude with streaming
             const response = await anthropic.messages.create({
               model: agent.model || "claude-sonnet-4-20250514",
               max_tokens: agent.max_tokens || 4096,
               system: systemPrompt,
-              tools: tools.map(t => ({
-                name: t.name,
-                description: t.description,
-                input_schema: t.input_schema
-              })),
+              tools: tools.map(t => ({ name: t.name, description: t.description, input_schema: t.input_schema })),
               messages,
               stream: true
             });
@@ -628,17 +880,10 @@ serve(async (req: Request) => {
             const toolUseBlocks: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
             let currentToolUse: { id: string; name: string; input: string } | null = null;
 
-            // Process stream
             for await (const event of response) {
-              if (event.type === "content_block_start") {
-                if (event.content_block.type === "tool_use") {
-                  currentToolUse = {
-                    id: event.content_block.id,
-                    name: event.content_block.name,
-                    input: ""
-                  };
-                  send({ type: "tool_start", name: event.content_block.name });
-                }
+              if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
+                currentToolUse = { id: event.content_block.id, name: event.content_block.name, input: "" };
+                send({ type: "tool_start", name: event.content_block.name });
               } else if (event.type === "content_block_delta") {
                 if (event.delta.type === "text_delta") {
                   currentText += event.delta.text;
@@ -646,32 +891,18 @@ serve(async (req: Request) => {
                 } else if (event.delta.type === "input_json_delta" && currentToolUse) {
                   currentToolUse.input += event.delta.partial_json;
                 }
-              } else if (event.type === "content_block_stop") {
-                if (currentToolUse) {
-                  try {
-                    const input = JSON.parse(currentToolUse.input);
-                    toolUseBlocks.push({
-                      id: currentToolUse.id,
-                      name: currentToolUse.name,
-                      input
-                    });
-                  } catch {
-                    // Invalid JSON, skip this tool use
-                  }
-                  currentToolUse = null;
-                }
-              } else if (event.type === "message_delta") {
-                if (event.usage) {
-                  totalOutputTokens += event.usage.output_tokens;
-                }
-              } else if (event.type === "message_start") {
-                if (event.message.usage) {
-                  totalInputTokens += event.message.usage.input_tokens;
-                }
+              } else if (event.type === "content_block_stop" && currentToolUse) {
+                try {
+                  toolUseBlocks.push({ id: currentToolUse.id, name: currentToolUse.name, input: JSON.parse(currentToolUse.input) });
+                } catch { /* skip invalid JSON */ }
+                currentToolUse = null;
+              } else if (event.type === "message_delta" && event.usage) {
+                totalOut += event.usage.output_tokens;
+              } else if (event.type === "message_start" && event.message.usage) {
+                totalIn += event.message.usage.input_tokens;
               }
             }
 
-            // If no tool calls, we're done
             if (toolUseBlocks.length === 0) {
               finalResponse = currentText;
               continueLoop = false;
@@ -680,94 +911,40 @@ serve(async (req: Request) => {
 
             // Execute tool calls
             const toolResults: Anthropic.MessageParam["content"] = [];
-
-            for (const toolUse of toolUseBlocks) {
+            for (const tu of toolUseBlocks) {
               toolCallCount++;
+              const toolArgs = { ...tu.input };
+              if (!toolArgs.store_id && storeId) toolArgs.store_id = storeId;
 
-              // Inject store_id if not provided
-              const args = { ...toolUse.input };
-              if (!args.store_id && storeId) {
-                args.store_id = storeId;
-              }
-
-              const result = await executeTool(supabase, toolUse.name, args, traceId, storeId);
-
-              send({
-                type: "tool_result",
-                name: toolUse.name,
-                success: result.success,
-                result: result.success ? result.data : result.error
-              });
-
-              toolResults.push({
-                type: "tool_result",
-                tool_use_id: toolUse.id,
-                content: JSON.stringify(result.success ? result.data : { error: result.error })
-              });
+              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId);
+              send({ type: "tool_result", name: tu.name, success: result.success, result: result.success ? result.data : result.error });
+              toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result.success ? result.data : { error: result.error }) });
             }
 
-            // Add assistant message with tool use and tool results
             messages.push({
               role: "assistant",
               content: [
                 ...(currentText ? [{ type: "text" as const, text: currentText }] : []),
-                ...toolUseBlocks.map(t => ({
-                  type: "tool_use" as const,
-                  id: t.id,
-                  name: t.name,
-                  input: t.input
-                }))
+                ...toolUseBlocks.map(t => ({ type: "tool_use" as const, id: t.id, name: t.name, input: t.input }))
               ]
             });
-
-            messages.push({
-              role: "user",
-              content: toolResults
-            });
+            messages.push({ role: "user", content: toolResults });
           }
 
-          // Send final usage
-          send({
-            type: "usage",
-            usage: {
-              input_tokens: totalInputTokens,
-              output_tokens: totalOutputTokens
-            }
-          });
-
+          send({ type: "usage", usage: { input_tokens: totalIn, output_tokens: totalOut } });
           send({ type: "done" });
 
-          // Log execution
-          await logExecution(
-            supabase,
-            agentId,
-            storeId,
-            message,
-            finalResponse,
-            true,
-            turnCount,
-            toolCallCount,
-            totalInputTokens,
-            totalOutputTokens
-          );
+          // Log execution trace
+          try {
+            await supabase.from("agent_execution_traces").insert({
+              agent_id: agentId, store_id: storeId, user_message: message,
+              final_response: finalResponse, success: true, turn_count: turnCount,
+              tool_calls: toolCallCount, input_tokens: totalIn, output_tokens: totalOut
+            });
+          } catch { /* don't fail */ }
 
         } catch (err) {
           send({ type: "error", error: String(err) });
-
-          // Log failed execution
-          await logExecution(
-            supabase,
-            agentId,
-            storeId,
-            message,
-            "",
-            false,
-            turnCount,
-            toolCallCount,
-            totalInputTokens,
-            totalOutputTokens,
-            String(err)
-          );
         }
 
         controller.close();
@@ -784,9 +961,7 @@ serve(async (req: Request) => {
     });
 
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: String(err) }),
+      { status: 500, headers: { "Content-Type": "application/json" } });
   }
 });

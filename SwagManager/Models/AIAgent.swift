@@ -26,7 +26,6 @@ struct AIAgent: Codable, Identifiable, Hashable {
 
     // Agent Builder fields
     var enabledTools: [String]?  // Array of tool IDs (UUIDs as strings)
-    var contextConfig: ContextConfig?
     var temperature: Double?
     var tone: String?
     var verbosity: String?
@@ -54,7 +53,6 @@ struct AIAgent: Codable, Identifiable, Hashable {
         case publishedAt = "published_at"
         case publishedBy = "published_by"
         case enabledTools = "enabled_tools"
-        case contextConfig = "context_config"
         case temperature
         case tone
         case verbosity
@@ -84,7 +82,6 @@ struct AIAgent: Codable, Identifiable, Hashable {
         publishedAt: Date? = nil,
         publishedBy: UUID? = nil,
         enabledTools: [String]? = nil,
-        contextConfig: ContextConfig? = nil,
         temperature: Double? = 0.7,
         tone: String? = "professional",
         verbosity: String? = "moderate",
@@ -110,7 +107,6 @@ struct AIAgent: Codable, Identifiable, Hashable {
         self.publishedAt = publishedAt
         self.publishedBy = publishedBy
         self.enabledTools = enabledTools
-        self.contextConfig = contextConfig
         self.temperature = temperature
         self.tone = tone
         self.verbosity = verbosity
@@ -160,23 +156,3 @@ struct AIAgent: Codable, Identifiable, Hashable {
     }
 }
 
-// MARK: - Context Configuration
-
-struct ContextConfig: Codable, Hashable {
-    var includeLocations: Bool?
-    var locationIds: [String]?
-    var includeCustomers: Bool?
-    var customerSegments: [String]?
-
-    init(
-        includeLocations: Bool? = nil,
-        locationIds: [String]? = nil,
-        includeCustomers: Bool? = nil,
-        customerSegments: [String]? = nil
-    ) {
-        self.includeLocations = includeLocations
-        self.locationIds = locationIds
-        self.includeCustomers = includeCustomers
-        self.customerSegments = customerSegments
-    }
-}

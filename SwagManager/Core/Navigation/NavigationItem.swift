@@ -1,20 +1,12 @@
 import Foundation
-import SwiftData
 
 // MARK: - Unified Navigation Item
-// Single enum for all navigation in the app
 
 enum NavigationItem: Hashable {
-    // Content
-    case teamChat
-
-    // AI
     case agents
-    case aiChat
-    case email
 }
 
-// MARK: - Navigation Path (for programmatic navigation)
+// MARK: - Navigation Path
 
 @MainActor
 @Observable

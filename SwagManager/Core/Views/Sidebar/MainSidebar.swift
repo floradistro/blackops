@@ -1,63 +1,20 @@
 import SwiftUI
-import SwiftData
 
 // MARK: - Main Sidebar
-// Simple flat navigation like macOS/iOS Settings
-// No expandable trees - just top-level sections that open in main content
+// Flat navigation — agents and telemetry only
 
 struct MainSidebar: View {
     @Binding var selection: SDSidebarItem?
-    var syncService: SyncService
     @Environment(\.editorStore) private var store
 
-    // ALL counts are cached - no direct store property access in body
-    @State private var conversationsCount: Int = 0
-    @State private var locationsCount: Int = 0
-    @State private var emailsCount: Int = 0
-    @State private var inboxUnreadCount: Int = 0
     @State private var agentsCount: Int = 0
 
     var body: some View {
         List(selection: $selection) {
-            // CONTENT
-            Section("Content") {
-                SidebarRow(
-                    item: .teamChat,
-                    icon: "message.fill",
-                    title: "Team Chat",
-                    badge: conversationsCount
-                )
-            }
-
-            // OPERATIONS
-            Section("Operations") {
-                SidebarRow(
-                    item: .locations,
-                    icon: "mappin.and.ellipse",
-                    title: "Locations",
-                    badge: locationsCount
-                )
-
-                SidebarRow(
-                    item: .emails,
-                    icon: "envelope.fill",
-                    title: "Emails",
-                    badge: emailsCount
-                )
-
-                SidebarRow(
-                    item: .inbox,
-                    icon: "tray.full.fill",
-                    title: "Inbox",
-                    badge: inboxUnreadCount
-                )
-            }
-
-            // AI
             Section("AI") {
                 SidebarRow(
                     item: .agents,
-                    icon: "gearshape.2.fill",
+                    icon: "cpu",
                     title: "Agents",
                     badge: agentsCount
                 )
@@ -71,35 +28,20 @@ struct MainSidebar: View {
             }
         }
         .listStyle(.sidebar)
-        .navigationTitle("WhaleTools")
         .task(id: store.selectedStore?.id) {
-            updateAllCounts()
+            agentsCount = store.aiAgents.count
         }
-        // Periodic refresh of counts (every 30 seconds) instead of observing store
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
-                updateStoreCounts()
+                agentsCount = store.aiAgents.count
             }
         }
         .freezeDebugLifecycle("MainSidebar")
     }
-
-    private func updateAllCounts() {
-        updateStoreCounts()
-    }
-
-    private func updateStoreCounts() {
-        conversationsCount = store.conversations.count
-        locationsCount = store.locations.count
-        emailsCount = store.emailTotalCount
-        inboxUnreadCount = store.inboxTotalUnread
-        agentsCount = store.aiAgents.count
-    }
 }
 
 // MARK: - Sidebar Row
-// Simple flat row with icon, title, and optional badge
 
 struct SidebarRow: View {
     let item: SDSidebarItem
@@ -128,7 +70,6 @@ struct SidebarRow: View {
 }
 
 // MARK: - Store Dropdown
-// Native macOS picker style - no custom styling
 
 struct StoreDropdown: View {
     @Environment(\.editorStore) private var store

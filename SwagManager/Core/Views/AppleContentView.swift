@@ -1,188 +1,126 @@
 import SwiftUI
-import SwiftData
+import AppKit
+
+// MARK: - Vibrancy Background
+// NSVisualEffectView for proper macOS frosted glass (not window transparency)
+
+struct VibrancyBackground: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .sidebar
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
+
+// MARK: - Window Vibrancy Configurator
+// Wraps the hosting view inside an NSVisualEffectView so vibrancy
+// covers the entire window including the title bar area.
+
+struct WindowVibrancy: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let v = _WiringView()
+        // Delay one runloop so the window + hosting view exist
+        DispatchQueue.main.async { v.wireWindow() }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    class _WiringView: NSView {
+        private static var configured = Set<ObjectIdentifier>()
+
+        func wireWindow() {
+            guard let window = self.window else { return }
+            let key = ObjectIdentifier(window)
+            guard !Self.configured.contains(key) else { return }
+            Self.configured.insert(key)
+
+            window.titlebarAppearsTransparent = true
+
+            // Replace contentView with an NSVisualEffectView that wraps it
+            guard let hostingView = window.contentView,
+                  !(hostingView is NSVisualEffectView) else { return }
+
+            let effectView = NSVisualEffectView()
+            effectView.material = .sidebar
+            effectView.blendingMode = .behindWindow
+            effectView.state = .active
+
+            // Reparent: effectView becomes contentView, hosting view goes inside
+            window.contentView = effectView
+            effectView.addSubview(hostingView)
+            hostingView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                hostingView.topAnchor.constraint(equalTo: effectView.topAnchor),
+                hostingView.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
+                hostingView.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
+                hostingView.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
+            ])
+        }
+    }
+}
 
 // MARK: - Apple-Style Content View
-// Settings-style navigation: flat sidebar + drill-down detail with back navigation
-// Sidebar shows top-level sections, detail view uses NavigationStack for breadcrumb nav
+// .hiddenTitleBar gives transparent title bar with traffic lights
+// Agent selection via macOS menu bar; inspector toggled via Cmd+I
 
 struct AppleContentView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.editorStore) private var store
-    @State private var syncService = SyncService.shared
+    @Environment(\.toolbarState) private var toolbarState
 
-    @State private var selectedItem: SDSidebarItem? = nil
-    @State private var navigationPath = NavigationPath()
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var showAIChat = false
-
-    var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            MainSidebar(selection: $selectedItem, syncService: syncService)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 280)
-        } detail: {
-            NavigationStack(path: $navigationPath) {
-                MainDetailView(selection: $selectedItem)
-                    .navigationDestination(for: SDSidebarItem.self) { item in
-                        DetailDestination(item: item, selection: $selectedItem)
-                    }
-            }
-        }
-        // Store is injected by ContentView at root level
-        // CRITICAL: Use StableInspectorContent to prevent view churn when toggling
-        // The inspector column still animates in/out, but the AIChatPane stays mounted
-        // once first shown, preventing NSHostingView layout recursion
-        .inspector(isPresented: $showAIChat) {
-            StableInspectorContent(isVisible: showAIChat)
-                .inspectorColumnWidth(min: 320, ideal: 420, max: 600)
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                StoreDropdown()
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                if syncService.isSyncing {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                RefreshButton(syncService: syncService)
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAIChat.toggle()
-                } label: {
-                    Label("AI Chat", systemImage: showAIChat ? "sidebar.trailing" : "sidebar.trailing")
-                }
-                .help(showAIChat ? "Hide AI Chat" : "Show AI Chat")
-            }
-        }
-        .toolbarBackground(.visible, for: .windowToolbar)
-        .onChange(of: selectedItem) { _, _ in
-            // Clear navigation path when sidebar selection changes
-            navigationPath = NavigationPath()
-        }
-        .task {
-            await store.loadStores()
-            store.startSubscriptions()  // Start realtime after store is ready
-            if let storeId = store.selectedStore?.id {
-                syncService.configure(modelContext: modelContext, storeId: storeId)
-                await loadAllData(store: store, syncService: syncService)
-            }
-        }
-        .onChange(of: store.selectedStore?.id) { _, newId in
-            if let storeId = newId {
-                syncService.configure(modelContext: modelContext, storeId: storeId)
-                Task { await loadAllData(store: store, syncService: syncService) }
-            }
-        }
-        .freezeDebugLifecycle("AppleContentView")
+    private var bindableToolbar: Bindable<ToolbarState> {
+        Bindable(toolbarState)
     }
-}
-
-// MARK: - Refresh Button (Isolated observation)
-private struct RefreshButton: View {
-    let syncService: SyncService
-    @Environment(\.editorStore) private var store
 
     var body: some View {
-        Button {
-            Task {
+        TelemetryPanel(storeId: store.selectedStore?.id)
+            .background(WindowVibrancy())
+            .inspector(isPresented: bindableToolbar.showConfig) {
+                inspectorContent
+                    .inspectorColumnWidth(min: 300, ideal: 380, max: 500)
+            }
+            .task {
                 await store.loadStores()
-                await syncService.syncAll()
+                if store.selectedStore != nil {
+                    await store.loadAIAgents()
+                }
             }
-        } label: {
-            Label("Refresh", systemImage: "arrow.clockwise")
-        }
-        .help("Refresh all data")
+            .onChange(of: store.selectedStore?.id) { _, newId in
+                toolbarState.selectedAgentId = nil
+                toolbarState.agentHasChanges = false
+                if newId != nil {
+                    Task { await store.loadAIAgents() }
+                }
+            }
+            .freezeDebugLifecycle("AppleContentView")
     }
-}
 
-// MARK: - Load All Data
-/// Load all data for the current store - PHASED for performance
-/// Phase 1: Critical data for sidebar (fast, blocks UI)
-/// Phase 2: Secondary data (background, non-blocking)
-@MainActor
-private func loadAllData(store: EditorStore, syncService: SyncService) async {
-    // PHASE 1: Critical data needed for initial UI render
-    async let agentsTask: () = store.loadAIAgents()
-    async let locationsTask: () = store.loadLocations()
-    _ = await (agentsTask, locationsTask)
+    // MARK: - Inspector Content
 
-    // PHASE 2: Secondary data - fire and forget (don't block UI)
-    Task.detached(priority: .utility) { @Sendable [store, syncService] in
-        async let syncTask: () = syncService.syncAll()
-        async let emailsTask: () = store.loadEmailCounts()
-        async let campaignsTask: () = store.loadAllCampaigns()
-
-        _ = await (syncTask, emailsTask, campaignsTask)
-    }
-}
-
-// MARK: - Detail Destination
-// Routes NavigationStack destinations to appropriate detail views
-// Uses @Environment for store access - Apple WWDC23 pattern
-
-struct DetailDestination: View {
-    let item: SDSidebarItem
-    @Binding var selection: SDSidebarItem?
-    @Environment(\.editorStore) private var store
-
-    var body: some View {
-        switch item {
-        case .locationDetail(let id):
-            LocationDetailWrapper(locationId: id)
-
-        case .queue(let locationId):
-            LocationQueueView(locationId: locationId)
-
-        case .emailDetail(let id):
-            EmailDetailWrapper(emailId: id)
-
-        case .inboxThread(let id):
-            ThreadDetailWrapper(threadId: id)
-
-        case .inboxSettings:
-            EmailDomainSettingsView()
-
-        case .emailCampaignDetail(let id):
-            EmailCampaignWrapper(campaignId: id)
-
-        case .metaCampaignDetail(let id):
-            MetaCampaignWrapper(campaignId: id)
-
-        case .metaIntegrationDetail(let id):
-            MetaIntegrationWrapper(integrationId: id)
-
-        case .agentDetail(let id):
-            AgentDetailWrapper(agentId: id, selection: $selection)
-
-        default:
-            EmptyView()
+    @ViewBuilder
+    private var inspectorContent: some View {
+        if let agentId = toolbarState.selectedAgentId,
+           let agent = store.aiAgents.first(where: { $0.id == agentId }) {
+            AgentConfigPanel(agent: agent)
+        } else {
+            ContentUnavailableView {
+                Label("No Agent Selected", systemImage: "cpu")
+            } description: {
+                Text("Select an agent from the Agent menu.")
+            }
         }
     }
 }
-
-// MARK: - Stable Inspector Content
-// Since animations are disabled on the toggle, we can mount AIChatPane directly
-// The wrapper still defers @ObservedObject subscriptions via AIChatPaneContent
-
-private struct StableInspectorContent: View {
-    let isVisible: Bool
-
-    var body: some View {
-        // AIChatPane is a lightweight wrapper that defers creating
-        // AIChatPaneContent (with @ObservedObject) until after a delay
-        AIChatPane()
-    }
-}
-
-// MARK: - Preview
 
 #Preview {
     AppleContentView()
-        .modelContainer(for: [], inMemory: true)
 }
