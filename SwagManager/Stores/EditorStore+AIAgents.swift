@@ -60,10 +60,11 @@ extension EditorStore {
 
         do {
             // Use adminClient to bypass RLS for agent config
+            // Include both store-specific agents AND global agents (store_id IS NULL)
             let response: [AIAgent] = try await SupabaseService.shared.adminClient
                 .from("ai_agent_config")
                 .select()
-                .eq("store_id", value: storeId.uuidString)
+                .or("store_id.eq.\(storeId.uuidString),store_id.is.null")
                 .order("created_at", ascending: false)
                 .execute()
                 .value

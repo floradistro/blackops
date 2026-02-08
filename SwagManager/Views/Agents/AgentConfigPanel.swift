@@ -56,7 +56,7 @@ struct AgentConfigPanel: View {
 
                     Divider()
 
-                    AgentToolsSection(enabledTools: $enabledTools, hasChanges: $hasChanges)
+                    AgentToolsSection(enabledTools: $enabledTools, hasChanges: $hasChanges, isGlobalAgent: agent.storeId == nil)
 
                     Divider()
 

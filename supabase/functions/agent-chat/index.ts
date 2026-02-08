@@ -53,7 +53,8 @@ async function loadTools(supabase: SupabaseClient): Promise<ToolDef[]> {
   const { data, error } = await supabase
     .from("ai_tool_registry")
     .select("name, description, definition")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .neq("tool_mode", "code");
 
   if (error || !data) return cachedTools;
 
@@ -151,6 +152,9 @@ async function executeTool(
         break;
       case "audit_trail":
         result = await handleAuditTrail(supabase, args, storeId);
+        break;
+      case "web_search":
+        result = await handleWebSearch(supabase, args, storeId);
         break;
 
       default:
@@ -440,7 +444,7 @@ async function handlePurchaseOrders(sb: SupabaseClient, args: Record<string, unk
   const sid = (args.store_id || storeId) as string;
   switch (args.action) {
     case "list": {
-      let q = sb.from("purchase_orders").select("*, supplier:suppliers(name), location:locations(name)")
+      let q = sb.from("purchase_orders").select("*, supplier:suppliers(external_name, external_company), location:locations(name)")
         .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 25);
       if (args.status) q = q.eq("status", args.status as string);
       const { data, error } = await q;
@@ -563,7 +567,7 @@ async function handleProducts(sb: SupabaseClient, args: Record<string, unknown>,
   const sid = (args.store_id || storeId) as string;
   switch (args.action) {
     case "find": {
-      let q = sb.from("products").select("id, name, sku, price, status, category_id")
+      let q = sb.from("products").select("id, name, sku, status, primary_category_id")
         .eq("store_id", sid).limit(args.limit as number || 25);
       if (args.query) q = q.or(`name.ilike.%${args.query}%,sku.ilike.%${args.query}%`);
       if (args.category) q = q.eq("category_id", args.category as string);
@@ -572,14 +576,14 @@ async function handleProducts(sb: SupabaseClient, args: Record<string, unknown>,
     }
     case "create": {
       const { data, error } = await sb.from("products")
-        .insert({ store_id: sid, name: args.name, sku: args.sku, price: args.base_price })
+        .insert({ store_id: sid, name: args.name, sku: args.sku })
         .select().single();
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "update": {
       const updates: Record<string, unknown> = {};
       if (args.name) updates.name = args.name;
-      if (args.base_price) updates.price = args.base_price;
+      if (args.base_price) updates.cost_price = args.base_price;
       const { data, error } = await sb.from("products")
         .update(updates).eq("id", args.product_id as string).select().single();
       return error ? { success: false, error: error.message } : { success: true, data };
@@ -731,7 +735,7 @@ async function handleAnalytics(sb: SupabaseClient, args: Record<string, unknown>
 
 async function handleLocations(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
   const sid = (args.store_id || storeId) as string;
-  let q = sb.from("locations").select("id, name, address, is_active, type").eq("store_id", sid);
+  let q = sb.from("locations").select("id, name, address_line1, city, state, is_active, type").eq("store_id", sid);
   if (args.is_active !== undefined) q = q.eq("is_active", args.is_active as boolean);
   if (args.name) q = q.ilike("name", `%${args.name}%`);
   const { data, error } = await q;
@@ -740,8 +744,8 @@ async function handleLocations(sb: SupabaseClient, args: Record<string, unknown>
 
 async function handleSuppliers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
   const sid = (args.store_id || storeId) as string;
-  let q = sb.from("suppliers").select("id, name, email, phone, contact_name").eq("store_id", sid);
-  if (args.name) q = q.ilike("name", `%${args.name}%`);
+  let q = sb.from("suppliers").select("id, external_name, external_company, contact_name, contact_email, contact_phone, city, state, is_active").eq("store_id", sid);
+  if (args.name) q = q.or(`external_name.ilike.%${args.name}%,external_company.ilike.%${args.name}%,contact_name.ilike.%${args.name}%`);
   const { data, error } = await q;
   return error ? { success: false, error: error.message } : { success: true, data };
 }
@@ -902,6 +906,53 @@ async function handleAuditTrail(sb: SupabaseClient, args: Record<string, unknown
   return error ? { success: false, error: error.message } : { success: true, data };
 }
 
+async function handleWebSearch(_sb: SupabaseClient, args: Record<string, unknown>, _storeId?: string) {
+  const query = args.query as string;
+  const numResults = (args.num_results as number) || 5;
+  const exaApiKey = Deno.env.get("EXA_API_KEY");
+
+  if (!exaApiKey) {
+    return { success: false, error: "EXA_API_KEY not configured" };
+  }
+
+  if (!query) {
+    return { success: false, error: "Query parameter is required" };
+  }
+
+  try {
+    const response = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": exaApiKey
+      },
+      body: JSON.stringify({
+        query,
+        numResults,
+        useAutoprompt: true,
+        type: "auto"
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `Exa API error: ${response.status} - ${errorText}` };
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      data: {
+        query,
+        results: data.results || [],
+        autopromptString: data.autopromptString
+      }
+    };
+  } catch (err) {
+    return { success: false, error: `Web search failed: ${err}` };
+  }
+}
+
 function groupBy(arr: Record<string, unknown>[], key: string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const item of arr) {
@@ -945,7 +996,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { agentId, storeId, message, conversationHistory, source } = await req.json();
+    const { agentId, storeId, message, conversationHistory, source, conversationId } = await req.json();
 
     if (!agentId || !message) {
       return new Response(JSON.stringify({ error: "agentId and message required" }),
@@ -985,6 +1036,9 @@ serve(async (req: Request) => {
     const tools = getToolsForAgent(agent, allTools);
     const traceId = crypto.randomUUID();
 
+    // Use provided conversation ID or generate one (agent-specific session)
+    const sessionId = conversationId || `${agentId}-${userId || "anon"}`;
+
     // Build system prompt
     let systemPrompt = agent.system_prompt || "You are a helpful assistant.";
     if (storeId) systemPrompt += `\n\nYou are operating for store_id: ${storeId}. Always include this in tool calls that require it.`;
@@ -994,6 +1048,27 @@ serve(async (req: Request) => {
       ...(conversationHistory || []),
       { role: "user", content: message }
     ];
+
+    // Log user message to audit_logs
+    try {
+      await supabase.from("audit_logs").insert({
+        action: "chat.user_message",
+        severity: "info",
+        store_id: storeId || null,
+        resource_type: "chat_message",
+        resource_id: agentId,
+        request_id: traceId,
+        conversation_id: sessionId,
+        user_id: userId || null,
+        user_email: userEmail || null,
+        details: {
+          source: source || "whale_chat",
+          agent_id: agentId,
+          message: message,
+          conversation_history_length: conversationHistory?.length || 0
+        }
+      });
+    } catch { /* don't fail if logging fails */ }
 
     // SSE stream
     const encoder = new TextEncoder();
@@ -1005,6 +1080,8 @@ serve(async (req: Request) => {
 
         let turnCount = 0, toolCallCount = 0, totalIn = 0, totalOut = 0;
         let finalResponse = "", continueLoop = true;
+        const chatStartTime = Date.now();
+        let allTextResponses: string[] = [];  // Collect all text across turns
 
         try {
           while (continueLoop && turnCount < (agent.max_tool_calls || 10)) {
@@ -1046,6 +1123,11 @@ serve(async (req: Request) => {
               }
             }
 
+            // Collect text from this turn (whether or not there were tool calls)
+            if (currentText) {
+              allTextResponses.push(currentText);
+            }
+
             if (toolUseBlocks.length === 0) {
               finalResponse = currentText;
               continueLoop = false;
@@ -1083,6 +1165,35 @@ serve(async (req: Request) => {
               agent_id: agentId, store_id: storeId, user_message: message,
               final_response: finalResponse, success: true, turn_count: turnCount,
               tool_calls: toolCallCount, input_tokens: totalIn, output_tokens: totalOut
+            });
+          } catch { /* don't fail */ }
+
+          // Log assistant response to audit_logs (combine all text from all turns)
+          const fullResponse = allTextResponses.join("\n\n") || finalResponse;
+          try {
+            await supabase.from("audit_logs").insert({
+              action: "chat.assistant_response",
+              severity: "info",
+              store_id: storeId || null,
+              resource_type: "chat_message",
+              resource_id: agentId,
+              request_id: traceId,
+              conversation_id: sessionId,
+              duration_ms: Date.now() - chatStartTime,
+              user_id: userId || null,
+              user_email: userEmail || null,
+              details: {
+                source: source || "whale_chat",
+                agent_id: agentId,
+                agent_name: agent.name,
+                model: agent.model || "claude-sonnet-4-20250514",
+                response: fullResponse,
+                turn_count: turnCount,
+                tool_calls: toolCallCount,
+                input_tokens: totalIn,
+                output_tokens: totalOut,
+                total_tokens: totalIn + totalOut
+              }
             });
           } catch { /* don't fail */ }
 

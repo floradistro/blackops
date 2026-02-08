@@ -175,15 +175,18 @@ struct CompactTraceRow: View {
 struct AgentToolsSection: View {
     @Binding var enabledTools: Set<String>
     @Binding var hasChanges: Bool
+    var isGlobalAgent: Bool = false
 
     @State private var registryTools: [ToolMetadata] = []
+    @State private var codeTools: [ToolMetadata] = []
     @State private var isLoading = true
     @State private var toolsByCategoryCache: [(category: String, tools: [ToolMetadata])] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Server tools header
             HStack {
-                Text("TOOLS")
+                Text("SERVER TOOLS")
                     .font(DesignSystem.Typography.monoHeader)
                     .foregroundStyle(.tertiary)
                 Text("\(registryTools.count) available")
@@ -267,6 +270,68 @@ struct AgentToolsSection: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
+
+            // Local code tools — only for global agents (Whale Code)
+            if isGlobalAgent && !codeTools.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("LOCAL TOOLS")
+                            .font(DesignSystem.Typography.monoHeader)
+                            .foregroundStyle(.tertiary)
+                        Text("\(codeTools.count) auto-loaded")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Text("managed by CLI")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.quaternary)
+                    }
+
+                    DisclosureGroup {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180))], spacing: 8) {
+                            ForEach(codeTools) { tool in
+                                HStack(spacing: 6) {
+                                    Image(systemName: "terminal")
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(.tertiary)
+                                        .frame(width: 14)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(tool.name)
+                                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                        Text(tool.description)
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.tertiary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 8)
+                            }
+                        }
+                        .padding(8)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "terminal")
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 20)
+                            Text("Code")
+                                .font(.subheadline.weight(.medium))
+                            Text("\(codeTools.count)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            Spacer()
+                            Text("always on")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(.quaternary)
+                        }
+                    }
+                    .padding(8)
+                    .background(DesignSystem.Colors.surfaceTertiary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+            }
         }
         .task { await loadToolsFromRegistry() }
     }
@@ -278,16 +343,34 @@ struct AgentToolsSection: View {
                 let name: String
                 let description: String?
                 let category: String?
+                let toolMode: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case name, description, category
+                    case toolMode = "tool_mode"
+                }
             }
-            let tools: [RegistryTool] = try await SupabaseService.shared.client
+            let allTools: [RegistryTool] = try await SupabaseService.shared.client
                 .from("ai_tool_registry")
-                .select("name, description, category")
+                .select("name, description, category, tool_mode")
                 .eq("is_active", value: true)
                 .execute()
                 .value
-            registryTools = tools.map { t in
-                ToolMetadata(id: t.name, name: t.name, description: t.description ?? t.name, category: t.category ?? "general")
+
+            // Split into server tools and code tools
+            var serverList: [ToolMetadata] = []
+            var codeList: [ToolMetadata] = []
+            for t in allTools {
+                let meta = ToolMetadata(id: t.name, name: t.name, description: t.description ?? t.name, category: t.category ?? "general")
+                if t.toolMode == "code" {
+                    codeList.append(meta)
+                } else {
+                    serverList.append(meta)
+                }
             }
+
+            registryTools = serverList
+            codeTools = codeList.sorted { $0.name < $1.name }
             let grouped = Dictionary(grouping: registryTools) { $0.category }
             toolsByCategoryCache = grouped.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
         } catch {
@@ -307,6 +390,13 @@ struct AgentToolsSection: View {
         case "collections": return "folder"
         case "locations": return "mappin"
         case "operations": return "gearshape.2"
+        case "supply_chain": return "arrow.triangle.swap"
+        case "suppliers": return "building.2"
+        case "crm": return "person.crop.rectangle"
+        case "catalog": return "list.bullet.rectangle"
+        case "code": return "terminal"
+        case "data": return "cylinder"
+        case "external": return "arrow.up.right.square"
         default: return "wrench"
         }
     }
