@@ -13,8 +13,11 @@ struct TelemetryPanel: View {
     @State private var expandedTraceId: String?  // Which trace within a session is expanded
     @State private var previousTraceCount: Int = 0  // Track to detect new turns
     @State private var previousSpanCount: Int = 0  // Track to detect new spans within a turn
+    @State private var previousSessionCount: Int = 0  // Track to detect new sessions
     @State private var autoFollow: Bool = true  // Auto-follow latest turn when live
+    @State private var autoFollowSessions: Bool = true  // Auto-scroll to new sessions in list
     @State private var newSpanIds: Set<UUID> = []  // Spans that just appeared (for entrance animation)
+    @State private var newSessionIds: Set<String> = []  // Sessions that just appeared (for entrance animation)
     @State private var spanDetailHeight: CGFloat = 280  // Resizable bottom detail
     @State private var pinnedSpan: TelemetrySpan?  // Pinned span in side panel
     var storeId: UUID?
@@ -135,15 +138,46 @@ struct TelemetryPanel: View {
                 }
                 Spacer()
             } else {
-                ScrollViewReader { proxy in
+                ScrollViewReader { sessionProxy in
                     List(telemetry.recentSessions, selection: selectedSession) { session in
-                        SessionRow(session: session, isSelected: selectedSessionId == session.id, isLive: isSessionLive(session))
-                            .tag(session)
-                            // Composite id forces re-render when data changes
-                            .id("\(session.id)-\(session.traces.count)-\(session.allSpans.count)")
+                        SessionRow(
+                            session: session,
+                            isSelected: selectedSessionId == session.id,
+                            isLive: isSessionLive(session),
+                            isNew: newSessionIds.contains(session.id)
+                        )
+                        .tag(session)
+                        // Composite id forces re-render when data changes
+                        .id(session.id)
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
+                    .onChange(of: telemetry.recentSessions.count) { oldCount, newCount in
+                        guard autoFollowSessions, newCount > oldCount, newCount > 0 else { return }
+
+                        // New session(s) arrived
+                        if let firstSession = telemetry.recentSessions.first {
+                            // Mark as new for entrance animation
+                            let newIds = telemetry.recentSessions.prefix(newCount - oldCount).map { $0.id }
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                newSessionIds.formUnion(newIds)
+                            }
+
+                            // Scroll to the newest session (first in list)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                    sessionProxy.scrollTo(firstSession.id, anchor: .top)
+                                }
+                            }
+
+                            // Clear "new" status after animation
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                newSessionIds.subtract(newIds)
+                            }
+                        }
+
+                        previousSessionCount = newCount
+                    }
                 }
             }
         }
@@ -164,7 +198,7 @@ struct TelemetryPanel: View {
                         }
                     } label: {
                         Text(range.rawValue)
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(
@@ -187,7 +221,7 @@ struct TelemetryPanel: View {
                         .fill(Color.green)
                         .frame(width: 5, height: 5)
                     Text("LIVE")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -237,7 +271,7 @@ struct TelemetryPanel: View {
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 8, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.quaternary)
         }
     }
@@ -265,9 +299,9 @@ struct TelemetryPanel: View {
             } label: {
                 HStack(spacing: 3) {
                     Text(telemetry.sourceFilter?.components(separatedBy: "_").first?.prefix(4).uppercased() ?? "SRC")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 7, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
@@ -289,9 +323,9 @@ struct TelemetryPanel: View {
                 } label: {
                     HStack(spacing: 3) {
                         Text(telemetry.agentFilter?.prefix(6).uppercased() ?? "AGENT")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 7, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
@@ -309,7 +343,7 @@ struct TelemetryPanel: View {
                 Task { await telemetry.fetchRecentTraces(storeId: storeId) }
             } label: {
                 Text("ERR")
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
                     .background(telemetry.onlyErrors ? Color.red.opacity(0.15) : Color.primary.opacity(0.04))
@@ -320,7 +354,7 @@ struct TelemetryPanel: View {
             Spacer()
 
             Text("\(telemetry.recentSessions.count)")
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 13, design: .monospaced))
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 10)
@@ -362,7 +396,7 @@ struct TelemetryPanel: View {
                         .modifier(PulseModifier())
 
                     Text("LIVE")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(TC.success)
 
                     Text("·")
@@ -378,7 +412,7 @@ struct TelemetryPanel: View {
                         autoFollow.toggle()
                     } label: {
                         Text(autoFollow ? "FOLLOWING" : "PAUSED")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(autoFollow ? TC.success.opacity(0.15) : Color.primary.opacity(0.05))
@@ -423,7 +457,7 @@ struct TelemetryPanel: View {
                                         } label: {
                                             HStack(spacing: 8) {
                                                 Image(systemName: expandedTraceId == trace.id ? "chevron.down" : "chevron.right")
-                                                    .font(.system(size: 9, weight: .semibold))
+                                                    .font(.system(size: 13, weight: .semibold))
                                                     .foregroundStyle(.tertiary)
                                                     .frame(width: 12)
                                                     .rotationEffect(expandedTraceId == trace.id ? .zero : .degrees(-0))
@@ -441,7 +475,7 @@ struct TelemetryPanel: View {
 
                                                 if !isLive {
                                                     Text(trace.hasErrors ? "ERR" : "OK")
-                                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
                                                         .foregroundStyle(trace.hasErrors ? TC.error : TC.success)
                                                 }
 
@@ -519,20 +553,20 @@ struct TelemetryPanel: View {
                                     .frame(height: 1)
                                     .id("scroll-bottom")
                             }
-                            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: expandedTraceId)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.9), value: session.traces.count)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceId)
+                            .animation(.spring(response: 0.35, dampingFraction: 0.88), value: session.traces.count)
                         }
                         .frame(height: scrollHeight)
                         .onChange(of: session.traces.count) { oldCount, newCount in
                             guard autoFollow, newCount > oldCount else { return }
                             // New turn arrived — auto-expand it
                             if let lastTrace = session.traces.last {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
                                     expandedTraceId = lastTrace.id
                                 }
-                                // Scroll to the new trace
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                // Scroll to the new trace smoothly
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) {
                                         scrollProxy.scrollTo("trace-\(lastTrace.id)", anchor: .top)
                                     }
                                 }
@@ -548,18 +582,20 @@ struct TelemetryPanel: View {
                                 let allIds = Set(session.allSpans.map { $0.id })
                                 let newIds = allIds.subtracting(newSpanIds.isEmpty ? [] : newSpanIds)
                                 if !newIds.isEmpty {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
                                         newSpanIds.formUnion(newIds)
                                     }
                                     // Clear "new" status after entrance animation
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                        newSpanIds.subtract(newIds)
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                        withAnimation(.easeOut(duration: 0.2)) {
+                                            newSpanIds.subtract(newIds)
+                                        }
                                     }
                                 }
-                                // Auto-scroll to bottom of expanded trace
+                                // Auto-scroll to bottom of expanded trace smoothly
                                 if expandedTraceId != nil {
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                        withAnimation(.easeOut(duration: 0.2)) {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
                                             scrollProxy.scrollTo("scroll-bottom", anchor: .bottom)
                                         }
                                     }
@@ -699,7 +735,7 @@ struct TelemetryPanel: View {
                         let x = (time / duration) * geo.size.width
                         VStack {
                             Text(formatDuration(time))
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(.system(size: 13, design: .monospaced))
                                 .foregroundStyle(.tertiary)
                         }
                         .position(x: x, y: 8)
@@ -737,7 +773,7 @@ struct TelemetryPanel: View {
                 // Error type badge
                 if let errorType = span.errorType {
                     Text(errorType.uppercased())
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .foregroundStyle(errorTypeBadgeColor(errorType))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -748,7 +784,7 @@ struct TelemetryPanel: View {
                 // Timeout badge
                 if span.timedOut {
                     Text("TIMEOUT")
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .foregroundStyle(TC.warning)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -759,7 +795,7 @@ struct TelemetryPanel: View {
                 // Retryable badge
                 if span.retryable {
                     Text("RETRYABLE")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
                         .foregroundStyle(TC.info)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -902,7 +938,7 @@ struct TelemetryPanel: View {
                         Spacer()
                         if let bytes = span.inputBytes {
                             Text("\(bytes)B")
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(.system(size: 13, design: .monospaced))
                                 .foregroundStyle(.quaternary)
                         }
                         Button {
@@ -953,7 +989,7 @@ struct TelemetryPanel: View {
                             Spacer()
                             if let bytes = span.outputBytes {
                                 Text("\(bytes)B")
-                                    .font(.system(size: 9, design: .monospaced))
+                                    .font(.system(size: 13, design: .monospaced))
                                     .foregroundStyle(.quaternary)
                             }
                             Button {
@@ -1046,7 +1082,7 @@ struct TelemetryPanel: View {
             // Avg comparison
             HStack(spacing: 4) {
                 Text("avg")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 13, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 Text(formatMs(comparison.avgMs))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -1056,7 +1092,7 @@ struct TelemetryPanel: View {
             // P95 comparison
             HStack(spacing: 4) {
                 Text("p95")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 13, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 Text(formatMs(comparison.p95Ms))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -1068,7 +1104,7 @@ struct TelemetryPanel: View {
             // Error rate
             HStack(spacing: 4) {
                 Text("err")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 13, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 Text(String(format: "%.1f%%", comparison.errorRate))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -1078,7 +1114,7 @@ struct TelemetryPanel: View {
             // 24h volume
             HStack(spacing: 4) {
                 Text("24h")
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 13, design: .monospaced))
                     .foregroundStyle(.tertiary)
                 Text("\(comparison.totalCalls24h)")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -1089,7 +1125,7 @@ struct TelemetryPanel: View {
 
             if comparison.isSlow {
                 Text("SLOW")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(TC.error)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)

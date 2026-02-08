@@ -82,7 +82,9 @@ async function executeTool(
   toolName: string,
   args: Record<string, unknown>,
   storeId?: string,
-  traceId?: string
+  traceId?: string,
+  userId?: string | null,
+  userEmail?: string | null
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
   const startTime = Date.now();
   const action = args.action as string | undefined;
@@ -168,7 +170,9 @@ async function executeTool(
       request_id: traceId || null,
       details: { source: "edge_function", args },
       error_message: result.error || null,
-      duration_ms: Date.now() - startTime
+      duration_ms: Date.now() - startTime,
+      user_id: userId || null,
+      user_email: userEmail || null
     });
   } catch { /* don't fail tool call if logging fails */ }
 
@@ -829,7 +833,27 @@ serve(async (req: Request) => {
         { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
+    // Create client with service role for full access
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Extract user info from Authorization header (JWT token)
+    const authHeader = req.headers.get("Authorization");
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      try {
+        // Verify and decode JWT to get user info
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (!error && user) {
+          userId = user.id;
+          userEmail = user.email || null;
+        }
+      } catch {
+        // Continue without user info if token is invalid
+      }
+    }
 
     const agent = await loadAgentConfig(supabase, agentId);
     if (!agent) {
@@ -916,7 +940,7 @@ serve(async (req: Request) => {
               const toolArgs = { ...tu.input };
               if (!toolArgs.store_id && storeId) toolArgs.store_id = storeId;
 
-              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId);
+              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId, userId, userEmail);
               send({ type: "tool_result", name: tu.name, success: result.success, result: result.success ? result.data : result.error });
               toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result.success ? result.data : { error: result.error }) });
             }

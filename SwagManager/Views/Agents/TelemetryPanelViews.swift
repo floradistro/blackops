@@ -2,99 +2,127 @@ import SwiftUI
 
 private typealias TC = DesignSystem.Colors.Telemetry
 
-// MARK: - Session Row (one row per conversation session)
+// MARK: - Session Row (Chat-style feed item)
 
 struct SessionRow: View {
     let session: TelemetrySession
     let isSelected: Bool
     var isLive: Bool = false
+    var isNew: Bool = false
 
-    /// Generate a human-readable summary from all tools across the session
-    private var actionSummary: String {
+    /// Generate a human-readable action description
+    private var actionDescription: String {
         let tools = session.allSpans.compactMap { $0.toolName }
-        if tools.isEmpty { return "session" }
+        if tools.isEmpty { return "started a session" }
+
         var counts: [String: Int] = [:]
         for tool in tools {
             let baseName = tool.components(separatedBy: ".").first ?? tool
             counts[baseName, default: 0] += 1
         }
-        return counts.sorted { $0.value > $1.value }.prefix(2).map { item in
-            item.key.replacingOccurrences(of: "_", with: " ")
+
+        let topActions = counts.sorted { $0.value > $1.value }.prefix(2)
+        let actionText = topActions.map { item in
+            let name = item.key.replacingOccurrences(of: "_", with: " ")
+            return item.value > 1 ? "\(name) (\(item.value)×)" : name
         }.joined(separator: ", ")
+
+        return "ran \(actionText)"
+    }
+
+    /// User initials from session
+    private var userInitials: String {
+        session.userInitials
+    }
+
+    /// User display name from session
+    private var userName: String {
+        session.userName ?? session.userEmail ?? "User"
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Status indicator with live pulse
+        HStack(spacing: 12) {
+            // User avatar/initial
             ZStack {
+                Circle()
+                    .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.white.opacity(0.08))
+                    .frame(width: 40, height: 40)
+
                 if isLive {
+                    // Live pulse indicator
                     Circle()
-                        .fill(TC.success.opacity(0.3))
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(TC.success)
-                        .frame(width: 5, height: 5)
-                } else {
-                    Text(session.hasErrors ? "ERR" : "OK")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(session.hasErrors ? TC.error : TC.success)
+                        .stroke(TC.success, lineWidth: 2)
+                        .frame(width: 44, height: 44)
                 }
+
+                Text(userInitials)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
             }
-            .frame(width: 28, alignment: .leading)
 
-            // Main content
-            VStack(alignment: .leading, spacing: 3) {
-                // Action summary + agent name
-                HStack(spacing: 4) {
-                    if let agent = session.agentName {
-                        Text(agent)
-                            .font(.system(.caption, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(actionSummary)
-                        .font(.system(.caption, weight: .medium))
+            // Message content
+            VStack(alignment: .leading, spacing: 4) {
+                // User name + action + timestamp
+                HStack(spacing: 6) {
+                    Text(userName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Text(actionDescription)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
+
+                    Spacer()
+
+                    Text(session.endTime ?? session.startTime, style: .relative)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.tertiary)
                 }
 
-                // Metadata line with mini progress bar
-                HStack(spacing: 6) {
-                    Label("\(session.turnCount)", systemImage: "bubble.left.fill")
-                        .foregroundStyle(.secondary)
-                    Label("\(session.toolCount)", systemImage: "wrench.fill")
-                        .foregroundStyle(.tertiary)
+                // Metadata badges
+                HStack(spacing: 8) {
+                    // Status badge
                     if session.hasErrors {
-                        Label("\(session.errorCount)", systemImage: "exclamationmark.triangle.fill")
+                        Label("\(session.errorCount) error\(session.errorCount == 1 ? "" : "s")", systemImage: "exclamationmark.circle.fill")
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(TC.error)
+                    } else if isLive {
+                        Label("Live", systemImage: "circle.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(TC.success)
                     }
+
+                    // Duration
+                    Text(session.formattedDuration)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(.secondary)
+
+                    // Turns
+                    Text("\(session.turnCount) turn\(session.turnCount == 1 ? "" : "s")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+
+                    // Cost if available
                     if let cost = session.formattedCost {
                         Text(cost)
+                            .font(.system(size: 12, design: .monospaced))
                             .foregroundStyle(TC.warning)
                     }
                 }
-                .font(.system(size: 9))
-                .labelStyle(.titleAndIcon)
-            }
-
-            Spacer()
-
-            // Right: duration and time
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(session.formattedDuration)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-
-                Text(session.endTime ?? session.startTime, style: .relative)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.1) : isLive ? TC.success.opacity(0.03) : Color.clear)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : isNew ? TC.success.opacity(0.08) : Color.clear)
         )
         .contentShape(Rectangle())
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .offset(y: -8)).combined(with: .scale(scale: 0.97, anchor: .top)),
+            removal: .opacity
+        ))
     }
 }
 
@@ -143,12 +171,12 @@ struct SpanRow: View {
                 // Status indicator - different for API requests
                 if isApiRequest {
                     Text("\u{25C6}")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .font(.system(size: 14, weight: .medium, design: .monospaced))
                         .foregroundStyle(TC.sourceClaude)
                         .frame(width: 20)
                 } else {
                     Text(span.isError ? "\u{00D7}" : "\u{2713}")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .font(.system(size: 14, weight: .medium, design: .monospaced))
                         .foregroundStyle(span.isError ? TC.error : TC.success)
                         .frame(width: 20)
                 }
@@ -163,7 +191,7 @@ struct SpanRow: View {
                 // Token usage for API requests (compact)
                 if isApiRequest, let tokens = span.formattedTokens {
                     Text(tokens)
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 13, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .frame(width: 70, alignment: .trailing)
                 } else {

@@ -16,6 +16,8 @@ struct TelemetrySpan: Identifiable, Codable {
     let conversationId: String?
     let storeId: UUID?
     let resourceType: String?
+    let userId: UUID?
+    let userEmail: String?
 
     // Computed for tree view (not decoded)
     var depth: Int = 0
@@ -34,6 +36,8 @@ struct TelemetrySpan: Identifiable, Codable {
         case conversationId = "conversation_id"
         case storeId = "store_id"
         case resourceType = "resource_type"
+        case userId = "user_id"
+        case userEmail = "user_email"
     }
 
     init(from decoder: Decoder) throws {
@@ -49,6 +53,8 @@ struct TelemetrySpan: Identifiable, Codable {
         conversationId = try container.decodeIfPresent(String.self, forKey: .conversationId)
         storeId = try container.decodeIfPresent(UUID.self, forKey: .storeId)
         resourceType = try container.decodeIfPresent(String.self, forKey: .resourceType)
+        userId = try container.decodeIfPresent(UUID.self, forKey: .userId)
+        userEmail = try container.decodeIfPresent(String.self, forKey: .userEmail)
         depth = 0
         children = []
 
@@ -84,6 +90,8 @@ struct TelemetrySpan: Identifiable, Codable {
         try container.encodeIfPresent(conversationId, forKey: .conversationId)
         try container.encodeIfPresent(storeId, forKey: .storeId)
         try container.encodeIfPresent(resourceType, forKey: .resourceType)
+        try container.encodeIfPresent(userId, forKey: .userId)
+        try container.encodeIfPresent(userEmail, forKey: .userEmail)
     }
 
     var isError: Bool {
@@ -501,6 +509,27 @@ struct TelemetrySession: Identifiable, Hashable {
 
     var agentName: String? {
         allSpans.first(where: { $0.agentName != nil })?.agentName
+    }
+
+    var userEmail: String? {
+        allSpans.first(where: { $0.userEmail != nil })?.userEmail
+    }
+
+    var userName: String? {
+        guard let email = userEmail else { return nil }
+        // Extract name from email (e.g., "john.doe@example.com" -> "John Doe")
+        let localPart = email.components(separatedBy: "@").first ?? email
+        return localPart
+            .components(separatedBy: ".")
+            .map { $0.capitalized }
+            .joined(separator: " ")
+    }
+
+    var userInitials: String {
+        guard let name = userName else { return "U" }
+        let components = name.components(separatedBy: " ")
+        let initials = components.compactMap { $0.first }.prefix(2)
+        return String(initials).uppercased()
     }
 }
 
