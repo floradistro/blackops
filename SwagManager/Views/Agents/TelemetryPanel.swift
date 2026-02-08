@@ -48,25 +48,21 @@ struct TelemetryPanel: View {
         return HSplitView {
             // Left: Session list (compact, scales down for narrow windows)
             traceListView
-                .frame(minWidth: 180, idealWidth: 260, maxWidth: 400)
-                .layoutPriority(1)
+                .frame(minWidth: 220, idealWidth: 260, maxWidth: 400)
 
             // Center: Live operations (main content, gets most space)
             if let session = liveSelectedSession {
                 sessionDetailView(session)
                     .frame(minWidth: 320, idealWidth: 600)
-                    .layoutPriority(2)  // Highest priority
             } else {
                 emptyState
                     .frame(minWidth: 320, idealWidth: 600)
-                    .layoutPriority(2)
             }
 
             // Right: Pinned span panel (optional inspector, moderate priority)
             if let span = pinnedSpan {
                 pinnedSpanPanel(span)
                     .frame(minWidth: 280, idealWidth: 380, maxWidth: 600)
-                    .layoutPriority(1)
             }
         }
         .task(id: storeId) {
