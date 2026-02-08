@@ -138,9 +138,9 @@ class TelemetryService: ObservableObject {
 
         // Decode in background to avoid main thread blocking
         Task.detached { [weak self] in
-            // Check if it's a tool action or API request (for AI telemetry)
+            // Check if it's a tool action, API request, or chat message (for AI telemetry)
             guard let action = record["action"]?.stringValue,
-                  (action.hasPrefix("tool.") || action == "claude_api_request") else {
+                  (action.hasPrefix("tool.") || action == "claude_api_request" || action.hasPrefix("chat.")) else {
                 return
             }
 
@@ -304,15 +304,16 @@ class TelemetryService: ObservableObject {
             // Silent fetch - no logging spam
 
             // Build query with all filters first, then order/limit
-            // Fetch both tool.* actions AND claude_api_request for AI telemetry
+            // Fetch tool.* actions, claude_api_request, AND chat.* for full AI telemetry
             var baseQuery = supabase
                 .from("audit_logs")
                 .select()
-                .or("action.like.tool.%,action.eq.claude_api_request")
+                .or("action.like.tool.%,action.eq.claude_api_request,action.like.chat.%")
                 .gte("created_at", value: cutoffString)
 
             if let storeId = storeId {
-                baseQuery = baseQuery.eq("store_id", value: storeId.uuidString)
+                // Include both store-specific AND global (NULL store_id) telemetry (e.g., CLI chats)
+                baseQuery = baseQuery.or("store_id.eq.\(storeId.uuidString),store_id.is.null")
             }
 
             if onlyErrors {
@@ -501,7 +502,8 @@ class TelemetryService: ObservableObject {
                 .gte("created_at", value: cutoffString)
 
             if let storeId = storeId {
-                baseQuery = baseQuery.eq("store_id", value: storeId.uuidString)
+                // Include both store-specific AND global (NULL store_id) telemetry
+                baseQuery = baseQuery.or("store_id.eq.\(storeId.uuidString),store_id.is.null")
             }
 
             let response: [TelemetrySpan] = try await baseQuery.execute().value

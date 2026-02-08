@@ -343,6 +343,37 @@ struct TelemetrySpan: Identifiable, Codable {
             return nil
         }
 
+        // For chat messages, show much fuller content (500 chars instead of 80)
+        if action == "chat.user_message" {
+            if let message = details?["message"]?.value as? String {
+                let preview = message.prefix(500)
+                return preview.count < message.count ? "\(preview)..." : String(preview)
+            }
+            return "User message"
+        }
+
+        if action == "chat.assistant_response" {
+            if let response = details?["response"]?.value as? String {
+                let preview = response.prefix(500)
+                let inputTokens = details?["input_tokens"]?.value as? Int
+                let outputTokens = details?["output_tokens"]?.value as? Int
+                let model = details?["model"]?.value as? String
+
+                var metadata: [String] = []
+                if let input = inputTokens, let output = outputTokens {
+                    metadata.append("\(input + output) tokens (\(input)→\(output))")
+                }
+                if let model = model {
+                    let shortModel = model.replacingOccurrences(of: "claude-", with: "").components(separatedBy: "-").prefix(2).joined(separator: "-")
+                    metadata.append(shortModel)
+                }
+
+                let metaText = metadata.isEmpty ? "" : " • " + metadata.joined(separator: " • ")
+                return (preview.count < response.count ? "\(preview)..." : String(preview)) + metaText
+            }
+            return "Assistant response"
+        }
+
         // For tool executions, parse input/output for meaningful info
         guard isToolSpan, let toolName = toolName else { return nil }
 

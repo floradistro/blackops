@@ -143,9 +143,27 @@ struct SpanRow: View {
         return max(0.01, CGFloat(spanDuration / traceDuration))
     }
 
+    private var isChatMessage: Bool {
+        span.action == "chat.user_message" || span.action == "chat.assistant_response"
+    }
+
+    private var isUserMessage: Bool {
+        span.action == "chat.user_message"
+    }
+
+    private var isAssistantMessage: Bool {
+        span.action == "chat.assistant_response"
+    }
+
     private var toolName: String {
         if span.isApiRequest {
             return span.shortModelName ?? "claude"
+        }
+        if isUserMessage {
+            return "user"
+        }
+        if isAssistantMessage {
+            return "assistant"
         }
         return span.toolName ?? span.action
     }
@@ -159,11 +177,21 @@ struct SpanRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 // Main row: status + tool + waterfall + duration
                 HStack(spacing: 0) {
-                    // Status indicator - different for API requests
+                    // Status indicator - different for API requests and chat messages
                     if isApiRequest {
                         Text("\u{25C6}")
                             .font(.system(size: 14, weight: .medium, design: .monospaced))
                             .foregroundStyle(TC.sourceClaude)
+                            .frame(width: 20)
+                    } else if isUserMessage {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.blue)
+                            .frame(width: 20)
+                    } else if isAssistantMessage {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.purple)
                             .frame(width: 20)
                     } else {
                         Text(span.isError ? "\u{00D7}" : "\u{2713}")
@@ -175,7 +203,12 @@ struct SpanRow: View {
                     // Tool name - monospace, no decoration
                     Text(toolName)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(isApiRequest ? TC.sourceClaude : span.isError ? TC.error : .primary)
+                        .foregroundStyle(
+                            isApiRequest ? TC.sourceClaude :
+                            isUserMessage ? .blue :
+                            isAssistantMessage ? .purple :
+                            span.isError ? TC.error : .primary
+                        )
                         .lineLimit(1)
                         .frame(width: 120, alignment: .leading)
 
@@ -214,16 +247,28 @@ struct SpanRow: View {
 
                 // Activity description (inline preview)
                 if let activity = span.activityDescription {
-                    HStack(spacing: 4) {
+                    HStack(alignment: .top, spacing: 4) {
                         Text("└─")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.quaternary)
                         Text(activity)
-                            .font(.system(size: 11))
-                            .foregroundStyle(span.isError ? TC.error : .secondary)
-                            .lineLimit(1)
+                            .font(.system(size: isChatMessage ? 12 : 11))
+                            .foregroundStyle(
+                                span.isError ? TC.error :
+                                isChatMessage ? .primary :
+                                .secondary
+                            )
+                            .lineLimit(isChatMessage ? nil : 1)  // Unlimited lines for chat, single for tools
+                            .textSelection(.enabled)  // Allow selecting message text
+                            .fixedSize(horizontal: false, vertical: true)  // Allow wrapping
                     }
                     .padding(.leading, 20)
+                    .padding(.trailing, 12)
+                    .padding(.vertical, isChatMessage ? 4 : 0)
+                    .background(
+                        isChatMessage ? Color.primary.opacity(0.03) : Color.clear
+                    )
+                    .cornerRadius(6)
                 }
             }
             .padding(.vertical, 4)
