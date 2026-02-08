@@ -213,7 +213,17 @@ class UnifiedAgentService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+
+        // Get user's actual JWT token for user tracking in Edge Function
+        let authToken: String
+        if let session = try? await SupabaseService.shared.client.auth.session,
+           let accessToken = session.accessToken {
+            authToken = accessToken
+        } else {
+            authToken = SupabaseConfig.anonKey // Fallback to anon key
+        }
+
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let payload: [String: Any] = [
