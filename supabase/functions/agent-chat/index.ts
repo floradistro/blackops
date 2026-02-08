@@ -84,7 +84,8 @@ async function executeTool(
   storeId?: string,
   traceId?: string,
   userId?: string | null,
-  userEmail?: string | null
+  userEmail?: string | null,
+  source?: string
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
   const startTime = Date.now();
   const action = args.action as string | undefined;
@@ -168,7 +169,7 @@ async function executeTool(
       resource_type: "mcp_tool",
       resource_id: toolName,
       request_id: traceId || null,
-      details: { source: "edge_function", args },
+      details: { source: source || "edge_function", args },
       error_message: result.error || null,
       duration_ms: Date.now() - startTime,
       user_id: userId || null,
@@ -187,55 +188,173 @@ async function handleInventory(sb: SupabaseClient, args: Record<string, unknown>
   const sid = (args.store_id || storeId) as string;
   switch (args.action) {
     case "adjust": {
-      // Get current inventory
+      const productId = args.product_id as string;
+      const locationId = args.location_id as string;
+      const adjustment = args.adjustment as number;
+      const reason = args.reason as string || "Manual adjustment";
+
+      // STEP 1: Fetch product and location names
+      const { data: product } = await sb.from("products")
+        .select("name, sku").eq("id", productId).single();
+      const { data: location } = await sb.from("locations")
+        .select("name").eq("id", locationId).single();
+
+      // STEP 2: Capture BEFORE state
       const { data: current } = await sb.from("inventory")
         .select("quantity").eq("store_id", sid)
-        .eq("product_id", args.product_id as string)
-        .eq("location_id", args.location_id as string).single();
-      const oldQty = current?.quantity || 0;
-      const newQty = oldQty + (args.adjustment as number);
+        .eq("product_id", productId)
+        .eq("location_id", locationId).single();
+      const qtyBefore = current?.quantity || 0;
+
+      // STEP 3: Calculate new quantity
+      const qtyAfter = qtyBefore + adjustment;
+      if (qtyAfter < 0) {
+        return {
+          success: false,
+          error: `Cannot adjust to negative quantity: current ${qtyBefore}, adjustment ${adjustment} would result in ${qtyAfter}`
+        };
+      }
+
+      // STEP 4: Perform the adjustment
       const { data, error } = await sb.from("inventory")
-        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.location_id, quantity: newQty },
+        .upsert({ store_id: sid, product_id: productId, location_id: locationId, quantity: qtyAfter },
           { onConflict: "store_id,product_id,location_id" })
         .select().single();
       if (error) return { success: false, error: error.message };
+
       // Log adjustment
       await sb.from("inventory_adjustments").insert({
-        store_id: sid, product_id: args.product_id, location_id: args.location_id,
-        previous_quantity: oldQty, new_quantity: newQty,
-        adjustment: args.adjustment, reason: args.reason || "API adjustment"
+        store_id: sid, product_id: productId, location_id: locationId,
+        previous_quantity: qtyBefore, new_quantity: qtyAfter,
+        adjustment, reason
       }).catch(() => {});
-      return { success: true, data: { ...data, previous_quantity: oldQty } };
+
+      // STEP 5: Return full observability data
+      const sign = adjustment >= 0 ? "+" : "";
+      return {
+        success: true,
+        data: {
+          intent: `Adjust inventory for ${product?.name || 'product'} at ${location?.name || 'location'}: ${sign}${adjustment} units`,
+          product: product ? { id: productId, name: product.name, sku: product.sku } : { id: productId },
+          location: location ? { id: locationId, name: location.name } : { id: locationId },
+          adjustment,
+          reason,
+          before_state: { quantity: qtyBefore },
+          after_state: { quantity: qtyAfter },
+          change: { from: qtyBefore, to: qtyAfter, delta: adjustment }
+        }
+      };
     }
     case "set": {
+      const productId = args.product_id as string;
+      const locationId = args.location_id as string;
+      const newQty = args.quantity as number;
+
+      // STEP 1: Fetch product and location names
+      const { data: product } = await sb.from("products")
+        .select("name, sku").eq("id", productId).single();
+      const { data: location } = await sb.from("locations")
+        .select("name").eq("id", locationId).single();
+
+      // STEP 2: Capture BEFORE state
+      const { data: current } = await sb.from("inventory")
+        .select("quantity").eq("store_id", sid)
+        .eq("product_id", productId)
+        .eq("location_id", locationId).single();
+      const qtyBefore = current?.quantity || 0;
+
+      // STEP 3: Set new quantity
       const { data, error } = await sb.from("inventory")
-        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.location_id, quantity: args.quantity },
+        .upsert({ store_id: sid, product_id: productId, location_id: locationId, quantity: newQty },
           { onConflict: "store_id,product_id,location_id" })
         .select().single();
-      return error ? { success: false, error: error.message } : { success: true, data };
+      if (error) return { success: false, error: error.message };
+
+      // STEP 4: Return full observability data
+      const delta = newQty - qtyBefore;
+      const sign = delta >= 0 ? "+" : "";
+      return {
+        success: true,
+        data: {
+          intent: `Set inventory for ${product?.name || 'product'} at ${location?.name || 'location'} to ${newQty} units`,
+          product: product ? { id: productId, name: product.name, sku: product.sku } : { id: productId },
+          location: location ? { id: locationId, name: location.name } : { id: locationId },
+          before_state: { quantity: qtyBefore },
+          after_state: { quantity: newQty },
+          change: { from: qtyBefore, to: newQty, delta, description: `${sign}${delta} units` }
+        }
+      };
     }
     case "transfer": {
-      // Deduct from source
-      const { data: src } = await sb.from("inventory")
-        .select("quantity").eq("store_id", sid)
-        .eq("product_id", args.product_id as string)
-        .eq("location_id", args.from_location_id as string).single();
-      const srcQty = src?.quantity || 0;
       const qty = args.quantity as number;
-      if (srcQty < qty) return { success: false, error: `Insufficient stock: have ${srcQty}, need ${qty}` };
+      const productId = args.product_id as string;
+      const fromLocationId = args.from_location_id as string;
+      const toLocationId = args.to_location_id as string;
+
+      // STEP 1: Fetch product and location names (for rich telemetry)
+      const { data: product } = await sb.from("products")
+        .select("name, sku").eq("id", productId).single();
+      const { data: fromLocation } = await sb.from("locations")
+        .select("name").eq("id", fromLocationId).single();
+      const { data: toLocation } = await sb.from("locations")
+        .select("name").eq("id", toLocationId).single();
+
+      // STEP 2: Capture BEFORE state (quantities at both locations)
+      const { data: srcBefore } = await sb.from("inventory")
+        .select("quantity").eq("store_id", sid)
+        .eq("product_id", productId)
+        .eq("location_id", fromLocationId).single();
+      const { data: dstBefore } = await sb.from("inventory")
+        .select("quantity").eq("store_id", sid)
+        .eq("product_id", productId)
+        .eq("location_id", toLocationId).single();
+
+      const srcQtyBefore = srcBefore?.quantity || 0;
+      const dstQtyBefore = dstBefore?.quantity || 0;
+
+      // Validation: check sufficient stock
+      if (srcQtyBefore < qty) {
+        return {
+          success: false,
+          error: `Insufficient stock at ${fromLocation?.name || fromLocationId}: have ${srcQtyBefore}, need ${qty}`
+        };
+      }
+
+      // STEP 3: Perform the transfer
+      // Deduct from source
       await sb.from("inventory")
-        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.from_location_id, quantity: srcQty - qty },
+        .upsert({ store_id: sid, product_id: productId, location_id: fromLocationId, quantity: srcQtyBefore - qty },
           { onConflict: "store_id,product_id,location_id" });
       // Add to destination
-      const { data: dst } = await sb.from("inventory")
-        .select("quantity").eq("store_id", sid)
-        .eq("product_id", args.product_id as string)
-        .eq("location_id", args.to_location_id as string).single();
-      const dstQty = dst?.quantity || 0;
       await sb.from("inventory")
-        .upsert({ store_id: sid, product_id: args.product_id, location_id: args.to_location_id, quantity: dstQty + qty },
+        .upsert({ store_id: sid, product_id: productId, location_id: toLocationId, quantity: dstQtyBefore + qty },
           { onConflict: "store_id,product_id,location_id" });
-      return { success: true, data: { transferred: qty, from: args.from_location_id, to: args.to_location_id } };
+
+      // STEP 4: Capture AFTER state (new quantities)
+      const srcQtyAfter = srcQtyBefore - qty;
+      const dstQtyAfter = dstQtyBefore + qty;
+
+      // STEP 5: Return full observability data
+      return {
+        success: true,
+        data: {
+          intent: `Transfer ${qty} units of ${product?.name || 'product'} from ${fromLocation?.name || 'source'} to ${toLocation?.name || 'destination'}`,
+          product: product ? { id: productId, name: product.name, sku: product.sku } : { id: productId },
+          from_location: fromLocation ? { id: fromLocationId, name: fromLocation.name } : { id: fromLocationId },
+          to_location: toLocation ? { id: toLocationId, name: toLocation.name } : { id: toLocationId },
+          quantity_transferred: qty,
+          before_state: {
+            from_quantity: srcQtyBefore,
+            to_quantity: dstQtyBefore,
+            total: srcQtyBefore + dstQtyBefore
+          },
+          after_state: {
+            from_quantity: srcQtyAfter,
+            to_quantity: dstQtyAfter,
+            total: srcQtyAfter + dstQtyAfter
+          }
+        }
+      };
     }
     default:
       return { success: false, error: `Unknown inventory action: ${args.action}` };
@@ -826,7 +945,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { agentId, storeId, message, conversationHistory } = await req.json();
+    const { agentId, storeId, message, conversationHistory, source } = await req.json();
 
     if (!agentId || !message) {
       return new Response(JSON.stringify({ error: "agentId and message required" }),
@@ -940,7 +1059,7 @@ serve(async (req: Request) => {
               const toolArgs = { ...tu.input };
               if (!toolArgs.store_id && storeId) toolArgs.store_id = storeId;
 
-              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId, userId, userEmail);
+              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId, userId, userEmail, source);
               send({ type: "tool_result", name: tu.name, success: result.success, result: result.success ? result.data : result.error });
               toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result.success ? result.data : { error: result.error }) });
             }

@@ -9,120 +9,109 @@ struct SessionRow: View {
     let isSelected: Bool
     var isLive: Bool = false
     var isNew: Bool = false
+    @State private var pulseScale: CGFloat = 1.0
 
-    /// Generate a human-readable action description
-    private var actionDescription: String {
+    private var actionSummary: String {
         let tools = session.allSpans.compactMap { $0.toolName }
-        if tools.isEmpty { return "started a session" }
-
-        var counts: [String: Int] = [:]
-        for tool in tools {
-            let baseName = tool.components(separatedBy: ".").first ?? tool
-            counts[baseName, default: 0] += 1
-        }
-
-        let topActions = counts.sorted { $0.value > $1.value }.prefix(2)
-        let actionText = topActions.map { item in
-            let name = item.key.replacingOccurrences(of: "_", with: " ")
-            return item.value > 1 ? "\(name) (\(item.value)×)" : name
-        }.joined(separator: ", ")
-
-        return "ran \(actionText)"
-    }
-
-    /// User initials from session
-    private var userInitials: String {
-        session.userInitials
-    }
-
-    /// User display name from session
-    private var userName: String {
-        session.userName ?? session.userEmail ?? "User"
+        if tools.isEmpty { return "started session" }
+        let uniqueTools = Set(tools)
+        return "\(session.turnCount) turn\(session.turnCount == 1 ? "" : "s") • \(uniqueTools.prefix(2).joined(separator: ", "))"
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // User avatar/initial
+        HStack(spacing: 10) {
+            // Compact avatar
             ZStack {
                 Circle()
-                    .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.white.opacity(0.08))
-                    .frame(width: 40, height: 40)
+                    .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.08))
+                    .frame(width: 32, height: 32)
 
                 if isLive {
-                    // Live pulse indicator
                     Circle()
                         .stroke(TC.success, lineWidth: 2)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 34, height: 34)
+                        .scaleEffect(pulseScale)
+                        .opacity(0.7)
                 }
 
-                Text(userInitials)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
+                Text(session.userInitials)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isSelected ? Color.accentColor : .primary)
             }
 
-            // Message content
-            VStack(alignment: .leading, spacing: 4) {
-                // User name + action + timestamp
-                HStack(spacing: 6) {
-                    Text(userName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.primary)
+            // Content - single line, compact
+            HStack(spacing: 6) {
+                // Source icon
+                Image(systemName: session.sourceIcon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14)
 
-                    Text(actionDescription)
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
+                // Name + action
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(session.userName ?? session.userEmail ?? "User")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
 
-                    Spacer()
-
-                    Text(session.endTime ?? session.startTime, style: .relative)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
+                    Text(actionSummary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
 
-                // Metadata badges
-                HStack(spacing: 8) {
-                    // Status badge
-                    if session.hasErrors {
-                        Label("\(session.errorCount) error\(session.errorCount == 1 ? "" : "s")", systemImage: "exclamationmark.circle.fill")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(TC.error)
-                    } else if isLive {
-                        Label("Live", systemImage: "circle.fill")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(TC.success)
+                Spacer(minLength: 4)
+
+                // Status + time
+                VStack(alignment: .trailing, spacing: 1) {
+                    HStack(spacing: 3) {
+                        if session.hasErrors {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(TC.error)
+                        } else if isLive {
+                            Circle()
+                                .fill(TC.success)
+                                .frame(width: 6, height: 6)
+                        }
+
+                        Text(session.formattedDuration)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
                     }
 
-                    // Duration
-                    Text(session.formattedDuration)
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(.secondary)
-
-                    // Turns
-                    Text("\(session.turnCount) turn\(session.turnCount == 1 ? "" : "s")")
-                        .font(.system(size: 12))
+                    Text(session.endTime ?? session.startTime, style: .relative)
+                        .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
-
-                    // Cost if available
-                    if let cost = session.formattedCost {
-                        Text(cost)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(TC.warning)
-                    }
                 }
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color.accentColor.opacity(0.12) : isNew ? TC.success.opacity(0.08) : Color.clear)
+            isSelected
+                ? Color.accentColor.opacity(0.15)
+                : Color.clear
         )
         .contentShape(Rectangle())
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .offset(y: -8)).combined(with: .scale(scale: 0.97, anchor: .top)),
-            removal: .opacity
-        ))
+        .onAppear {
+            if isLive {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.2
+                }
+            }
+        }
+        .onChange(of: isLive) { _, newValue in
+            if newValue {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.2
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    pulseScale = 1.0
+                }
+            }
+        }
     }
 }
 

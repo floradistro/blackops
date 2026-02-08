@@ -109,6 +109,38 @@ struct TelemetrySpan: Identifiable, Codable {
         (details?["source"]?.value as? String) ?? "unknown"
     }
 
+    /// Human-readable source label
+    var sourceLabel: String {
+        switch source.lowercased() {
+        case "whale_chat", "agent_ui", "ui":
+            return "Whale Chat"
+        case "whale_mcp", "mcp_server", "mcp":
+            return "Whale MCP"
+        case "claude_code", "claude-code":
+            return "Claude Code"
+        case "edge_function":
+            return "Edge Function"
+        default:
+            return source.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    /// SF Symbol icon for source
+    var sourceIcon: String {
+        switch source.lowercased() {
+        case "whale_chat", "agent_ui", "ui":
+            return "bubble.left.and.bubble.right.fill"
+        case "whale_mcp", "mcp_server", "mcp":
+            return "server.rack"
+        case "claude_code", "claude-code":
+            return "terminal.fill"
+        case "edge_function":
+            return "function"
+        default:
+            return "app.fill"
+        }
+    }
+
     var agentName: String? {
         // First check for explicit agent_name in details
         if let name = details?["agent_name"]?.value as? String, !name.isEmpty {
@@ -345,50 +377,79 @@ struct TelemetrySpan: Identifiable, Codable {
 
         switch action {
         case "adjust":
+            // Try to get full observability data from result
+            if let result = toolResult as? [String: Any] {
+                let productName = (result["product"] as? [String: Any])?["name"] as? String
+                let locationName = (result["location"] as? [String: Any])?["name"] as? String
+                let beforeQty = (result["before_state"] as? [String: Any])?["quantity"] as? Int
+                let afterQty = (result["after_state"] as? [String: Any])?["quantity"] as? Int
+
+                if let productName = productName, let beforeQty = beforeQty, let afterQty = afterQty {
+                    let delta = afterQty - beforeQty
+                    let sign = delta >= 0 ? "+" : ""
+                    let locationText = locationName.map { " at \($0)" } ?? ""
+                    return "\(productName)\(locationText): \(beforeQty) → \(afterQty) (\(sign)\(delta))"
+                }
+            }
+
+            // Fallback
             let adjustment = input["adjustment"] as? Int ?? 0
             let sign = adjustment >= 0 ? "+" : ""
-
-            // Try to get product name from result
-            if let result = toolResult as? [String: Any],
-               let product = result["product"] as? [String: Any],
-               let name = product["name"] as? String {
-                return "\(name): \(sign)\(adjustment) units"
-            }
-
-            // Fallback to product_id
-            let productId = input["product_id"] as? String ?? "?"
-            return "Product #\(productId.prefix(8)): \(sign)\(adjustment) units"
+            return "Adjusted inventory: \(sign)\(adjustment) units"
 
         case "set":
-            let quantity = input["quantity"] as? Int ?? 0
+            // Try to get full observability data from result
+            if let result = toolResult as? [String: Any] {
+                let productName = (result["product"] as? [String: Any])?["name"] as? String
+                let locationName = (result["location"] as? [String: Any])?["name"] as? String
+                let beforeQty = (result["before_state"] as? [String: Any])?["quantity"] as? Int
+                let afterQty = (result["after_state"] as? [String: Any])?["quantity"] as? Int
 
-            if let result = toolResult as? [String: Any],
-               let product = result["product"] as? [String: Any],
-               let name = product["name"] as? String {
-                return "\(name) → \(quantity) units"
+                if let productName = productName, let beforeQty = beforeQty, let afterQty = afterQty {
+                    let delta = afterQty - beforeQty
+                    let sign = delta >= 0 ? "+" : ""
+                    let locationText = locationName.map { " at \($0)" } ?? ""
+                    return "\(productName)\(locationText): \(beforeQty) → \(afterQty) (\(sign)\(delta))"
+                }
             }
 
-            let productId = input["product_id"] as? String ?? "?"
-            return "Product #\(productId.prefix(8)) → \(quantity) units"
+            // Fallback
+            let quantity = input["quantity"] as? Int ?? 0
+            return "Set inventory to \(quantity) units"
 
         case "transfer":
-            let qty = input["quantity"] as? Int ?? 0
-            let fromLoc = input["from_location_id"] as? String ?? "?"
-            let toLoc = input["to_location_id"] as? String ?? "?"
-
-            // Try to get location names from result
+            // Try to get full observability data from result
             if let result = toolResult as? [String: Any] {
-                let fromName = (result["from_location"] as? [String: Any])?["name"] as? String ?? String(fromLoc.prefix(8))
-                let toName = (result["to_location"] as? [String: Any])?["name"] as? String ?? String(toLoc.prefix(8))
+                let productName = (result["product"] as? [String: Any])?["name"] as? String
+                let fromName = (result["from_location"] as? [String: Any])?["name"] as? String
+                let toName = (result["to_location"] as? [String: Any])?["name"] as? String
+                let qty = result["quantity_transferred"] as? Int ?? input["quantity"] as? Int ?? 0
 
-                if let product = result["product"] as? [String: Any],
-                   let productName = product["name"] as? String {
+                // Full observability: show before/after state at both locations
+                if let beforeState = result["before_state"] as? [String: Any],
+                   let afterState = result["after_state"] as? [String: Any],
+                   let fromQtyBefore = beforeState["from_quantity"] as? Int,
+                   let toQtyBefore = beforeState["to_quantity"] as? Int,
+                   let fromQtyAfter = afterState["from_quantity"] as? Int,
+                   let toQtyAfter = afterState["to_quantity"] as? Int,
+                   let productName = productName,
+                   let fromName = fromName,
+                   let toName = toName {
+                    return "\(productName): \(qty) units • \(fromName) (\(fromQtyBefore)→\(fromQtyAfter)) → \(toName) (\(toQtyBefore)→\(toQtyAfter))"
+                }
+
+                // Fallback: basic info
+                if let productName = productName, let fromName = fromName, let toName = toName {
                     return "\(productName) (\(qty) units): \(fromName) → \(toName)"
                 }
 
-                return "\(qty) units: \(fromName) → \(toName)"
+                // Minimal fallback
+                if let fromName = fromName, let toName = toName {
+                    return "\(qty) units: \(fromName) → \(toName)"
+                }
             }
 
+            let qty = input["quantity"] as? Int ?? 0
             return "Transferred \(qty) units"
 
         default:
@@ -402,27 +463,39 @@ struct TelemetrySpan: Identifiable, Codable {
         switch action {
         case "create":
             // Show location names and items
-            let fromLoc = input["from_location_id"] as? String ?? "?"
-            let toLoc = input["to_location_id"] as? String ?? "?"
-
             if let items = input["items"] as? [[String: Any]] {
                 let count = items.count
                 let totalQty = items.compactMap { $0["quantity"] as? Int }.reduce(0, +)
 
-                // Try to get location names from result
+                // Try to get location names and product names from result
                 if let result = toolResult as? [String: Any] {
-                    let fromName = (result["from_location"] as? [String: Any])?["name"] as? String ?? String(fromLoc.prefix(8))
-                    let toName = (result["to_location"] as? [String: Any])?["name"] as? String ?? String(toLoc.prefix(8))
+                    let fromName = (result["from_location"] as? [String: Any])?["name"] as? String
+                    let toName = (result["to_location"] as? [String: Any])?["name"] as? String
 
-                    // Show first item as preview
-                    if let firstItem = items.first,
-                       let productId = firstItem["product_id"] as? String {
+                    // Show first item as preview with product name
+                    if let firstItem = items.first {
                         let qty = firstItem["quantity"] as? Int ?? 0
                         let moreText = count > 1 ? " +\(count - 1) more" : ""
-                        return "\(fromName) → \(toName): \(qty) units of #\(productId.prefix(8))\(moreText)"
+
+                        // Try to get product name from nested product object
+                        if let product = firstItem["product"] as? [String: Any],
+                           let productName = product["name"] as? String {
+                            if let fromName = fromName, let toName = toName {
+                                return "\(fromName) → \(toName): \(qty) units of \(productName)\(moreText)"
+                            }
+                            return "\(productName): \(qty) units\(moreText)"
+                        }
+
+                        // Fallback to item count with locations if available
+                        if let fromName = fromName, let toName = toName {
+                            return "\(fromName) → \(toName): \(count) item\(count == 1 ? "" : "s")"
+                        }
                     }
 
-                    return "\(fromName) → \(toName): \(count) item\(count == 1 ? "" : "s"), \(totalQty) total units"
+                    // Generic fallback with location names if available
+                    if let fromName = fromName, let toName = toName {
+                        return "\(fromName) → \(toName): \(count) item\(count == 1 ? "" : "s"), \(totalQty) total units"
+                    }
                 }
 
                 return "Transfer: \(count) item\(count == 1 ? "" : "s"), \(totalQty) units"
@@ -437,9 +510,7 @@ struct TelemetrySpan: Identifiable, Codable {
                     if let toName = toName {
                         return "Received at \(toName): \(count) item\(count == 1 ? "" : "s")"
                     }
-                }
-                if let id = result["id"] as? String {
-                    return "Received transfer #\(id.prefix(8))"
+                    return "Received \(count) item\(count == 1 ? "" : "s")"
                 }
             }
             return "Received transfer"
@@ -501,8 +572,6 @@ struct TelemetrySpan: Identifiable, Codable {
     }
 
     private func formatOrderActivity(action: String?) -> String? {
-        guard let input = toolInput else { return nil }
-
         switch action {
         case "find":
             if let result = toolResult as? [[String: Any]] {
@@ -597,8 +666,6 @@ struct TelemetrySpan: Identifiable, Codable {
     }
 
     private func formatPurchaseOrderActivity(action: String?) -> String? {
-        guard let input = toolInput else { return nil }
-
         switch action {
         case "create":
             return "Created purchase order"
@@ -873,6 +940,38 @@ struct TelemetrySession: Identifiable, Hashable {
 
     var source: String {
         traces.first?.source ?? "unknown"
+    }
+
+    /// Human-readable source label
+    var sourceLabel: String {
+        switch source.lowercased() {
+        case "whale_chat", "agent_ui", "ui":
+            return "Whale Chat"
+        case "whale_mcp", "mcp_server", "mcp":
+            return "Whale MCP"
+        case "claude_code", "claude-code":
+            return "Claude Code"
+        case "edge_function":
+            return "Edge Function"
+        default:
+            return source.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    /// SF Symbol icon for source
+    var sourceIcon: String {
+        switch source.lowercased() {
+        case "whale_chat", "agent_ui", "ui":
+            return "bubble.left.and.bubble.right.fill"
+        case "whale_mcp", "mcp_server", "mcp":
+            return "server.rack"
+        case "claude_code", "claude-code":
+            return "terminal.fill"
+        case "edge_function":
+            return "function"
+        default:
+            return "app.fill"
+        }
     }
 
     /// Number of user turns (each trace = one user prompt/turn)

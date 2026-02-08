@@ -9,7 +9,8 @@ struct TelemetryPanel: View {
     @ObservedObject private var telemetry = TelemetryService.shared
     @Environment(\.toolbarState) private var toolbarState
     @State private var selectedSessionId: String?  // Track by ID, not value
-    @State private var expandedTraceId: String?  // Which trace within a session is expanded
+    @State private var expandedTraceIds: Set<String> = []  // Which traces are expanded
+    @State private var expandAll: Bool = false  // Expand all traces toggle
     @State private var previousTraceCount: Int = 0  // Track to detect new turns
     @State private var previousSpanCount: Int = 0  // Track to detect new spans within a turn
     @State private var previousSessionCount: Int = 0  // Track to detect new sessions
@@ -407,6 +408,26 @@ struct TelemetryPanel: View {
                     Spacer()
 
                     Button {
+                        expandAll.toggle()
+                        if expandAll {
+                            // Expand all traces
+                            expandedTraceIds = Set(session.traces.map { $0.id })
+                        } else {
+                            // Collapse all, keep only latest 2-3
+                            autoExpandRecentTraces(session: session)
+                        }
+                    } label: {
+                        Text(expandAll ? "COLLAPSE ALL" : "EXPAND ALL")
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(expandAll ? Color.primary.opacity(0.12) : Color.primary.opacity(0.05))
+                            .foregroundStyle(expandAll ? .primary : .secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
                         autoFollow.toggle()
                     } label: {
                         Text(autoFollow ? "FOLLOWING" : "PAUSED")
@@ -438,19 +459,19 @@ struct TelemetryPanel: View {
                                         // Trace header row (clickable to expand/collapse)
                                         Button {
                                             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                                if expandedTraceId == trace.id {
-                                                    expandedTraceId = nil
+                                                if expandedTraceIds.contains(trace.id) {
+                                                    expandedTraceIds.remove(trace.id)
                                                 } else {
-                                                    expandedTraceId = trace.id
+                                                    expandedTraceIds.insert(trace.id)
                                                 }
                                             }
                                         } label: {
                                             HStack(spacing: 8) {
-                                                Image(systemName: expandedTraceId == trace.id ? "chevron.down" : "chevron.right")
+                                                Image(systemName: expandedTraceIds.contains(trace.id) ? "chevron.down" : "chevron.right")
                                                     .font(.system(size: 13, weight: .semibold))
                                                     .foregroundStyle(.tertiary)
                                                     .frame(width: 12)
-                                                    .rotationEffect(expandedTraceId == trace.id ? .zero : .degrees(-0))
+                                                    .rotationEffect(expandedTraceIds.contains(trace.id) ? .zero : .degrees(-0))
 
                                                 // Live dot for active trace
                                                 if isLive {
@@ -489,9 +510,12 @@ struct TelemetryPanel: View {
                                                         .foregroundStyle(TC.warning)
                                                 }
 
-                                                Text(trace.formattedDuration)
-                                                    .font(.system(size: 10, design: .monospaced))
-                                                    .foregroundStyle(.secondary)
+                                                // Only show duration if meaningful (> 0ms) and not live
+                                                if !isLive, let duration = trace.duration, duration > 0.001 {
+                                                    Text(trace.formattedDuration)
+                                                        .font(.system(size: 10, design: .monospaced))
+                                                        .foregroundStyle(.secondary)
+                                                }
 
                                                 if !isLive {
                                                     Text(trace.startTime, style: .relative)
@@ -502,7 +526,7 @@ struct TelemetryPanel: View {
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
                                             .background(
-                                                expandedTraceId == trace.id
+                                                expandedTraceIds.contains(trace.id)
                                                     ? (isLive ? TC.success.opacity(0.04) : Color.primary.opacity(0.04))
                                                     : Color.clear
                                             )
@@ -510,7 +534,7 @@ struct TelemetryPanel: View {
                                         .buttonStyle(.plain)
 
                                         // Expanded: show span waterfall
-                                        if expandedTraceId == trace.id {
+                                        if expandedTraceIds.contains(trace.id) {
                                             VStack(alignment: .leading, spacing: 0) {
                                                 timelineHeader(trace)
                                                     .padding(.horizontal, 16)
@@ -543,17 +567,19 @@ struct TelemetryPanel: View {
                                     .frame(height: 1)
                                     .id("scroll-bottom")
                             }
-                            .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceId)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceIds)
                             .animation(.spring(response: 0.35, dampingFraction: 0.88), value: session.traces.count)
                         }
                         .onChange(of: session.traces.count) { oldCount, newCount in
                             guard autoFollow, newCount > oldCount else { return }
-                            // New turn arrived — auto-expand it
-                            if let lastTrace = session.traces.last {
+                            // New turn arrived — auto-expand recent traces (unless expandAll is active)
+                            if !expandAll {
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
-                                    expandedTraceId = lastTrace.id
+                                    autoExpandRecentTraces(session: session)
                                 }
-                                // Scroll to the new trace smoothly
+                            }
+                            // Scroll to the latest trace smoothly
+                            if let lastTrace = session.traces.last {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                     withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) {
                                         scrollProxy.scrollTo("trace-\(lastTrace.id)", anchor: .top)
@@ -582,7 +608,7 @@ struct TelemetryPanel: View {
                                     }
                                 }
                                 // Auto-scroll to bottom of expanded trace smoothly
-                                if expandedTraceId != nil {
+                                if !expandedTraceIds.isEmpty {
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                         withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
                                             scrollProxy.scrollTo("scroll-bottom", anchor: .bottom)
@@ -600,6 +626,10 @@ struct TelemetryPanel: View {
             if let session = liveSelectedSession {
                 previousTraceCount = session.traces.count
                 previousSpanCount = session.allSpans.count
+                // Auto-expand recent traces on first load
+                if !expandAll && expandedTraceIds.isEmpty {
+                    autoExpandRecentTraces(session: session)
+                }
             }
         }
     }
@@ -654,8 +684,11 @@ struct TelemetryPanel: View {
 
             // Metrics row
             HStack(spacing: 0) {
-                metricCell(label: "Duration", value: session.formattedDuration, highlight: (session.duration ?? 0) > 5)
-                Divider().frame(height: 32)
+                // Only show duration if session has completed and duration is meaningful
+                if let duration = session.duration, duration > 0.001 {
+                    metricCell(label: "Duration", value: session.formattedDuration, highlight: duration > 5)
+                    Divider().frame(height: 32)
+                }
                 metricCell(label: "Turns", value: "\(session.turnCount)")
                 Divider().frame(height: 32)
                 metricCell(label: "Tools", value: "\(session.toolCount)")
@@ -705,20 +738,23 @@ struct TelemetryPanel: View {
             Text("Operation")
                 .frame(width: 200, alignment: .leading)
 
-            // Time markers
+            // Time markers (skip 0ms marker)
             GeometryReader { geo in
                 let duration = trace.duration ?? 1
                 let markers = stride(from: 0.0, through: duration, by: max(duration / 4, 0.001))
 
                 ZStack(alignment: .leading) {
                     ForEach(Array(markers.enumerated()), id: \.offset) { _, time in
-                        let x = (time / duration) * geo.size.width
-                        VStack {
-                            Text(formatDuration(time))
-                                .font(.system(size: 13, design: .monospaced))
-                                .foregroundStyle(.tertiary)
+                        // Skip the first marker (0ms)
+                        if time > 0.0001 {
+                            let x = (time / duration) * geo.size.width
+                            VStack {
+                                Text(formatDuration(time))
+                                    .font(.system(size: 13, design: .monospaced))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .position(x: x, y: 8)
                         }
-                        .position(x: x, y: 8)
                     }
                 }
             }
@@ -737,6 +773,12 @@ struct TelemetryPanel: View {
             return String(format: "%.0fms", seconds * 1000)
         }
         return String(format: "%.2fs", seconds)
+    }
+
+    /// Auto-expand the most recent 2-3 traces (keeps older ones collapsed)
+    private func autoExpandRecentTraces(session: TelemetrySession) {
+        let recentCount = min(3, session.traces.count)
+        expandedTraceIds = Set(session.traces.suffix(recentCount).map { $0.id })
     }
 
 
