@@ -8,7 +8,6 @@ private typealias TC = DesignSystem.Colors.Telemetry
 struct TelemetryPanel: View {
     @ObservedObject private var telemetry = TelemetryService.shared
     @Environment(\.toolbarState) private var toolbarState
-    @State private var selectedSpan: TelemetrySpan?
     @State private var selectedSessionId: String?  // Track by ID, not value
     @State private var expandedTraceId: String?  // Which trace within a session is expanded
     @State private var previousTraceCount: Int = 0  // Track to detect new turns
@@ -18,8 +17,7 @@ struct TelemetryPanel: View {
     @State private var autoFollowSessions: Bool = true  // Auto-scroll to new sessions in list
     @State private var newSpanIds: Set<UUID> = []  // Spans that just appeared (for entrance animation)
     @State private var newSessionIds: Set<String> = []  // Sessions that just appeared (for entrance animation)
-    @State private var spanDetailHeight: CGFloat = 280  // Resizable bottom detail
-    @State private var pinnedSpan: TelemetrySpan?  // Pinned span in side panel
+    @State private var pinnedSpan: TelemetrySpan?  // Pinned span in inspector panel
     var storeId: UUID?
 
     /// Binding that maps selectedSessionId to/from TelemetrySession for List selection
@@ -428,16 +426,8 @@ struct TelemetryPanel: View {
                 Divider()
             }
 
-            // Trace waterfall + resizable span detail
-            GeometryReader { geometry in
-                let totalHeight = geometry.size.height
-                let hasSpanDetail = selectedSpan != nil
-                let clampedDetailHeight = hasSpanDetail ? min(max(spanDetailHeight, 150), min(500, totalHeight * 0.7)) : 0
-                let scrollHeight = hasSpanDetail ? totalHeight - clampedDetailHeight : totalHeight
-
-                VStack(spacing: 0) {
-                    // All traces in this session, each with expandable spans
-                    ScrollViewReader { scrollProxy in
+            // Trace waterfall with inline logs
+            ScrollViewReader { scrollProxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
                                 ForEach(Array(session.traces.enumerated()), id: \.element.id) { index, trace in
@@ -530,9 +520,9 @@ struct TelemetryPanel: View {
                                                         span: span,
                                                         traceStart: trace.startTime,
                                                         traceDuration: trace.duration ?? 1,
-                                                        isSelected: selectedSpan?.id == span.id,
+                                                        isSelected: pinnedSpan?.id == span.id,
                                                         isNew: isSpanNew(span),
-                                                        onSelect: { selectedSpan = span }
+                                                        onSelect: { pinnedSpan = span }
                                                     )
                                                 }
                                             }
@@ -556,7 +546,6 @@ struct TelemetryPanel: View {
                             .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceId)
                             .animation(.spring(response: 0.35, dampingFraction: 0.88), value: session.traces.count)
                         }
-                        .frame(height: scrollHeight)
                         .onChange(of: session.traces.count) { oldCount, newCount in
                             guard autoFollow, newCount > oldCount else { return }
                             // New turn arrived — auto-expand it
@@ -604,15 +593,6 @@ struct TelemetryPanel: View {
                             previousSpanCount = currentSpanCount
                         }
                     }
-
-                    // Selected span detail with drag divider
-                    if let span = selectedSpan {
-                        DragDivider(offset: $spanDetailHeight, range: 150...min(500, totalHeight * 0.7))
-                        spanDetailView(span)
-                            .frame(height: clampedDetailHeight)
-                    }
-                }
-            }
         }
         .background(VibrancyBackground())
         .onAppear {
@@ -759,103 +739,6 @@ struct TelemetryPanel: View {
         return String(format: "%.2fs", seconds)
     }
 
-    // MARK: - Span Detail View
-
-    private func spanDetailView(_ span: TelemetrySpan) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header with status + badges
-            HStack(spacing: 8) {
-                // Status
-                Text(span.isError ? "ERROR" : "OK")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(span.isError ? TC.error : TC.success)
-
-                // Error type badge
-                if let errorType = span.errorType {
-                    Text(errorType.uppercased())
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(errorTypeBadgeColor(errorType))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(errorTypeBadgeColor(errorType).opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
-                }
-
-                // Timeout badge
-                if span.timedOut {
-                    Text("TIMEOUT")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(TC.warning)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(TC.warning.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
-                }
-
-                // Retryable badge
-                if span.retryable {
-                    Text("RETRYABLE")
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .foregroundStyle(TC.info)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(TC.info.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
-                }
-
-                Text(span.toolName ?? span.action)
-                    .font(.system(.subheadline, design: .monospaced, weight: .medium))
-
-                Spacer()
-
-                Text(span.formattedDuration)
-                    .font(.system(.subheadline, design: .monospaced))
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    pinnedSpan = span
-                    selectedSpan = nil
-                    telemetry.selectedSpanComparison = nil
-                } label: {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .help("Open in side panel")
-
-                Button {
-                    selectedSpan = nil
-                    telemetry.selectedSpanComparison = nil
-                } label: {
-                    Text("Close")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            // Performance comparison bar (tool spans only)
-            if let comparison = telemetry.selectedSpanComparison {
-                spanComparisonBar(span, comparison: comparison)
-            }
-
-            Divider()
-
-            ScrollView {
-                spanDetailContent(span)
-                    .padding(16)
-            }
-        }
-        .background(VibrancyBackground())
-        .task(id: span.id) {
-            if span.isToolSpan {
-                await telemetry.fetchSpanComparison(spanId: span.id)
-            }
-        }
-    }
 
     // MARK: - Span Detail Content (shared between inline and pinned)
 
