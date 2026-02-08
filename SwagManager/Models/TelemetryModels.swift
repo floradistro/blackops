@@ -483,9 +483,24 @@ struct TelemetrySpan: Identifiable, Codable {
 
         switch action {
         case "summary":
+            // Check for nested summary object first
+            if let summary = result["summary"] as? [String: Any] {
+                if let revenue = summary["total_revenue"] as? Double,
+                   let orders = summary["order_count"] as? Int {
+                    return "\(orders) orders, $\(String(format: "%.0f", revenue)) revenue"
+                }
+                if let revenue = summary["net_sales"] as? Double {
+                    return "$\(String(format: "%.0f", revenue)) revenue"
+                }
+            }
+            // Also check top-level
             if let revenue = result["total_revenue"] as? Double,
                let orders = result["order_count"] as? Int {
                 return "\(orders) orders, $\(String(format: "%.0f", revenue)) revenue"
+            }
+            // Fallback: show row count if available
+            if let rowCount = result["rowCount"] as? Int {
+                return "Analyzed \(rowCount) record\(rowCount == 1 ? "" : "s")"
             }
             return nil
 
