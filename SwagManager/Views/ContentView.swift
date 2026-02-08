@@ -14,6 +14,8 @@ struct ContentView: View {
                 AuthView()
             }
         }
+        .font(DesignSystem.Typography.body)  // Apply 17pt default to all text
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .freezeDebugLifecycle("ContentView")
     }
 

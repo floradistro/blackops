@@ -672,16 +672,16 @@ struct TelemetryPanel: View {
     }
 
     private func metricCell(label: String, value: String, highlight: Bool = false, isError: Bool = false, color: Color? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased())
-                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.secondary)
             Text(value)
-                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                .font(.system(size: 16, weight: .medium, design: .monospaced))
                 .foregroundStyle(color ?? (isError ? TC.error : highlight ? TC.warning : .primary))
         }
-        .padding(.trailing, 12)
-        .frame(minWidth: 60, alignment: .leading)
+        .padding(.horizontal, 16)
+        .frame(minWidth: 70, alignment: .leading)
     }
 
     private func timelineHeader(_ trace: Trace) -> some View {
