@@ -167,58 +167,75 @@ struct SpanRow: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 0) {
-                // Status indicator - different for API requests
-                if isApiRequest {
-                    Text("\u{25C6}")
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
-                        .foregroundStyle(TC.sourceClaude)
-                        .frame(width: 20)
-                } else {
-                    Text(span.isError ? "\u{00D7}" : "\u{2713}")
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
-                        .foregroundStyle(span.isError ? TC.error : TC.success)
-                        .frame(width: 20)
-                }
-
-                // Tool name - monospace, no decoration
-                Text(toolName)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(isApiRequest ? TC.sourceClaude : span.isError ? TC.error : .primary)
-                    .lineLimit(1)
-                    .frame(width: 120, alignment: .leading)
-
-                // Token usage for API requests (compact)
-                if isApiRequest, let tokens = span.formattedTokens {
-                    Text(tokens)
-                        .font(.system(size: 13, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 70, alignment: .trailing)
-                } else {
-                    Spacer().frame(width: 70)
-                }
-
-                // Waterfall bar - simple, no gradients
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        // Track
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.04))
-
-                        // Bar - solid color
-                        Rectangle()
-                            .fill(span.isError ? TC.error : Color.primary.opacity(0.25))
-                            .frame(width: max(2, geo.size.width * widthPercent))
-                            .offset(x: geo.size.width * startPercent)
+            VStack(alignment: .leading, spacing: 2) {
+                // Main row: status + tool + waterfall + duration
+                HStack(spacing: 0) {
+                    // Status indicator - different for API requests
+                    if isApiRequest {
+                        Text("\u{25C6}")
+                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                            .foregroundStyle(TC.sourceClaude)
+                            .frame(width: 20)
+                    } else {
+                        Text(span.isError ? "\u{00D7}" : "\u{2713}")
+                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                            .foregroundStyle(span.isError ? TC.error : TC.success)
+                            .frame(width: 20)
                     }
-                }
-                .frame(height: 16)
 
-                // Duration - right aligned
-                Text(span.formattedDuration)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 60, alignment: .trailing)
+                    // Tool name - monospace, no decoration
+                    Text(toolName)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(isApiRequest ? TC.sourceClaude : span.isError ? TC.error : .primary)
+                        .lineLimit(1)
+                        .frame(width: 120, alignment: .leading)
+
+                    // Token usage for API requests (compact)
+                    if isApiRequest, let tokens = span.formattedTokens {
+                        Text(tokens)
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 70, alignment: .trailing)
+                    } else {
+                        Spacer().frame(width: 70)
+                    }
+
+                    // Waterfall bar - simple, no gradients
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            // Track
+                            Rectangle()
+                                .fill(Color.primary.opacity(0.04))
+
+                            // Bar - solid color
+                            Rectangle()
+                                .fill(span.isError ? TC.error : Color.primary.opacity(0.25))
+                                .frame(width: max(2, geo.size.width * widthPercent))
+                                .offset(x: geo.size.width * startPercent)
+                        }
+                    }
+                    .frame(height: 16)
+
+                    // Duration - right aligned
+                    Text(span.formattedDuration)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 60, alignment: .trailing)
+                }
+
+                // Activity description (inline preview)
+                if let activity = span.activityDescription {
+                    HStack(spacing: 4) {
+                        Text("└─")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.quaternary)
+                        Text(activity)
+                            .font(.system(size: 11))
+                            .foregroundStyle(span.isError ? TC.error : .secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(.leading, 20)
+                }
             }
             .padding(.vertical, 4)
             .padding(.horizontal, 12)

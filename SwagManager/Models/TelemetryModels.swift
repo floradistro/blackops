@@ -293,6 +293,222 @@ struct TelemetrySpan: Identifiable, Codable {
         return String(format: "$%.6f", cost)
     }
 
+    // MARK: - Human-Readable Activity Description
+
+    /// Generate a human-readable description of what this span did
+    var activityDescription: String? {
+        // Show error message for failures
+        if isError, let error = errorMessage ?? toolError {
+            return "Error: \(error.prefix(100))"
+        }
+
+        // For API requests, show cache info
+        if isApiRequest {
+            if let cacheRead = cacheReadTokens, let input = inputTokens, cacheRead > 0 {
+                let cachePercent = Int((Double(cacheRead) / Double(input)) * 100)
+                return "💾 \(cachePercent)% cached"
+            }
+            return nil
+        }
+
+        // For tool executions, parse input/output for meaningful info
+        guard isToolSpan, let toolName = toolName else { return nil }
+
+        let parts = toolName.components(separatedBy: ".")
+        let baseTool = parts.first ?? toolName
+        let action = parts.count >= 2 ? parts[1] : nil
+
+        // Parse based on tool type
+        switch baseTool {
+        case "inventory":
+            return formatInventoryActivity(action: action)
+        case "transfers":
+            return formatTransferActivity(action: action)
+        case "products":
+            return formatProductActivity(action: action)
+        case "orders":
+            return formatOrderActivity(action: action)
+        case "customers":
+            return formatCustomerActivity(action: action)
+        case "purchase_orders":
+            return formatPurchaseOrderActivity(action: action)
+        case "analytics":
+            return formatAnalyticsActivity(action: action)
+        default:
+            // Generic fallback: show first line of result
+            return formatGenericActivity()
+        }
+    }
+
+    private func formatInventoryActivity(action: String?) -> String? {
+        guard let input = toolInput else { return nil }
+
+        switch action {
+        case "adjust":
+            let productId = input["product_id"] as? String ?? "?"
+            let adjustment = input["adjustment"] as? Int ?? 0
+            let sign = adjustment >= 0 ? "+" : ""
+            return "Product #\(productId.prefix(8)): \(sign)\(adjustment) units"
+
+        case "set":
+            let productId = input["product_id"] as? String ?? "?"
+            let quantity = input["quantity"] as? Int ?? 0
+            return "Set Product #\(productId.prefix(8)) → \(quantity) units"
+
+        case "transfer":
+            let productId = input["product_id"] as? String ?? "?"
+            let qty = input["quantity"] as? Int ?? 0
+            return "Transferred \(qty) units of #\(productId.prefix(8))"
+
+        default:
+            return nil
+        }
+    }
+
+    private func formatTransferActivity(action: String?) -> String? {
+        guard let input = toolInput else { return nil }
+
+        switch action {
+        case "create":
+            if let items = input["items"] as? [[String: Any]] {
+                let count = items.count
+                return "Created transfer: \(count) item\(count == 1 ? "" : "s")"
+            }
+            return "Created transfer"
+
+        case "receive":
+            if let result = toolResult as? [String: Any],
+               let id = result["id"] as? String {
+                return "Received transfer #\(id.prefix(8))"
+            }
+            return "Received transfer"
+
+        case "cancel":
+            return "Cancelled transfer"
+
+        default:
+            return nil
+        }
+    }
+
+    private func formatProductActivity(action: String?) -> String? {
+        guard let input = toolInput else { return nil }
+
+        switch action {
+        case "create":
+            let name = input["name"] as? String ?? "New product"
+            return "Created: \(name)"
+
+        case "update":
+            if let result = toolResult as? [String: Any],
+               let name = result["name"] as? String {
+                return "Updated: \(name)"
+            }
+            return "Updated product"
+
+        case "find":
+            if let result = toolResult as? [[String: Any]] {
+                return "Found \(result.count) product\(result.count == 1 ? "" : "s")"
+            }
+            return nil
+
+        default:
+            return nil
+        }
+    }
+
+    private func formatOrderActivity(action: String?) -> String? {
+        guard let input = toolInput else { return nil }
+
+        switch action {
+        case "find":
+            if let result = toolResult as? [[String: Any]] {
+                return "Found \(result.count) order\(result.count == 1 ? "" : "s")"
+            }
+            return nil
+
+        case "get":
+            if let result = toolResult as? [String: Any],
+               let orderNum = result["order_number"] as? String {
+                return "Order #\(orderNum)"
+            }
+            return nil
+
+        default:
+            return nil
+        }
+    }
+
+    private func formatCustomerActivity(action: String?) -> String? {
+        guard let input = toolInput else { return nil }
+
+        switch action {
+        case "create":
+            let name = [input["first_name"] as? String, input["last_name"] as? String]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            return "Created customer: \(name)"
+
+        case "find":
+            if let result = toolResult as? [[String: Any]] {
+                return "Found \(result.count) customer\(result.count == 1 ? "" : "s")"
+            }
+            return nil
+
+        default:
+            return nil
+        }
+    }
+
+    private func formatPurchaseOrderActivity(action: String?) -> String? {
+        guard let input = toolInput else { return nil }
+
+        switch action {
+        case "create":
+            return "Created purchase order"
+
+        case "approve":
+            return "Approved purchase order"
+
+        case "receive":
+            return "Received purchase order"
+
+        default:
+            return nil
+        }
+    }
+
+    private func formatAnalyticsActivity(action: String?) -> String? {
+        guard let result = toolResult as? [String: Any] else { return nil }
+
+        switch action {
+        case "summary":
+            if let revenue = result["total_revenue"] as? Double,
+               let orders = result["order_count"] as? Int {
+                return "\(orders) orders, $\(String(format: "%.0f", revenue)) revenue"
+            }
+            return nil
+
+        default:
+            if let data = result["data"] as? [[String: Any]] {
+                return "Analyzed \(data.count) record\(data.count == 1 ? "" : "s")"
+            }
+            return nil
+        }
+    }
+
+    private func formatGenericActivity() -> String? {
+        // For unknown tools, show first line of result
+        if let result = toolResult as? String {
+            let firstLine = result.components(separatedBy: .newlines).first ?? result
+            return String(firstLine.prefix(60))
+        } else if let result = toolResult as? [String: Any],
+                  let message = result["message"] as? String {
+            return String(message.prefix(60))
+        }
+        return nil
+    }
+
     /// Formatted payload sizes
     var formattedPayloadSize: String? {
         guard let inBytes = inputBytes, let outBytes = outputBytes else { return nil }
