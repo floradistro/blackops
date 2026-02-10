@@ -49,6 +49,7 @@
 		TELEMPVIEW002 /* TelemetryPanelViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMPVIEW001 /* TelemetryPanelViews.swift */; };
 		USERTOOL001 /* UserTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = USERTOOL002 /* UserTool.swift */; };
 		USERTOOLS002 /* EditorStore+UserTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = USERTOOLS001 /* EditorStore+UserTools.swift */; };
+		KEYCHAIN002 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KEYCHAIN001 /* KeychainService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -93,6 +94,7 @@
 		TELEMPVIEW001 /* TelemetryPanelViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryPanelViews.swift; sourceTree = "<group>"; };
 		USERTOOL002 /* UserTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserTool.swift; sourceTree = "<group>"; };
 		USERTOOLS001 /* EditorStore+UserTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EditorStore+UserTools.swift"; sourceTree = "<group>"; };
+		KEYCHAIN001 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainService.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -297,6 +299,7 @@
 			isa = PBXGroup;
 			children = (
 				SF010 /* AnyCodable.swift */,
+				KEYCHAIN001 /* KeychainService.swift */,
 				847EF2E6EF2603E411B2BF5B /* SupabaseDecoder.swift */,
 			);
 			path = Utilities;
@@ -477,6 +480,7 @@
 				D017E131684C0759D1D1C35B /* StoreModels.swift in Sources */,
 				TOOLBARST002 /* ToolbarState.swift in Sources */,
 				B25D681FC4B50617B90180BD /* FreezeDebugger.swift in Sources */,
+				KEYCHAIN002 /* KeychainService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

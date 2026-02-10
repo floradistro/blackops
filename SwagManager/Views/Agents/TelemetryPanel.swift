@@ -6,10 +6,11 @@ private typealias TC = DesignSystem.Colors.Telemetry
 // Production-quality trace viewer inspired by Jaeger/Datadog
 
 struct TelemetryPanel: View {
-    @ObservedObject private var telemetry = TelemetryService.shared
+    @Environment(\.telemetryService) private var telemetry
     @Environment(\.toolbarState) private var toolbarState
     @State private var selectedSessionId: String?  // Track by ID, not value
     @State private var expandedTraceIds: Set<String> = []  // Which traces are expanded
+    @State private var expandedTeamIds: Set<String> = []  // Which team sessions are expanded to show children
     @State private var expandAll: Bool = false  // Expand all traces toggle
     @State private var previousTraceCount: Int = 0  // Track to detect new turns
     @State private var previousSpanCount: Int = 0  // Track to detect new spans within a turn
@@ -26,7 +27,7 @@ struct TelemetryPanel: View {
         Binding(
             get: {
                 guard let id = selectedSessionId else { return nil }
-                return telemetry.recentSessions.first { $0.id == id }
+                return findSession(id: id)
             },
             set: { newSession in
                 selectedSessionId = newSession?.id
@@ -35,9 +36,25 @@ struct TelemetryPanel: View {
     }
 
     /// Live session data that updates with realtime - always reads from latest array
+    /// Searches both parent sessions and child sessions (teammates)
     private var liveSelectedSession: TelemetrySession? {
         guard let id = selectedSessionId else { return nil }
-        return telemetry.recentSessions.first { $0.id == id }
+        return findSession(id: id)
+    }
+
+    /// Find a session by ID, searching both parents and children
+    private func findSession(id: String) -> TelemetrySession? {
+        // First check top-level sessions
+        if let session = telemetry.recentSessions.first(where: { $0.id == id }) {
+            return session
+        }
+        // Then check child sessions (teammates)
+        for parent in telemetry.recentSessions {
+            if let child = parent.childSessions.first(where: { $0.id == id }) {
+                return child
+            }
+        }
+        return nil
     }
 
     var body: some View {
@@ -68,8 +85,8 @@ struct TelemetryPanel: View {
         .task(id: storeId) {
             FreezeDebugger.printRunloopContext("TelemetryPanel.task START")
 
-            // Stop previous realtime before switching stores
-            telemetry.stopRealtime()
+            // Configure service (idempotent, survives view lifecycle cancellation)
+            telemetry.configure(storeId: storeId)
 
             // Wire toolbar state
             toolbarState.telemetryStoreId = storeId
@@ -80,20 +97,10 @@ struct TelemetryPanel: View {
                 await telemetry.fetchStats(storeId: storeId)
             }
 
-            FreezeDebugger.telemetryEvent("fetchConfiguredAgents")
-            await telemetry.fetchConfiguredAgents(storeId: storeId)
-
-            FreezeDebugger.telemetryEvent("fetchRecentTraces")
-            await telemetry.fetchRecentTraces(storeId: storeId)
-
-            FreezeDebugger.telemetryEvent("startRealtime")
-            telemetry.startRealtime(storeId: storeId)
-
             FreezeDebugger.printRunloopContext("TelemetryPanel.task END")
         }
         .onDisappear {
-            FreezeDebugger.telemetryEvent("stopRealtime (onDisappear)")
-            telemetry.stopRealtime()
+            // Don't stop realtime — service manages its own lifecycle
             toolbarState.reset()
         }
         .onChange(of: telemetry.isLive) { _, newValue in
@@ -138,16 +145,45 @@ struct TelemetryPanel: View {
                 Spacer()
             } else {
                 ScrollViewReader { sessionProxy in
-                    List(telemetry.recentSessions, selection: selectedSession) { session in
-                        SessionRow(
-                            session: session,
-                            isSelected: selectedSessionId == session.id,
-                            isLive: isSessionLive(session),
-                            isNew: newSessionIds.contains(session.id)
-                        )
-                        .tag(session)
-                        // Composite id forces re-render when data changes
-                        .id(session.id)
+                    List(selection: selectedSession) {
+                        ForEach(telemetry.recentSessions) { session in
+                            // Parent session row
+                            SessionRow(
+                                session: session,
+                                isSelected: selectedSessionId == session.id,
+                                isLive: isSessionLive(session),
+                                isNew: newSessionIds.contains(session.id),
+                                isExpanded: expandedTeamIds.contains(session.id),
+                                onToggleExpand: session.isTeamCoordinator ? {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                        if expandedTeamIds.contains(session.id) {
+                                            expandedTeamIds.remove(session.id)
+                                        } else {
+                                            expandedTeamIds.insert(session.id)
+                                        }
+                                    }
+                                } : nil
+                            )
+                            .tag(session)
+                            .id(session.id)
+
+                            // Child sessions (teammates) - shown when team is expanded
+                            if session.isTeamCoordinator && expandedTeamIds.contains(session.id) {
+                                ForEach(session.childSessions) { child in
+                                    TeammateSessionRow(
+                                        session: child,
+                                        isSelected: selectedSessionId == child.id,
+                                        isLive: isSessionLive(child)
+                                    )
+                                    .tag(child)
+                                    .id(child.id)
+                                    .onTapGesture {
+                                        selectedSessionId = child.id
+                                    }
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
+                            }
+                        }
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -160,6 +196,13 @@ struct TelemetryPanel: View {
                             let newIds = telemetry.recentSessions.prefix(newCount - oldCount).map { $0.id }
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                 newSessionIds.formUnion(newIds)
+                            }
+
+                            // Auto-expand new team sessions
+                            for session in telemetry.recentSessions.prefix(newCount - oldCount) {
+                                if session.isTeamCoordinator {
+                                    expandedTeamIds.insert(session.id)
+                                }
                             }
 
                             // Scroll to the newest session (first in list)
@@ -176,6 +219,16 @@ struct TelemetryPanel: View {
                         }
 
                         previousSessionCount = newCount
+                    }
+                    // Auto-expand sessions that just became team coordinators
+                    // (e.g., when teammate links to parent during realtime)
+                    .onChange(of: telemetry.newTeamCoordinatorIds) { _, newCoordinatorIds in
+                        guard !newCoordinatorIds.isEmpty else { return }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            expandedTeamIds.formUnion(newCoordinatorIds)
+                        }
+                        // Clear after processing
+                        telemetry.newTeamCoordinatorIds = []
                     }
                 }
             }
@@ -1140,9 +1193,22 @@ struct TelemetryPanel: View {
     // MARK: - Helpers
 
     /// Check if a session received data in the last 30 seconds (still active)
+    /// For team sessions, also checks if any child session is live
     private func isSessionLive(_ session: TelemetrySession) -> Bool {
-        guard let endTime = session.endTime else { return false }
-        return Date().timeIntervalSince(endTime) < 30
+        // Check if this session itself is live
+        if let endTime = session.endTime, Date().timeIntervalSince(endTime) < 30 {
+            return true
+        }
+        // For team coordinators, check if any child is live
+        if session.isTeamCoordinator {
+            return session.childSessions.contains { child in
+                if let endTime = child.endTime {
+                    return Date().timeIntervalSince(endTime) < 30
+                }
+                return false
+            }
+        }
+        return false
     }
 
     // MARK: - Pinned Span Panel (full-height 3rd column)

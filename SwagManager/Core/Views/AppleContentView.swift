@@ -101,6 +101,11 @@ struct AppleContentView: View {
                     Task { await store.loadAIAgents() }
                 }
             }
+            .alert("Error", isPresented: Bindable(store).showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(store.error ?? "An unknown error occurred.")
+            }
             .freezeDebugLifecycle("AppleContentView")
     }
 

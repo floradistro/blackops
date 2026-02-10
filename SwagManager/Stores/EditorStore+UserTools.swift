@@ -23,7 +23,8 @@ extension EditorStore {
             self.userTools = tools
             print("[EditorStore] Loaded \(tools.count) user tools")
         } catch {
-            print("[EditorStore] Failed to load user tools: \(error)")
+            self.error = "Failed to load user tools: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 
@@ -45,7 +46,8 @@ extension EditorStore {
             self.userTriggers = triggers
             print("[EditorStore] Loaded \(triggers.count) user triggers")
         } catch {
-            print("[EditorStore] Failed to load user triggers: \(error)")
+            self.error = "Failed to load user triggers: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 
@@ -66,7 +68,8 @@ extension EditorStore {
             print("[EditorStore] Created user tool: \(created.name)")
             return created
         } catch {
-            print("[EditorStore] Failed to create user tool: \(error)")
+            self.error = "Failed to create tool: \(error.localizedDescription)"
+            self.showError = true
             return nil
         }
     }
@@ -88,7 +91,8 @@ extension EditorStore {
             print("[EditorStore] Updated user tool: \(tool.name)")
             return true
         } catch {
-            print("[EditorStore] Failed to update user tool: \(error)")
+            self.error = "Failed to update tool: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -110,7 +114,8 @@ extension EditorStore {
             print("[EditorStore] Deleted user tool: \(tool.name)")
             return true
         } catch {
-            print("[EditorStore] Failed to delete user tool: \(error)")
+            self.error = "Failed to delete tool: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -132,7 +137,8 @@ extension EditorStore {
             print("[EditorStore] Created user trigger: \(created.name)")
             return created
         } catch {
-            print("[EditorStore] Failed to create user trigger: \(error)")
+            self.error = "Failed to create trigger: \(error.localizedDescription)"
+            self.showError = true
             return nil
         }
     }
@@ -154,7 +160,8 @@ extension EditorStore {
             print("[EditorStore] Updated user trigger: \(trigger.name)")
             return true
         } catch {
-            print("[EditorStore] Failed to update user trigger: \(error)")
+            self.error = "Failed to update trigger: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -174,7 +181,8 @@ extension EditorStore {
             print("[EditorStore] Deleted user trigger: \(trigger.name)")
             return true
         } catch {
-            print("[EditorStore] Failed to delete user trigger: \(error)")
+            self.error = "Failed to delete trigger: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -287,7 +295,8 @@ extension EditorStore {
             print("[EditorStore] Fired trigger: \(trigger.name)")
             return true
         } catch {
-            print("[EditorStore] Failed to fire trigger: \(error)")
+            self.error = "Failed to fire trigger: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -319,7 +328,8 @@ extension EditorStore {
             print("[EditorStore] Saved secret: \(name)")
             return true
         } catch {
-            print("[EditorStore] Failed to save secret \(name): \(error)")
+            self.error = "Failed to save secret: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -349,7 +359,8 @@ extension EditorStore {
 
             return secrets.map { $0.name }
         } catch {
-            print("[EditorStore] Failed to load secret names: \(error)")
+            self.error = "Failed to load secrets: \(error.localizedDescription)"
+            self.showError = true
             return []
         }
     }
@@ -390,7 +401,8 @@ extension EditorStore {
             print("[EditorStore] Deleted secret: \(name)")
             return true
         } catch {
-            print("[EditorStore] Failed to delete secret: \(error)")
+            self.error = "Failed to delete secret: \(error.localizedDescription)"
+            self.showError = true
             return false
         }
     }
@@ -640,7 +652,7 @@ extension EditorStore {
             return secrets.first?.encrypted_value
         } catch {
             print("[EditorStore] Failed to fetch secret \(name): \(error)")
-            return nil
+            return nil  // Silent failure — secrets are fetched during HTTP tool execution
         }
     }
 

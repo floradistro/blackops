@@ -6,13 +6,14 @@ import Foundation
 // Mirrors Claude Code architecture
 
 @MainActor
-class UnifiedAgentService: ObservableObject {
+@Observable
+class UnifiedAgentService {
     static let shared = UnifiedAgentService()
 
     // MARK: - State
 
-    @Published var isRunning = false
-    @Published var currentTool: String?
+    var isRunning = false
+    var currentTool: String?
 
     // MARK: - Configuration
 
@@ -263,21 +264,31 @@ class UnifiedAgentService: ObservableObject {
 
     // MARK: - API Key
 
+    private static let apiKeyName = "anthropic_api_key"
+
     private func getAnthropicAPIKey() -> String? {
         // Try environment variable first
         if let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] {
             return key
         }
-        // Try UserDefaults
-        if let key = UserDefaults.standard.string(forKey: "anthropic_api_key"), !key.isEmpty {
+        // Try Keychain
+        if let key = KeychainService.read(Self.apiKeyName), !key.isEmpty {
             return key
         }
-        // Try Keychain (could implement later)
+        // Migrate from UserDefaults (old key names) to Keychain
+        let legacyKeys = ["anthropic_api_key", "anthropicApiKey"]
+        for legacyKey in legacyKeys {
+            if let key = UserDefaults.standard.string(forKey: legacyKey), !key.isEmpty {
+                _ = KeychainService.save(Self.apiKeyName, value: key)
+                UserDefaults.standard.removeObject(forKey: legacyKey)
+                return key
+            }
+        }
         return nil
     }
 
     func setAPIKey(_ key: String) {
-        UserDefaults.standard.set(key, forKey: "anthropic_api_key")
+        _ = KeychainService.save(Self.apiKeyName, value: key)
     }
 
     var hasAPIKey: Bool {

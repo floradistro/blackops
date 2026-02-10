@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject var authManager: AuthManager
+    @Environment(\.authManager) private var authManager
     @State private var store = EditorStore()
 
     var body: some View {
@@ -22,7 +22,7 @@ struct SettingsView: View {
                 }
         }
         .frame(width: 600, height: 500)
-        .environmentObject(authManager)
+        .environment(\.authManager, authManager)
         .environment(store)
         .task {
             await store.loadStores()
@@ -31,7 +31,7 @@ struct SettingsView: View {
 }
 
 struct AccountSettingsView: View {
-    @EnvironmentObject var authManager: AuthManager
+    @Environment(\.authManager) private var authManager
     @State private var showSignOutConfirm = false
 
     var body: some View {
@@ -73,7 +73,7 @@ struct AccountSettingsView: View {
 // MARK: - AI Settings View
 
 struct AISettingsView: View {
-    @AppStorage("anthropicApiKey") private var apiKey = ""
+    @State private var apiKey = ""
     @AppStorage("defaultModel") private var defaultModel = "claude-sonnet-4-20250514"
     @State private var showApiKey = false
     @State private var testStatus: TestStatus = .idle
@@ -172,6 +172,16 @@ struct AISettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .onAppear {
+            apiKey = KeychainService.read("anthropic_api_key") ?? ""
+        }
+        .onChange(of: apiKey) { _, newValue in
+            if newValue.isEmpty {
+                KeychainService.delete("anthropic_api_key")
+            } else {
+                _ = KeychainService.save("anthropic_api_key", value: newValue)
+            }
+        }
     }
 
     private func testConnection() {
@@ -228,6 +238,4 @@ struct AboutView: View {
 
 #Preview {
     SettingsView()
-        .environmentObject(AuthManager.shared)
-        .environment(EditorStore())
 }

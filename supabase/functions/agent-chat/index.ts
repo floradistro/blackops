@@ -13,6 +13,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.30.1";
 interface AgentConfig {
   id: string;
   name: string;
+  description: string;
   system_prompt: string;
   model: string;
   max_tokens: number;
@@ -22,6 +23,15 @@ interface AgentConfig {
   can_query: boolean;
   can_send: boolean;
   can_modify: boolean;
+  tone: string;
+  verbosity: string;
+  api_key: string | null;
+  context_config: {
+    includeLocations?: boolean;
+    locationIds?: string[];
+    includeCustomers?: boolean;
+    customerSegments?: string[];
+  } | null;
 }
 
 interface ToolDef {
@@ -38,6 +48,7 @@ interface StreamEvent {
   success?: boolean;
   error?: string;
   usage?: { input_tokens: number; output_tokens: number };
+  conversationId?: string;
 }
 
 // ============================================================================
@@ -86,7 +97,8 @@ async function executeTool(
   traceId?: string,
   userId?: string | null,
   userEmail?: string | null,
-  source?: string
+  source?: string,
+  conversationId?: string
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
   const startTime = Date.now();
   const action = args.action as string | undefined;
@@ -173,13 +185,15 @@ async function executeTool(
       resource_type: "mcp_tool",
       resource_id: toolName,
       request_id: traceId || null,
+      conversation_id: conversationId || null,
+      source: source || "edge_function",
       details: { source: source || "edge_function", args },
       error_message: result.error || null,
       duration_ms: Date.now() - startTime,
       user_id: userId || null,
       user_email: userEmail || null
     });
-  } catch { /* don't fail tool call if logging fails */ }
+  } catch (err) { console.error("[audit]", err); }
 
   return result;
 }
@@ -189,7 +203,7 @@ async function executeTool(
 // ============================================================================
 
 async function handleInventory(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string; // Always use server-verified storeId, never trust args.store_id
   switch (args.action) {
     case "adjust": {
       const productId = args.product_id as string;
@@ -231,7 +245,7 @@ async function handleInventory(sb: SupabaseClient, args: Record<string, unknown>
         store_id: sid, product_id: productId, location_id: locationId,
         previous_quantity: qtyBefore, new_quantity: qtyAfter,
         adjustment, reason
-      }).catch(() => {});
+      }).catch((err: unknown) => console.error("[audit]", err));
 
       // STEP 5: Return full observability data
       const sign = adjustment >= 0 ? "+" : "";
@@ -366,12 +380,12 @@ async function handleInventory(sb: SupabaseClient, args: Record<string, unknown>
 }
 
 async function handleInventoryQuery(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "summary": {
       const { data, error } = await sb.from("inventory")
         .select("*, product:products(name, sku), location:locations(name)")
-        .eq("store_id", sid);
+        .eq("store_id", sid).limit(1000);
       if (error) return { success: false, error: error.message };
       // Group by location
       const byLocation: Record<string, { location_name: string; items: number; total_qty: number }> = {};
@@ -393,13 +407,13 @@ async function handleInventoryQuery(sb: SupabaseClient, args: Record<string, unk
       let q = sb.from("inventory").select("*, product:products(name, sku), location:locations(name)")
         .eq("store_id", sid);
       if (args.location_id) q = q.eq("location_id", args.location_id as string);
-      const { data, error } = await q;
+      const { data, error } = await q.limit(100);
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "in_stock": {
       const { data, error } = await sb.from("inventory")
         .select("*, product:products(name, sku), location:locations(name)")
-        .eq("store_id", sid).gt("quantity", 0);
+        .eq("store_id", sid).gt("quantity", 0).limit(100);
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     default:
@@ -408,7 +422,7 @@ async function handleInventoryQuery(sb: SupabaseClient, args: Record<string, unk
 }
 
 async function handleInventoryAudit(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "start": {
       // Create audit record directly
@@ -441,7 +455,7 @@ async function handleInventoryAudit(sb: SupabaseClient, args: Record<string, unk
 }
 
 async function handlePurchaseOrders(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "list": {
       let q = sb.from("purchase_orders").select("*, supplier:suppliers(external_name, external_company), location:locations(name)")
@@ -457,11 +471,28 @@ async function handlePurchaseOrders(sb: SupabaseClient, args: Record<string, unk
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "create": {
+      const poNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
+      const poType = (args.po_type as string) || "inbound";
       const { data, error } = await sb.from("purchase_orders")
-        .insert({ store_id: sid, supplier_id: args.supplier_id, location_id: args.location_id,
-          expected_delivery_date: args.expected_delivery_date, notes: args.notes, status: "draft" })
+        .insert({ store_id: sid, po_number: poNumber, po_type: poType,
+          supplier_id: args.supplier_id, location_id: args.location_id,
+          expected_delivery_date: args.expected_delivery_date, notes: args.notes,
+          status: "draft", is_ai_action: true })
         .select().single();
-      return error ? { success: false, error: error.message } : { success: true, data };
+      if (error) return { success: false, error: error.message };
+      // If items provided, insert them
+      if (args.items && Array.isArray(args.items) && data) {
+        const items = (args.items as Array<Record<string, unknown>>).map(item => {
+          const qty = Number(item.quantity) || 1;
+          const price = Number(item.unit_cost || item.unit_price) || 0;
+          return {
+            purchase_order_id: data.id, product_id: item.product_id,
+            quantity: qty, unit_price: price, subtotal: qty * price
+          };
+        });
+        await sb.from("purchase_order_items").insert(items);
+      }
+      return { success: true, data };
     }
     case "approve": {
       const { data, error } = await sb.from("purchase_orders")
@@ -484,23 +515,31 @@ async function handlePurchaseOrders(sb: SupabaseClient, args: Record<string, unk
 }
 
 async function handleTransfers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "list": {
       let q = sb.from("inventory_transfers")
-        .select("*, from_location:locations!from_location_id(name), to_location:locations!to_location_id(name)")
+        .select("*, from_location:locations!source_location_id(name), to_location:locations!destination_location_id(name)")
         .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 25);
       if (args.status) q = q.eq("status", args.status as string);
       const { data, error } = await q;
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "create": {
-      // Create transfer header
+      const transferNumber = `TR-${Date.now().toString(36).toUpperCase()}`;
       const { data: transfer, error } = await sb.from("inventory_transfers")
-        .insert({ store_id: sid, from_location_id: args.from_location_id, to_location_id: args.to_location_id,
-          notes: args.notes, status: "pending" })
+        .insert({
+          store_id: sid,
+          transfer_number: transferNumber,
+          source_location_id: args.from_location_id || args.source_location_id,
+          destination_location_id: args.to_location_id || args.destination_location_id,
+          notes: args.notes,
+          status: "draft",
+          is_ai_action: true
+        })
         .select().single();
       if (error) return { success: false, error: error.message };
+      const sourceLocId = (args.from_location_id || args.source_location_id) as string;
       // Insert items and deduct from source
       const items = args.items as Array<{ product_id: string; quantity: number }>;
       if (items?.length) {
@@ -508,10 +547,10 @@ async function handleTransfers(sb: SupabaseClient, args: Record<string, unknown>
         await sb.from("inventory_transfer_items").insert(itemRows);
         for (const item of items) {
           const { data: src } = await sb.from("inventory").select("quantity")
-            .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", args.from_location_id as string).single();
+            .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", sourceLocId).single();
           const newQty = (src?.quantity || 0) - item.quantity;
           await sb.from("inventory").upsert(
-            { store_id: sid, product_id: item.product_id, location_id: args.from_location_id, quantity: newQty },
+            { store_id: sid, product_id: item.product_id, location_id: sourceLocId, quantity: newQty },
             { onConflict: "store_id,product_id,location_id" });
         }
       }
@@ -524,38 +563,35 @@ async function handleTransfers(sb: SupabaseClient, args: Record<string, unknown>
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "receive": {
-      // Get transfer and items
       const { data: transfer } = await sb.from("inventory_transfers")
         .select("*, items:inventory_transfer_items(*)").eq("id", args.transfer_id as string).single();
       if (!transfer) return { success: false, error: "Transfer not found" };
-      // Add to destination inventory
       for (const item of (transfer as any).items || []) {
         const { data: dst } = await sb.from("inventory").select("quantity")
-          .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", transfer.to_location_id).single();
+          .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", transfer.destination_location_id).single();
         const newQty = (dst?.quantity || 0) + item.quantity;
         await sb.from("inventory").upsert(
-          { store_id: sid, product_id: item.product_id, location_id: transfer.to_location_id, quantity: newQty },
+          { store_id: sid, product_id: item.product_id, location_id: transfer.destination_location_id, quantity: newQty },
           { onConflict: "store_id,product_id,location_id" });
       }
       const { data, error } = await sb.from("inventory_transfers")
-        .update({ status: "received" }).eq("id", args.transfer_id as string).select().single();
+        .update({ status: "completed", received_at: new Date().toISOString() }).eq("id", args.transfer_id as string).select().single();
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "cancel": {
-      // Get transfer and restore source inventory
       const { data: transfer } = await sb.from("inventory_transfers")
         .select("*, items:inventory_transfer_items(*)").eq("id", args.transfer_id as string).single();
       if (!transfer) return { success: false, error: "Transfer not found" };
       for (const item of (transfer as any).items || []) {
         const { data: src } = await sb.from("inventory").select("quantity")
-          .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", transfer.from_location_id).single();
+          .eq("store_id", sid).eq("product_id", item.product_id).eq("location_id", transfer.source_location_id).single();
         const newQty = (src?.quantity || 0) + item.quantity;
         await sb.from("inventory").upsert(
-          { store_id: sid, product_id: item.product_id, location_id: transfer.from_location_id, quantity: newQty },
+          { store_id: sid, product_id: item.product_id, location_id: transfer.source_location_id, quantity: newQty },
           { onConflict: "store_id,product_id,location_id" });
       }
       const { data, error } = await sb.from("inventory_transfers")
-        .update({ status: "cancelled" }).eq("id", args.transfer_id as string).select().single();
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", args.transfer_id as string).select().single();
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     default:
@@ -564,13 +600,24 @@ async function handleTransfers(sb: SupabaseClient, args: Record<string, unknown>
 }
 
 async function handleProducts(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "find": {
-      let q = sb.from("products").select("id, name, sku, status, primary_category_id")
+      let q = sb.from("products").select("id, name, sku, slug, status, primary_category_id, category:categories!primary_category_id(name)")
         .eq("store_id", sid).limit(args.limit as number || 25);
       if (args.query) q = q.or(`name.ilike.%${args.query}%,sku.ilike.%${args.query}%`);
-      if (args.category) q = q.eq("category_id", args.category as string);
+      if (args.category) {
+        const catVal = args.category as string;
+        // If it looks like a UUID, use directly; otherwise resolve name to ID
+        if (/^[0-9a-f]{8}-/.test(catVal)) {
+          q = q.eq("primary_category_id", catVal);
+        } else {
+          const { data: cats } = await sb.from("categories").select("id").ilike("name", `%${catVal}%`).eq("store_id", sid).limit(1);
+          if (cats?.length) q = q.eq("primary_category_id", cats[0].id);
+          else q = q.ilike("name", `%${catVal}%`); // fallback to name search
+        }
+      }
+      if (args.name) q = q.ilike("name", `%${args.name}%`);
       const { data, error } = await q;
       return error ? { success: false, error: error.message } : { success: true, data };
     }
@@ -594,12 +641,12 @@ async function handleProducts(sb: SupabaseClient, args: Record<string, unknown>,
 }
 
 async function handleCollections(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "find": {
       let q = sb.from("creation_collections").select("*").eq("store_id", sid);
       if (args.name) q = q.ilike("name", `%${args.name}%`);
-      const { data, error } = await q;
+      const { data, error } = await q.limit(100);
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "create": {
@@ -613,12 +660,12 @@ async function handleCollections(sb: SupabaseClient, args: Record<string, unknow
 }
 
 async function handleCustomers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "find": {
-      let q = sb.from("customers").select("id, full_name, email, phone, created_at")
+      let q = sb.from("customers").select("id, first_name, last_name, email, phone, created_at")
         .eq("store_id", sid).limit(args.limit as number || 25);
-      if (args.query) q = q.or(`full_name.ilike.%${args.query}%,email.ilike.%${args.query}%,phone.ilike.%${args.query}%`);
+      if (args.query) q = q.or(`first_name.ilike.%${args.query}%,last_name.ilike.%${args.query}%,email.ilike.%${args.query}%,phone.ilike.%${args.query}%`);
       const { data, error } = await q;
       return error ? { success: false, error: error.message } : { success: true, data };
     }
@@ -644,20 +691,21 @@ async function handleCustomers(sb: SupabaseClient, args: Record<string, unknown>
 }
 
 async function handleOrders(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "find": {
       let q = sb.from("orders")
-        .select("id, order_number, status, total, created_at, customer:customers(id, full_name, email)")
+        .select("id, order_number, status, total_amount, subtotal, tax_amount, created_at, customer_id, headless_customer:headless_customers!headless_customer_id(id, first_name, last_name, email)")
         .eq("store_id", sid).order("created_at", { ascending: false }).limit(args.limit as number || 25);
       if (args.status) q = q.eq("status", args.status as string);
       if (args.customer_id) q = q.eq("customer_id", args.customer_id as string);
+      if (args.order_number) q = q.eq("order_number", args.order_number as string);
       const { data, error } = await q;
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "get": {
       const { data, error } = await sb.from("orders")
-        .select("*, customer:customers(*), items:order_items(*, product:products(id, name, sku))")
+        .select("*, headless_customer:headless_customers!headless_customer_id(*), items:order_items(*, product:products(id, name, sku))")
         .eq("id", args.order_id as string).single();
       return error ? { success: false, error: error.message } : { success: true, data };
     }
@@ -667,7 +715,7 @@ async function handleOrders(sb: SupabaseClient, args: Record<string, unknown>, s
 }
 
 async function handleAnalytics(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   // Resolve date range from period/days_back
   const getDateRange = () => {
     const end = args.end_date as string || new Date().toISOString().split("T")[0];
@@ -734,24 +782,24 @@ async function handleAnalytics(sb: SupabaseClient, args: Record<string, unknown>
 }
 
 async function handleLocations(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   let q = sb.from("locations").select("id, name, address_line1, city, state, is_active, type").eq("store_id", sid);
   if (args.is_active !== undefined) q = q.eq("is_active", args.is_active as boolean);
   if (args.name) q = q.ilike("name", `%${args.name}%`);
-  const { data, error } = await q;
+  const { data, error } = await q.limit(100);
   return error ? { success: false, error: error.message } : { success: true, data };
 }
 
 async function handleSuppliers(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   let q = sb.from("suppliers").select("id, external_name, external_company, contact_name, contact_email, contact_phone, city, state, is_active").eq("store_id", sid);
   if (args.name) q = q.or(`external_name.ilike.%${args.name}%,external_company.ilike.%${args.name}%,contact_name.ilike.%${args.name}%`);
-  const { data, error } = await q;
+  const { data, error } = await q.limit(100);
   return error ? { success: false, error: error.message } : { success: true, data };
 }
 
 async function handleEmail(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   switch (args.action) {
     case "inbox": {
       let q = sb.from("email_threads").select("*, latest_message:email_inbox(subject, from_email, created_at)")
@@ -810,7 +858,7 @@ async function handleEmail(sb: SupabaseClient, args: Record<string, unknown>, st
     }
     case "templates": {
       const { data, error } = await sb.from("email_templates").select("*")
-        .eq("store_id", sid).eq("is_active", true);
+        .eq("store_id", sid).eq("is_active", true).limit(100);
       return error ? { success: false, error: error.message } : { success: true, data };
     }
     case "inbox_reply": {
@@ -840,7 +888,7 @@ async function handleEmail(sb: SupabaseClient, args: Record<string, unknown>, st
     }
     case "inbox_stats": {
       const { data, error } = await sb.from("email_threads")
-        .select("status, mailbox, priority").eq("store_id", sid);
+        .select("status, mailbox, priority").eq("store_id", sid).limit(1000);
       if (error) return { success: false, error: error.message };
       const stats = {
         total: data.length,
@@ -862,7 +910,7 @@ async function handleAlerts(sb: SupabaseClient, _args: Record<string, unknown>, 
   // Low stock alerts (quantity < 10)
   const { data: lowStock } = await sb.from("inventory")
     .select("quantity, product:products(name, sku), location:locations(name)")
-    .eq("store_id", sid).lt("quantity", 10).gt("quantity", 0);
+    .eq("store_id", sid).lt("quantity", 10).gt("quantity", 0).limit(100);
   for (const item of lowStock || []) {
     alerts.push({
       type: "low_stock", severity: "warning",
@@ -874,7 +922,7 @@ async function handleAlerts(sb: SupabaseClient, _args: Record<string, unknown>, 
   // Out of stock
   const { data: outOfStock } = await sb.from("inventory")
     .select("product:products(name, sku), location:locations(name)")
-    .eq("store_id", sid).eq("quantity", 0);
+    .eq("store_id", sid).eq("quantity", 0).limit(100);
   for (const item of outOfStock || []) {
     alerts.push({
       type: "out_of_stock", severity: "critical",
@@ -885,7 +933,7 @@ async function handleAlerts(sb: SupabaseClient, _args: Record<string, unknown>, 
 
   // Pending orders
   const { data: pendingOrders } = await sb.from("orders")
-    .select("id, order_number, total, created_at")
+    .select("id, order_number, total_amount, created_at")
     .eq("store_id", sid).eq("status", "pending");
   if (pendingOrders?.length) {
     alerts.push({
@@ -899,20 +947,23 @@ async function handleAlerts(sb: SupabaseClient, _args: Record<string, unknown>, 
 }
 
 async function handleAuditTrail(sb: SupabaseClient, args: Record<string, unknown>, storeId?: string) {
-  const sid = (args.store_id || storeId) as string;
+  const sid = storeId as string;
   const { data, error } = await sb.from("audit_logs").select("*")
     .eq("store_id", sid).order("created_at", { ascending: false })
     .limit(args.limit as number || 25);
   return error ? { success: false, error: error.message } : { success: true, data };
 }
 
-async function handleWebSearch(_sb: SupabaseClient, args: Record<string, unknown>, _storeId?: string) {
+async function handleWebSearch(sb: SupabaseClient, args: Record<string, unknown>, _storeId?: string) {
   const query = args.query as string;
   const numResults = (args.num_results as number) || 5;
-  const exaApiKey = Deno.env.get("EXA_API_KEY");
+
+  // Read from platform_secrets table first, fall back to env var
+  const { data: secret } = await sb.from("platform_secrets").select("value").eq("key", "exa_api_key").single();
+  const exaApiKey = secret?.value || Deno.env.get("EXA_API_KEY");
 
   if (!exaApiKey) {
-    return { success: false, error: "EXA_API_KEY not configured" };
+    return { success: false, error: "Exa API key not configured. Add 'exa_api_key' to platform_secrets table." };
   }
 
   if (!query) {
@@ -962,6 +1013,22 @@ function groupBy(arr: Record<string, unknown>[], key: string): Record<string, nu
   return counts;
 }
 
+function validateUUID(value: unknown, name: string): string {
+  const s = String(value || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+    throw new Error(`Invalid UUID for ${name}: ${s}`);
+  }
+  return s;
+}
+
+function validateNumber(value: unknown, name: string, opts?: { min?: number; max?: number }): number {
+  const n = Number(value);
+  if (isNaN(n)) throw new Error(`Invalid number for ${name}: ${value}`);
+  if (opts?.min !== undefined && n < opts.min) throw new Error(`${name} must be >= ${opts.min}`);
+  if (opts?.max !== undefined && n > opts.max) throw new Error(`${name} must be <= ${opts.max}`);
+  return n;
+}
+
 // ============================================================================
 // AGENT LOADER
 // ============================================================================
@@ -976,59 +1043,92 @@ async function loadAgentConfig(supabase: SupabaseClient, agentId: string): Promi
 // MAIN HANDLER
 // ============================================================================
 
-const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
+// Default client — overridden per-agent if api_key is set
+const defaultAnthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
+
+function getAnthropicClient(agent: AgentConfig): Anthropic {
+  const key = agent.api_key || defaultAnthropicKey;
+  return new Anthropic({ apiKey: key });
+}
+
+// CORS: use ALLOWED_ORIGINS env var (comma-separated) or fall back to wildcard for local dev
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "*").split(",").map((s: string) => s.trim());
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes("*") ? "*" : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]);
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405, headers: { "Content-Type": "application/json" },
+      status: 405, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   }
 
   try {
-    const { agentId, storeId, message, conversationHistory, source, conversationId } = await req.json();
+    // ── Auth gate: require valid JWT or service-role key ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } });
+    }
+
+    const token = authHeader.substring(7);
+
+    // Create service-role client for data operations
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Validate the JWT — reject if invalid/expired
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } });
+    }
+
+    const body = await req.json();
+    const { agentId, storeId, message, conversationHistory, source, conversationId } = body;
 
     if (!agentId || !message) {
       return new Response(JSON.stringify({ error: "agentId and message required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } });
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } });
     }
 
-    // Create client with service role for full access
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
-    // Extract user info from Authorization header (JWT token)
-    const authHeader = req.headers.get("Authorization");
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      try {
-        // Verify and decode JWT to get user info
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (!error && user) {
-          userId = user.id;
-          userEmail = user.email || null;
-        }
-      } catch {
-        // Continue without user info if token is invalid
+    // Verify user has access to the requested store
+    if (storeId) {
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+      const { data: storeAccess, error: storeErr } = await userClient
+        .from("stores")
+        .select("id")
+        .eq("id", storeId)
+        .limit(1);
+      if (storeErr || !storeAccess?.length) {
+        return new Response(JSON.stringify({ error: "Access denied to store" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } });
       }
     }
+
+    // User info from validated JWT (ignore body.userId to prevent spoofing)
+    const userId: string = user.id;
+    const userEmail: string | null = user.email || null;
 
     const agent = await loadAgentConfig(supabase, agentId);
     if (!agent) {
       return new Response(JSON.stringify({ error: "Agent not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } });
+        { status: 404, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } });
     }
 
     // Load tools from registry, filter for this agent
@@ -1036,20 +1136,73 @@ serve(async (req: Request) => {
     const tools = getToolsForAgent(agent, allTools);
     const traceId = crypto.randomUUID();
 
-    // Use provided conversation ID or generate one (agent-specific session)
-    const sessionId = conversationId || `${agentId}-${userId || "anon"}`;
+    // Resolve or create conversation in ai_conversations
+    let activeConversationId: string;
+    if (conversationId) {
+      activeConversationId = conversationId;
+    } else {
+      // Create new conversation (user_id FK requires valid auth.users ID — null if invalid)
+      let conv = await supabase.from("ai_conversations").insert({
+        store_id: storeId || null,
+        user_id: userId || null,
+        agent_id: agentId,
+        title: message.substring(0, 100),
+        metadata: { agentName: agent.name, source: source || "whale_chat" }
+      }).select("id").single();
+      if (conv.error && userId) {
+        // FK violation on user_id — retry without it
+        conv = await supabase.from("ai_conversations").insert({
+          store_id: storeId || null,
+          agent_id: agentId,
+          title: message.substring(0, 100),
+          metadata: { agentName: agent.name, source: source || "whale_chat", userId, userEmail }
+        }).select("id").single();
+      }
+      activeConversationId = conv.data?.id || crypto.randomUUID();
+    }
 
-    // Build system prompt
+    // Build system prompt from agent config
     let systemPrompt = agent.system_prompt || "You are a helpful assistant.";
     if (storeId) systemPrompt += `\n\nYou are operating for store_id: ${storeId}. Always include this in tool calls that require it.`;
     if (!agent.can_modify) systemPrompt += "\n\nIMPORTANT: You have read-only access. Do not attempt to modify any data.";
+
+    // Tone & verbosity from agent config
+    if (agent.tone && agent.tone !== "professional") {
+      systemPrompt += `\n\nTone: Respond in a ${agent.tone} tone.`;
+    }
+    if (agent.verbosity === "concise") {
+      systemPrompt += "\n\nBe concise — short answers, minimal explanation.";
+    } else if (agent.verbosity === "verbose") {
+      systemPrompt += "\n\nBe thorough — provide detailed answers with full context.";
+    }
+
+    // Context config — enrich with location/customer context
+    if (agent.context_config) {
+      const ctx = agent.context_config;
+      if (ctx.includeLocations && ctx.locationIds?.length) {
+        systemPrompt += `\n\nFocus on these locations: ${ctx.locationIds.join(", ")}`;
+      }
+      if (ctx.includeCustomers && ctx.customerSegments?.length) {
+        systemPrompt += `\n\nFocus on these customer segments: ${ctx.customerSegments.join(", ")}`;
+      }
+    }
+
+    // Per-agent Anthropic client (uses agent's api_key if set)
+    const anthropic = getAnthropicClient(agent);
 
     const messages: Anthropic.MessageParam[] = [
       ...(conversationHistory || []),
       { role: "user", content: message }
     ];
 
-    // Log user message to audit_logs
+    // Insert user message to ai_messages + audit_logs
+    try {
+      await supabase.from("ai_messages").insert({
+        conversation_id: activeConversationId,
+        role: "user",
+        content: [{ type: "text", text: message }]
+      });
+    } catch (err) { console.error("[audit]", err); }
     try {
       await supabase.from("audit_logs").insert({
         action: "chat.user_message",
@@ -1058,17 +1211,33 @@ serve(async (req: Request) => {
         resource_type: "chat_message",
         resource_id: agentId,
         request_id: traceId,
-        conversation_id: sessionId,
+        conversation_id: activeConversationId,
         user_id: userId || null,
         user_email: userEmail || null,
+        source: source || "whale_chat",
         details: {
-          source: source || "whale_chat",
+          message,
           agent_id: agentId,
-          message: message,
+          agent_name: agent.name,
+          model: agent.model,
+          temperature: agent.temperature,
+          tone: agent.tone,
+          verbosity: agent.verbosity,
+          system_prompt: systemPrompt,
+          max_tokens: agent.max_tokens,
+          max_tool_calls: agent.max_tool_calls,
+          enabled_tools: agent.enabled_tools,
+          can_query: agent.can_query,
+          can_send: agent.can_send,
+          can_modify: agent.can_modify,
+          conversation_id: activeConversationId,
+          user_id: userId,
+          user_email: userEmail,
+          source: source || "whale_chat",
           conversation_history_length: conversationHistory?.length || 0
         }
       });
-    } catch { /* don't fail if logging fails */ }
+    } catch (err) { console.error("[audit]", err); }
 
     // SSE stream
     const encoder = new TextEncoder();
@@ -1081,7 +1250,8 @@ serve(async (req: Request) => {
         let turnCount = 0, toolCallCount = 0, totalIn = 0, totalOut = 0;
         let finalResponse = "", continueLoop = true;
         const chatStartTime = Date.now();
-        let allTextResponses: string[] = [];  // Collect all text across turns
+        let allTextResponses: string[] = [];
+        let allToolNames: string[] = [];
 
         try {
           while (continueLoop && turnCount < (agent.max_tool_calls || 10)) {
@@ -1090,6 +1260,7 @@ serve(async (req: Request) => {
             const response = await anthropic.messages.create({
               model: agent.model || "claude-sonnet-4-20250514",
               max_tokens: agent.max_tokens || 4096,
+              temperature: agent.temperature ?? 0.7,
               system: systemPrompt,
               tools: tools.map(t => ({ name: t.name, description: t.description, input_schema: t.input_schema })),
               messages,
@@ -1113,8 +1284,9 @@ serve(async (req: Request) => {
                 }
               } else if (event.type === "content_block_stop" && currentToolUse) {
                 try {
-                  toolUseBlocks.push({ id: currentToolUse.id, name: currentToolUse.name, input: JSON.parse(currentToolUse.input) });
-                } catch { /* skip invalid JSON */ }
+                  const rawInput = currentToolUse.input.trim() || "{}";
+                  toolUseBlocks.push({ id: currentToolUse.id, name: currentToolUse.name, input: JSON.parse(rawInput) });
+                } catch (err) { console.error("[json-parse]", err); }
                 currentToolUse = null;
               } else if (event.type === "message_delta" && event.usage) {
                 totalOut += event.usage.output_tokens;
@@ -1138,10 +1310,11 @@ serve(async (req: Request) => {
             const toolResults: Anthropic.MessageParam["content"] = [];
             for (const tu of toolUseBlocks) {
               toolCallCount++;
+              allToolNames.push(tu.name);
               const toolArgs = { ...tu.input };
               if (!toolArgs.store_id && storeId) toolArgs.store_id = storeId;
 
-              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId, userId, userEmail, source);
+              const result = await executeTool(supabase, tu.name, toolArgs, storeId, traceId, userId, userEmail, source, activeConversationId);
               send({ type: "tool_result", name: tu.name, success: result.success, result: result.success ? result.data : result.error });
               toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result.success ? result.data : { error: result.error }) });
             }
@@ -1157,19 +1330,36 @@ serve(async (req: Request) => {
           }
 
           send({ type: "usage", usage: { input_tokens: totalIn, output_tokens: totalOut } });
-          send({ type: "done" });
 
-          // Log execution trace
-          try {
-            await supabase.from("agent_execution_traces").insert({
-              agent_id: agentId, store_id: storeId, user_message: message,
-              final_response: finalResponse, success: true, turn_count: turnCount,
-              tool_calls: toolCallCount, input_tokens: totalIn, output_tokens: totalOut
-            });
-          } catch { /* don't fail */ }
-
-          // Log assistant response to audit_logs (combine all text from all turns)
+          // Insert assistant message to ai_messages
           const fullResponse = allTextResponses.join("\n\n") || finalResponse;
+          const usedToolNames = [...new Set(allToolNames)];
+          try {
+            await supabase.from("ai_messages").insert({
+              conversation_id: activeConversationId,
+              role: "assistant",
+              content: [{ type: "text", text: fullResponse }],
+              is_tool_use: toolCallCount > 0,
+              tool_names: usedToolNames.length > 0 ? usedToolNames : null,
+              token_count: totalIn + totalOut
+            });
+          } catch (err) { console.error("[audit]", err); }
+
+          // Update conversation metadata with latest stats
+          try {
+            await supabase.from("ai_conversations").update({
+              metadata: {
+                agentName: agent.name,
+                source: source || "whale_chat",
+                model: agent.model,
+                lastTurnTokens: totalIn + totalOut,
+                lastToolCalls: toolCallCount,
+                lastDurationMs: Date.now() - chatStartTime
+              }
+            }).eq("id", activeConversationId);
+          } catch (err) { console.error("[audit]", err); }
+
+          // Audit log: assistant response (prompt + response + telemetry for dashboard)
           try {
             await supabase.from("audit_logs").insert({
               action: "chat.assistant_response",
@@ -1178,24 +1368,42 @@ serve(async (req: Request) => {
               resource_type: "chat_message",
               resource_id: agentId,
               request_id: traceId,
-              conversation_id: sessionId,
+              conversation_id: activeConversationId,
               duration_ms: Date.now() - chatStartTime,
               user_id: userId || null,
               user_email: userEmail || null,
+              source: source || "whale_chat",
+              input_tokens: totalIn,
+              output_tokens: totalOut,
+              model: agent.model || "claude-sonnet-4-20250514",
               details: {
-                source: source || "whale_chat",
+                message,
+                response: fullResponse,
                 agent_id: agentId,
                 agent_name: agent.name,
-                model: agent.model || "claude-sonnet-4-20250514",
-                response: fullResponse,
+                model: agent.model,
+                temperature: agent.temperature,
+                tone: agent.tone,
+                verbosity: agent.verbosity,
+                system_prompt: systemPrompt,
                 turn_count: turnCount,
                 tool_calls: toolCallCount,
+                tool_names: usedToolNames,
                 input_tokens: totalIn,
                 output_tokens: totalOut,
-                total_tokens: totalIn + totalOut
+                total_tokens: totalIn + totalOut,
+                conversation_id: activeConversationId,
+                user_id: userId,
+                user_email: userEmail,
+                source: source || "whale_chat",
+                can_query: agent.can_query,
+                can_send: agent.can_send,
+                can_modify: agent.can_modify
               }
             });
-          } catch { /* don't fail */ }
+          } catch (err) { console.error("[audit]", err); }
+
+          send({ type: "done", conversationId: activeConversationId });
 
         } catch (err) {
           send({ type: "error", error: String(err) });
@@ -1210,12 +1418,12 @@ serve(async (req: Request) => {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "Access-Control-Allow-Origin": "*",
+        ...getCorsHeaders(req),
       },
     });
 
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { "Content-Type": "application/json" } });
+      { status: 500, headers: { "Content-Type": "application/json", ...getCorsHeaders(req) } });
   }
 });

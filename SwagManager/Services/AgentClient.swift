@@ -15,33 +15,34 @@ struct ClientConnectionState: Equatable {
 // Implements Anthropic multi-turn conversation pattern with persistent storage
 
 @MainActor
-class AgentClient: ObservableObject {
+@Observable
+class AgentClient {
     static let shared = AgentClient()
 
-    // MARK: - Connection State (UNIFIED - single @Published to prevent layout recursion)
+    // MARK: - Connection State (UNIFIED)
 
-    @Published private(set) var connectionState = ClientConnectionState()
+    private(set) var connectionState = ClientConnectionState()
 
     /// Convenience accessors for backwards compatibility
     var isConnected: Bool { connectionState.isConnected }
     var isRunning: Bool { connectionState.isRunning }
     var currentTool: String? { connectionState.currentTool }
 
-    @Published private(set) var serverVersion: String?
-    @Published private(set) var availableTools: [ToolMetadata] = []
+    private(set) var serverVersion: String?
+    private(set) var availableTools: [ToolMetadata] = []
 
     // MARK: - Conversation State
 
-    @Published private(set) var currentConversationId: String?
-    @Published private(set) var conversations: [ConversationMeta] = []
+    private(set) var currentConversationId: String?
+    private(set) var conversations: [ConversationMeta] = []
 
     // MARK: - Execution State
 
-    @Published private(set) var currentModel: String?
-    @Published private(set) var executionLogs: [ExecutionLogEntry] = []
-    @Published private(set) var debugMessages: [DebugMessage] = []
-    @Published private(set) var conversationTrace: [ConversationMessage] = []
-    @Published private(set) var sessionMetrics: SessionMetrics = SessionMetrics()
+    private(set) var currentModel: String?
+    private(set) var executionLogs: [ExecutionLogEntry] = []
+    private(set) var debugMessages: [DebugMessage] = []
+    private(set) var conversationTrace: [ConversationMessage] = []
+    private(set) var sessionMetrics: SessionMetrics = SessionMetrics()
 
     // MARK: - Configuration
 

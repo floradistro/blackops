@@ -4,7 +4,7 @@ import SwiftUI
 
 struct TelemetrySection: View {
     let storeId: UUID?
-    @StateObject private var telemetry = TelemetryService.shared
+    @Environment(\.telemetryService) private var telemetry
     @State private var isExpanded = true
     @State private var showFullPanel = false
 
@@ -181,6 +181,7 @@ struct AgentToolsSection: View {
     @State private var codeTools: [ToolMetadata] = []
     @State private var isLoading = true
     @State private var toolsByCategoryCache: [(category: String, tools: [ToolMetadata])] = []
+    @State private var loadError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -210,7 +211,18 @@ struct AgentToolsSection: View {
                 .font(.system(size: 10))
             }
 
-            if isLoading {
+            if let loadError {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundStyle(.secondary)
+                    Text(loadError)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DesignSystem.Colors.surfaceTertiary)
+            } else if isLoading {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     Text("Loading tools from registry...")
@@ -374,7 +386,7 @@ struct AgentToolsSection: View {
             let grouped = Dictionary(grouping: registryTools) { $0.category }
             toolsByCategoryCache = grouped.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
         } catch {
-            print("[AgentToolsSection] Failed to load tools: \(error)")
+            loadError = "Failed to load tools: \(error.localizedDescription)"
         }
         isLoading = false
     }

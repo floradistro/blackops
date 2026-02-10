@@ -48,7 +48,19 @@ struct TelemetrySpan: Identifiable, Codable {
         severity = try container.decode(String.self, forKey: .severity)
         durationMs = try container.decodeIfPresent(Int.self, forKey: .durationMs)
         errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
-        details = try container.decodeIfPresent([String: AnyCodable].self, forKey: .details)
+
+        // Robust details decoding: Supabase Realtime may send JSONB as a serialized
+        // JSON string instead of a nested object. Handle both cases.
+        if let detailsDict = try? container.decodeIfPresent([String: AnyCodable].self, forKey: .details) {
+            details = detailsDict
+        } else if let detailsString = try? container.decodeIfPresent(String.self, forKey: .details),
+                  let data = detailsString.data(using: .utf8),
+                  let parsed = try? JSONDecoder().decode([String: AnyCodable].self, from: data) {
+            details = parsed
+        } else {
+            details = nil
+        }
+
         requestId = try container.decodeIfPresent(String.self, forKey: .requestId)
         conversationId = try container.decodeIfPresent(String.self, forKey: .conversationId)
         storeId = try container.decodeIfPresent(UUID.self, forKey: .storeId)
@@ -313,6 +325,219 @@ struct TelemetrySpan: Identifiable, Codable {
         action.hasPrefix("tool.")
     }
 
+    // MARK: - Subagent Detection & Display
+
+    /// Whether this span represents a subagent execution
+    var isSubagent: Bool {
+        action.hasPrefix("subagent.") || (details?["is_subagent"]?.value as? Bool) == true
+    }
+
+    /// Subagent type (explore, plan, general-purpose, research)
+    var subagentType: String? {
+        if action.hasPrefix("subagent.") {
+            return String(action.dropFirst(9))  // "subagent." is 9 chars
+        }
+        return details?["agent_type"]?.value as? String
+    }
+
+    /// Display name for subagent (e.g., "Explore Agent")
+    var subagentDisplayName: String? {
+        if let name = details?["display_name"]?.value as? String {
+            return name
+        }
+        guard let type = subagentType else { return nil }
+        return type.replacingOccurrences(of: "-", with: " ").capitalized + " Agent"
+    }
+
+    /// SF Symbol icon for subagent type
+    var subagentIcon: String {
+        guard let type = subagentType else { return "cpu" }
+        switch type {
+        case "explore":
+            return "magnifyingglass"
+        case "plan":
+            return "list.clipboard"
+        case "general-purpose":
+            return "cpu"
+        case "research":
+            return "books.vertical"
+        default:
+            return "gearshape"
+        }
+    }
+
+    /// Display color for subagent type (hex string)
+    var subagentColor: String {
+        if let color = details?["display_color"]?.value as? String {
+            return color
+        }
+        guard let type = subagentType else { return "#6B7280" }
+        switch type {
+        case "explore":
+            return "#3B82F6"  // Blue
+        case "plan":
+            return "#8B5CF6"  // Purple
+        case "general-purpose":
+            return "#10B981"  // Green
+        case "research":
+            return "#F59E0B"  // Amber
+        default:
+            return "#6B7280"  // Gray
+        }
+    }
+
+    /// Preview of the subagent's prompt/task
+    var subagentPromptPreview: String? {
+        details?["prompt_preview"]?.value as? String
+    }
+
+    /// Summary of the subagent's output
+    var subagentSummary: String? {
+        details?["summary"]?.value as? String
+    }
+
+    /// Number of tools used by subagent
+    var subagentToolCount: Int? {
+        details?["tool_count"]?.value as? Int
+    }
+
+    /// Tools used by subagent (array of names)
+    var subagentToolsUsed: [String]? {
+        details?["tools_used"]?.value as? [String]
+    }
+
+    /// Parent trace ID (for hierarchy visualization)
+    var parentTraceId: String? {
+        details?["parent_trace_id"]?.value as? String
+    }
+
+    /// Parent span ID (for hierarchy visualization)
+    var parentSpanIdFromDetails: String? {
+        details?["parent_span_id"]?.value as? String
+    }
+
+    /// Number of turns the subagent took
+    var subagentTurns: Int? {
+        details?["turns"]?.value as? Int
+    }
+
+    // MARK: - Team Detection & Display
+
+    /// Whether this span represents an Agent Team execution
+    var isTeam: Bool {
+        action.hasPrefix("team.") || (details?["is_team"]?.value as? Bool) == true
+    }
+
+    /// Whether this span represents a teammate in a team
+    var isTeammate: Bool {
+        (details?["is_teammate"]?.value as? Bool) == true
+    }
+
+    /// Whether this span is the team coordinator/lead
+    var isTeamCoordinator: Bool {
+        (details?["is_team_coordinator"]?.value as? Bool) == true
+    }
+
+    /// Team ID (for grouping team events)
+    var teamId: String? {
+        details?["team_id"]?.value as? String
+    }
+
+    /// Team name
+    var teamName: String? {
+        details?["team_name"]?.value as? String
+    }
+
+    /// Teammate ID (for individual teammate spans)
+    var teammateId: String? {
+        details?["teammate_id"]?.value as? String
+    }
+
+    /// Teammate name
+    var teammateName: String? {
+        details?["teammate_name"]?.value as? String
+    }
+
+    /// Number of teammates in the team
+    var teammateCount: Int? {
+        details?["teammate_count"]?.value as? Int
+    }
+
+    /// Number of tasks in the team
+    var teamTaskCount: Int? {
+        details?["task_count"]?.value as? Int
+    }
+
+    /// Tasks completed by team
+    var teamTasksCompleted: Int? {
+        details?["tasks_completed"]?.value as? Int
+    }
+
+    /// Tasks total in team
+    var teamTasksTotal: Int? {
+        details?["tasks_total"]?.value as? Int
+    }
+
+    /// Team completion percentage
+    var teamPercentComplete: Int? {
+        details?["percent_complete"]?.value as? Int
+    }
+
+    /// Parent conversation ID (for linking teammate traces to parent)
+    var parentConversationId: String? {
+        details?["parent_conversation_id"]?.stringValue
+    }
+
+    /// Display name for team (from telemetry)
+    var teamDisplayName: String? {
+        if let name = details?["display_name"]?.value as? String {
+            return name
+        }
+        if isTeamCoordinator, let name = teamName {
+            return "Team: \(name)"
+        }
+        if isTeammate, let name = teammateName {
+            return name
+        }
+        return nil
+    }
+
+    /// SF Symbol icon for team
+    var teamIcon: String {
+        if let icon = details?["display_icon"]?.value as? String {
+            return icon
+        }
+        if isTeamCoordinator {
+            return "person.3.fill"
+        }
+        if isTeammate {
+            return "person.fill"
+        }
+        return "person.3"
+    }
+
+    /// Display color for team (hex string)
+    var teamColor: String {
+        if let color = details?["display_color"]?.value as? String {
+            return color
+        }
+        if isTeamCoordinator {
+            return "#10B981"  // Green for coordinator
+        }
+        if isTeammate {
+            return "#3B82F6"  // Blue for teammates
+        }
+        return "#6B7280"  // Gray default
+    }
+
+    /// Team action type (create, complete, teammate_start, teammate_done, etc.)
+    var teamAction: String? {
+        if action.hasPrefix("team.") {
+            return String(action.dropFirst(5))  // "team." is 5 chars
+        }
+        return nil
+    }
+
     /// Tool action (e.g., "adjust" from "tool.inventory.adjust")
     var toolAction: String? {
         let parts = action.components(separatedBy: ".")
@@ -332,6 +557,99 @@ struct TelemetrySpan: Identifiable, Codable {
         // Show error message for failures
         if isError, let error = errorMessage ?? toolError {
             return "Error: \(error.prefix(100))"
+        }
+
+        // For subagent spans, show rich visualization
+        if isSubagent {
+            let name = subagentDisplayName ?? "Subagent"
+            var parts: [String] = []
+
+            // Add prompt preview
+            if let prompt = subagentPromptPreview {
+                parts.append("Task: \(prompt)")
+            }
+
+            // Add tools used
+            if let toolCount = subagentToolCount, toolCount > 0 {
+                if let tools = subagentToolsUsed {
+                    parts.append("Tools: \(tools.joined(separator: ", "))")
+                } else {
+                    parts.append("\(toolCount) tool\(toolCount == 1 ? "" : "s") used")
+                }
+            }
+
+            // Add turns
+            if let turns = subagentTurns, turns > 1 {
+                parts.append("\(turns) turns")
+            }
+
+            // Add summary preview
+            if let summary = subagentSummary {
+                let preview = summary.prefix(200)
+                parts.append(preview.count < summary.count ? "\(preview)..." : String(preview))
+            }
+
+            return parts.isEmpty ? name : parts.joined(separator: " • ")
+        }
+
+        // For team spans, show team visualization
+        if isTeam {
+            var parts: [String] = []
+
+            // Team coordinator events
+            if isTeamCoordinator {
+                if let teamAction = teamAction {
+                    switch teamAction {
+                    case "create":
+                        if let teammates = teammateCount, let tasks = teamTaskCount {
+                            parts.append("\(teammates) teammate\(teammates == 1 ? "" : "s")")
+                            parts.append("\(tasks) task\(tasks == 1 ? "" : "s")")
+                        }
+                    case "complete":
+                        if let completed = teamTasksCompleted, let total = teamTasksTotal {
+                            parts.append("\(completed)/\(total) tasks completed")
+                            if let percent = teamPercentComplete {
+                                parts.append("\(percent)%")
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+                if let name = teamName {
+                    return parts.isEmpty ? "Team: \(name)" : "Team: \(name) • " + parts.joined(separator: " • ")
+                }
+            }
+
+            // Teammate events
+            if isTeammate {
+                if let teamAction = teamAction {
+                    switch teamAction {
+                    case "teammate_start":
+                        if let name = teammateName {
+                            parts.append("\(name) started")
+                        }
+                    case "teammate_done":
+                        if let name = teammateName {
+                            parts.append("\(name) completed")
+                        }
+                        if let input = inputTokens, let output = outputTokens {
+                            parts.append("\(input)→\(output) tokens")
+                        }
+                    case "task_complete":
+                        if let name = teammateName {
+                            parts.append("\(name)")
+                        }
+                        parts.append("task completed")
+                    default:
+                        break
+                    }
+                }
+                return parts.isEmpty ? (teammateName ?? "Teammate") : parts.joined(separator: " • ")
+            }
+
+            // Generic team event
+            return teamDisplayName ?? parts.joined(separator: " • ")
         }
 
         // For API requests, show cache info
@@ -916,22 +1234,54 @@ struct Trace: Identifiable, Hashable {
 
 /// A conversation session (group of traces with same conversation_id)
 /// One entry in the sidebar = one conversation session
+/// Sessions can be nested: teammates have parent_conversation_id linking to coordinator
 struct TelemetrySession: Identifiable, Hashable {
     let id: String  // conversation_id
     let traces: [Trace]
     let startTime: Date
     let endTime: Date?
 
+    /// Child sessions (teammates) linked via parent_conversation_id
+    var childSessions: [TelemetrySession] = []
+
+    /// Parent conversation ID (if this is a teammate session)
+    var parentConversationId: String? {
+        // Get from any span's details
+        allSpans.first(where: { $0.parentConversationId != nil })?.parentConversationId
+    }
+
+    /// Whether this session is a teammate (has parent)
+    var isTeammate: Bool {
+        parentConversationId != nil
+    }
+
+    /// Whether this session is a team coordinator (has children)
+    var isTeamCoordinator: Bool {
+        !childSessions.isEmpty
+    }
+
+    /// Team name (from spans)
+    var teamName: String? {
+        allSpans.first(where: { $0.teamName != nil })?.teamName
+    }
+
+    /// Teammate name (from spans)
+    var teammateName: String? {
+        allSpans.first(where: { $0.teammateName != nil })?.teammateName
+    }
+
     /// Include trace count + span count so SwiftUI detects realtime updates
     static func == (lhs: TelemetrySession, rhs: TelemetrySession) -> Bool {
         lhs.id == rhs.id
             && lhs.traces.count == rhs.traces.count
             && lhs.allSpans.count == rhs.allSpans.count
+            && lhs.childSessions.count == rhs.childSessions.count
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(traces.count)
+        hasher.combine(childSessions.count)
     }
 
     var duration: TimeInterval? {

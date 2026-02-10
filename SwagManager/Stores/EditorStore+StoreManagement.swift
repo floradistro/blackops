@@ -27,6 +27,7 @@ class EditorStore {
     var isSaving = false
     var refreshTrigger = UUID()
     var error: String?
+    var showError: Bool = false
 
     // Sheet states
     var showNewStoreSheet = false
@@ -50,6 +51,7 @@ extension EditorStore {
             }
         } catch {
             self.error = "Failed to load stores: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 
@@ -82,6 +84,7 @@ extension EditorStore {
             selectedStore = newStore
         } catch {
             self.error = "Failed to create store: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 

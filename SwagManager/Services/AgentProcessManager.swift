@@ -28,19 +28,20 @@ enum AgentState: Equatable {
 // Spawns on app launch, terminates on app quit
 
 @MainActor
-class AgentProcessManager: ObservableObject {
+@Observable
+class AgentProcessManager {
     static let shared = AgentProcessManager()
 
-    // MARK: - Published State (SINGLE source of truth)
+    // MARK: - State (SINGLE source of truth)
 
-    /// Unified agent state - ONE @Published var to prevent layout recursion
-    @Published private(set) var state: AgentState = .idle
+    /// Unified agent state
+    private(set) var state: AgentState = .idle
 
     /// Convenience accessors for backwards compatibility
     var isRunning: Bool { state.isRunning }
     var error: String? { state.error }
 
-    @Published private(set) var lastOutput: String = ""
+    private(set) var lastOutput: String = ""
 
     // MARK: - Process
 
@@ -66,10 +67,8 @@ class AgentProcessManager: ObservableObject {
 
     // MARK: - State Transition (SINGLE POINT OF MUTATION)
 
-    /// Transition to new state - coalesced, deferred, guarded against duplicates
-    /// Uses withTransaction to suppress animations and prevent layout recursion
+    /// Transition to new state - guarded against duplicates
     private func transition(to newState: AgentState, reason: String = "") {
-        // Guard against duplicate emissions - critical for preventing redundant invalidations
         guard state != newState else {
             FreezeDebugger.logStateChange("agentState (SKIPPED - same)", old: state, new: newState)
             return
@@ -80,24 +79,7 @@ class AgentProcessManager: ObservableObject {
             reason: reason
         )
         FreezeDebugger.logStateChange("agentState", old: state, new: newState)
-
-        // Emit state change with animations disabled to prevent layout recursion
-        // This ensures observing views update without triggering animation passes
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            state = newState
-        }
-    }
-
-    /// Deferred transition - use when called from callbacks that might be during layout
-    private func transitionDeferred(to newState: AgentState, reason: String = "") {
-        // Guard against duplicate emissions BEFORE deferring
-        guard state != newState else { return }
-
-        DispatchQueue.main.async { [weak self] in
-            self?.transition(to: newState, reason: reason)
-        }
+        state = newState
     }
 
     // MARK: - Lifecycle
@@ -111,8 +93,7 @@ class AgentProcessManager: ObservableObject {
 
         FreezeDebugger.printRunloopContext("AgentProcessManager.start()")
 
-        // Transition to launching (deferred to avoid layout recursion if called from .task)
-        transitionDeferred(to: .launching, reason: "start() called")
+        transition(to: .launching, reason: "start() called")
 
         // If port is already in use, just connect to the existing server
         let portInUse = isPortInUse(port)
@@ -133,13 +114,13 @@ class AgentProcessManager: ObservableObject {
         // Check if npm/node is available
         guard FileManager.default.fileExists(atPath: "/usr/local/bin/node") ||
               FileManager.default.fileExists(atPath: "/opt/homebrew/bin/node") else {
-            transitionDeferred(to: .failed("Node.js not found. Please install Node.js."), reason: "Node.js not found")
+            transition(to: .failed("Node.js not found. Please install Node.js."), reason: "Node.js not found")
             return
         }
 
         // Check if server directory exists
         guard FileManager.default.fileExists(atPath: serverPath) else {
-            transitionDeferred(to: .failed("Agent server not found at \(serverPath)"), reason: "server path not found")
+            transition(to: .failed("Agent server not found at \(serverPath)"), reason: "server path not found")
             return
         }
 
@@ -156,10 +137,10 @@ class AgentProcessManager: ObservableObject {
         process?.currentDirectoryURL = URL(fileURLWithPath: serverPath)
 
         // Environment variables
+        // The agent server should source its own .env for SUPABASE_SERVICE_ROLE_KEY
         var env = ProcessInfo.processInfo.environment
         env["AGENT_PORT"] = String(port)
         env["SUPABASE_URL"] = SupabaseConfig.url.absoluteString
-        env["SUPABASE_SERVICE_ROLE_KEY"] = SupabaseConfig.serviceRoleKey
         process?.environment = env
 
         // Handle output
@@ -205,13 +186,13 @@ class AgentProcessManager: ObservableObject {
                 guard let proc = self.process, proc.isRunning else {
                     // ONE state change for failure
                     let errorMsg = self.state.error ?? "Agent server process exited immediately. Check Node.js installation."
-                    self.transitionDeferred(to: .failed(errorMsg), reason: "process died immediately")
+                    self.transition(to: .failed(errorMsg), reason: "process died immediately")
                     print("[AgentProcessManager] Process died - NOT connecting client")
                     return
                 }
 
                 // Process is running - ONE state change
-                self.transitionDeferred(to: .running, reason: "process verified running")
+                self.transition(to: .running, reason: "process verified running")
                 print("[AgentProcessManager] Agent server running on port \(self.port)")
 
                 try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 more seconds
@@ -226,7 +207,7 @@ class AgentProcessManager: ObservableObject {
             }
         } catch {
             // ONE state change for failure
-            transitionDeferred(to: .failed("Failed to start agent server: \(error.localizedDescription)"), reason: "launch error")
+            transition(to: .failed("Failed to start agent server: \(error.localizedDescription)"), reason: "launch error")
             print("[AgentProcessManager] Error: \(error)")
         }
     }

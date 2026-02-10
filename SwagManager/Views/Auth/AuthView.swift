@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct AuthView: View {
-    @EnvironmentObject var authManager: AuthManager
+    @Environment(\.authManager) private var authManager
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
@@ -88,5 +88,4 @@ struct AuthView: View {
 
 #Preview {
     AuthView()
-        .environmentObject(AuthManager.shared)
 }

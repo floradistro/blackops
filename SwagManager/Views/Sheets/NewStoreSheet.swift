@@ -5,7 +5,7 @@ import SwiftUI
 
 struct NewStoreSheet: View {
     @Environment(\.editorStore) private var store
-    @ObservedObject var authManager: AuthManager
+    @Environment(\.authManager) private var authManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""

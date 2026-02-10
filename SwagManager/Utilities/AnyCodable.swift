@@ -7,6 +7,39 @@ public struct AnyCodable: Codable, Hashable {
         self.value = value
     }
 
+    /// Safely extract as String, handling NSString bridging and other edge cases
+    public var stringValue: String? {
+        if let str = value as? String {
+            return str
+        }
+        if let nsStr = value as? NSString {
+            return nsStr as String
+        }
+        // Handle case where value might be wrapped in another AnyCodable
+        if let nested = value as? AnyCodable {
+            return nested.stringValue
+        }
+        // Handle case where value is a number that should be a string (UUID stored as different type)
+        if let num = value as? NSNumber {
+            return num.stringValue
+        }
+        // Handle Substring
+        if let substr = value as? Substring {
+            return String(substr)
+        }
+        return nil
+    }
+
+    /// Safely extract as Int
+    public var intValue: Int? {
+        value as? Int
+    }
+
+    /// Safely extract as Bool
+    public var boolValue: Bool? {
+        value as? Bool
+    }
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 

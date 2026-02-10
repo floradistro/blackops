@@ -13,16 +13,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct SwagManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var authManager = AuthManager.shared
+    @State private var authManager = AuthManager.shared
     @State private var editorStore = EditorStore()
     @State private var toolbarState = ToolbarState()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(authManager)
+                .environment(\.authManager, authManager)
                 .environment(\.editorStore, editorStore)
                 .environment(\.toolbarState, toolbarState)
+                .environment(\.telemetryService, TelemetryService.shared)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .windowStyle(.hiddenTitleBar)
@@ -34,7 +35,7 @@ struct SwagManagerApp: App {
 
         Settings {
             SettingsView()
-                .environmentObject(authManager)
+                .environment(\.authManager, authManager)
         }
     }
 }

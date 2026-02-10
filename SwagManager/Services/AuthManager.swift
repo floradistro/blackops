@@ -1,18 +1,20 @@
 import Foundation
+import SwiftUI
 import Supabase
 import Auth
 
 @MainActor
-class AuthManager: ObservableObject {
+@Observable
+class AuthManager {
     static let shared = AuthManager()
 
-    @Published var currentUser: User?
-    @Published var session: Session?
-    @Published var isAuthenticated = false
-    @Published var isLoading = true
-    @Published var error: String?
-    @Published var email = ""
-    @Published var password = ""
+    var currentUser: User?
+    var session: Session?
+    var isAuthenticated = false
+    var isLoading = true
+    var error: String?
+    var email = ""
+    var password = ""
 
     private var supabase: SupabaseClient { SupabaseService.shared.client }
 
@@ -50,7 +52,10 @@ class AuthManager: ObservableObject {
                 throw NSError(domain: "Timeout", code: -1, userInfo: nil)
             }
 
-            let result = try await group.next()!
+            // First task to complete wins; the other is cancelled
+            guard let result = try await group.next() else {
+                throw NSError(domain: "Timeout", code: -1, userInfo: nil)
+            }
             group.cancelAll()
             return result
         }
@@ -130,5 +135,22 @@ class AuthManager: ObservableObject {
 
     func resetPassword(email: String) async throws {
         try await supabase.auth.resetPasswordForEmail(email)
+    }
+}
+
+// MARK: - Environment Support
+
+private struct AuthManagerKey: EnvironmentKey {
+    static var defaultValue: AuthManager {
+        MainActor.assumeIsolated {
+            AuthManager.shared
+        }
+    }
+}
+
+extension EnvironmentValues {
+    var authManager: AuthManager {
+        get { self[AuthManagerKey.self] }
+        set { self[AuthManagerKey.self] = newValue }
     }
 }

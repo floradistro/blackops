@@ -71,7 +71,8 @@ extension EditorStore {
 
             aiAgents = response
         } catch {
-            print("[Agent Load] Error: \(error)")
+            self.error = "Failed to load agents: \(error.localizedDescription)"
+            self.showError = true
         }
 
         isLoadingAgents = false
@@ -89,7 +90,8 @@ extension EditorStore {
 
             await loadAIAgents()
         } catch {
-            print("[Agent Toggle] Error: \(error)")
+            self.error = "Failed to toggle agent: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 
@@ -120,7 +122,8 @@ extension EditorStore {
             await loadAIAgents()
             return newAgent
         } catch {
-            print("[Agent Create] Error: \(error)")
+            self.error = "Failed to create agent: \(error.localizedDescription)"
+            self.showError = true
             return nil
         }
     }
@@ -156,7 +159,8 @@ extension EditorStore {
             print("[Agent Update] Success! Response: \(response.count) rows affected")
             await loadAIAgents()
         } catch {
-            print("[Agent Update] ERROR: \(error)")
+            self.error = "Failed to update agent: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 
@@ -172,7 +176,8 @@ extension EditorStore {
 
             await loadAIAgents()
         } catch {
-            print("[Agent Delete] Error: \(error)")
+            self.error = "Failed to delete agent: \(error.localizedDescription)"
+            self.showError = true
         }
     }
 }

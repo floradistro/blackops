@@ -6,23 +6,30 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.30.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+// CORS: use ALLOWED_ORIGINS env var (comma-separated) or fall back to wildcard for local dev
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "*").split(",").map(s => s.trim());
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes("*") ? "*" : (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]);
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+}
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   }
 
@@ -31,7 +38,7 @@ serve(async (req: Request) => {
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Missing authorization" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   }
 
@@ -49,7 +56,7 @@ serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
       });
     }
 
@@ -59,8 +66,8 @@ serve(async (req: Request) => {
       messages,
       system,
       tools,
-      model = "claude-sonnet-4-20250514",
-      max_tokens = 4096,
+      model: requestedModel = "claude-sonnet-4-20250514",
+      max_tokens: requestedMaxTokens = 4096,
       temperature,
       stream = true,
     } = body;
@@ -68,9 +75,21 @@ serve(async (req: Request) => {
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages array required" }), {
         status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
       });
     }
+
+    // Model allowlist — only permit known Anthropic models
+    const ALLOWED_MODELS = [
+      "claude-sonnet-4-20250514",
+      "claude-haiku-4-5-20251001",
+      "claude-opus-4-20250514",
+    ];
+    const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : "claude-sonnet-4-20250514";
+
+    // Cap max_tokens to prevent abuse (16k ceiling)
+    const MAX_TOKENS_LIMIT = 16384;
+    const max_tokens = Math.min(Math.max(1, Number(requestedMaxTokens) || 4096), MAX_TOKENS_LIMIT);
 
     // Build Anthropic request
     const apiParams: Record<string, unknown> = {
@@ -90,7 +109,7 @@ serve(async (req: Request) => {
         stream: false,
       } as any);
       return new Response(JSON.stringify(response), {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
       });
     }
 
@@ -124,13 +143,13 @@ serve(async (req: Request) => {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        ...corsHeaders,
+        ...getCorsHeaders(req),
       },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   }
 });
