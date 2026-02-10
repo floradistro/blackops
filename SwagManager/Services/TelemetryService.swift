@@ -480,7 +480,9 @@ class TelemetryService {
             }
         }
 
-        recentSessions = rootSessions.sorted { $0.startTime > $1.startTime }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            recentSessions = rootSessions.sorted { $0.startTime > $1.startTime }
+        }
 
         #if DEBUG
         diagLog("rebuildSessions: \(allSessions.count) sessions, \(childrenByParent.count) parents with children, \(allParentedIds.count) child sessions, \(rootSessions.count) roots, parentChildMap=\(parentChildMap.count)")
@@ -800,7 +802,9 @@ class TelemetryService {
                 )
             }.value
 
-            stats = computedStats
+            withAnimation(.easeInOut(duration: 0.3)) {
+                stats = computedStats
+            }
 
         } catch {
             self.error = "Stats error: \(error.localizedDescription)"

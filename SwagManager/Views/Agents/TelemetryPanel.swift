@@ -68,18 +68,24 @@ struct TelemetryPanel: View {
                 .frame(minWidth: 220, idealWidth: 260, maxWidth: 400)
 
             // Center: Live operations (main content, gets most space)
-            if let session = liveSelectedSession {
-                sessionDetailView(session)
-                    .frame(minWidth: 320, idealWidth: 600)
-            } else {
-                emptyState
-                    .frame(minWidth: 320, idealWidth: 600)
+            Group {
+                if let session = liveSelectedSession {
+                    sessionDetailView(session)
+                        .id(session.id)
+                        .transition(.opacity)
+                } else {
+                    emptyState
+                        .transition(.opacity)
+                }
             }
+            .frame(minWidth: 320, idealWidth: 600)
+            .animation(.easeInOut(duration: 0.25), value: selectedSessionId)
 
             // Right: Pinned span panel (optional inspector, moderate priority)
             if let span = pinnedSpan {
                 pinnedSpanPanel(span)
                     .frame(minWidth: 280, idealWidth: 380, maxWidth: 600)
+                    .transition(.opacity)
             }
         }
         .task(id: storeId) {
@@ -120,6 +126,7 @@ struct TelemetryPanel: View {
             // Stats bar
             if let stats = telemetry.stats {
                 statsBar(stats)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 Divider()
             }
 
@@ -132,6 +139,7 @@ struct TelemetryPanel: View {
             if telemetry.isLoading && telemetry.recentSessions.isEmpty {
                 Spacer()
                 ProgressView()
+                    .transition(.opacity)
                 Spacer()
             } else if telemetry.recentSessions.isEmpty {
                 Spacer()
@@ -142,6 +150,7 @@ struct TelemetryPanel: View {
                     Text("No sessions")
                         .foregroundStyle(.secondary)
                 }
+                .transition(.opacity)
                 Spacer()
             } else {
                 ScrollViewReader { sessionProxy in
@@ -166,6 +175,10 @@ struct TelemetryPanel: View {
                             )
                             .tag(session)
                             .id(session.id)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .offset(y: -6)),
+                                removal: .opacity
+                            ))
 
                             // Child sessions (teammates) - shown when team is expanded
                             if session.isTeamCoordinator && expandedTeamIds.contains(session.id) {
@@ -180,7 +193,10 @@ struct TelemetryPanel: View {
                                     .onTapGesture {
                                         selectedSessionId = child.id
                                     }
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
+                                        removal: .opacity
+                                    ))
                                 }
                             }
                         }
@@ -234,6 +250,9 @@ struct TelemetryPanel: View {
             }
         }
         .background(VibrancyBackground())
+        .animation(.easeInOut(duration: 0.3), value: telemetry.isLoading)
+        .animation(.easeInOut(duration: 0.3), value: telemetry.recentSessions.isEmpty)
+        .animation(.easeInOut(duration: 0.3), value: telemetry.stats != nil)
     }
 
     // MARK: - Time Range Bar (inline)
