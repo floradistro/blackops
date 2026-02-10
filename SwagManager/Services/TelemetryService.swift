@@ -47,6 +47,9 @@ class TelemetryService {
     // Track which team sessions have been auto-expanded (to avoid re-expanding collapsed ones)
     private var autoExpandedTeamIds: Set<String> = []
 
+    // Debounce for full rebuilds (structural changes only)
+    private var rebuildDebounceTask: Task<Void, Never>?
+
     // Memory limits
     private static let maxSessions = 200
     private static let maxParentChildEntries = 500
@@ -315,7 +318,7 @@ class TelemetryService {
                     #if DEBUG
                     print("[RT-DB] Found parent for \(conversationId.prefix(15)): \(parentId.prefix(15))")
                     #endif
-                    self.rebuildSessions()
+                    self.scheduleRebuild()
                 }
             } catch {
                 #if DEBUG
@@ -351,9 +354,7 @@ class TelemetryService {
                 endTime: updatedSpans.last?.createdAt
             )
 
-            // Force SwiftUI to detect the change by removing and re-inserting
-            recentTraces.remove(at: index)
-            recentTraces.insert(updatedTrace, at: index)
+            recentTraces[index] = updatedTrace
 
             // Incrementally update only the affected session in sessionMap
             if var sessionTraces = sessionMap[conversationId] {
@@ -393,11 +394,71 @@ class TelemetryService {
         updateCount += 1
     }
 
-    /// Update recentSessions for a single conversation that changed
-    /// Rebuilds the full tree to maintain parent-child relationships
+    /// Update recentSessions for a single conversation that changed.
+    /// Incremental: updates in-place when topology is unchanged.
+    /// Falls back to debounced full rebuild for structural changes.
     private func updateSessionFromMap(conversationId: String) {
-        // Rebuild full tree to maintain parent-child relationships correctly
-        rebuildSessions()
+        guard let sessionTraces = sessionMap[conversationId] else {
+            scheduleRebuild()
+            return
+        }
+
+        let sorted = sessionTraces.sorted { $0.startTime < $1.startTime }
+        var updatedSession = TelemetrySession(
+            id: conversationId,
+            traces: sorted,
+            startTime: sorted.first?.startTime ?? Date(),
+            endTime: sorted.last?.endTime
+        )
+
+        // Case 1: Child session — find parent and update child in-place
+        if let parentId = parentChildMap[conversationId] {
+            if let parentIdx = recentSessions.firstIndex(where: { $0.id == parentId }) {
+                var parent = recentSessions[parentIdx]
+                if let childIdx = parent.childSessions.firstIndex(where: { $0.id == conversationId }) {
+                    parent.childSessions[childIdx] = updatedSession
+                    recentSessions[parentIdx] = parent
+                    return
+                }
+                // New child for existing parent — structural change
+                parent.childSessions.append(updatedSession)
+                parent.childSessions.sort { $0.startTime < $1.startTime }
+                recentSessions[parentIdx] = parent
+                // Signal new team coordinator for auto-expand
+                if !newTeamCoordinatorIds.contains(parentId) {
+                    newTeamCoordinatorIds = [parentId]
+                }
+                return
+            }
+            // Parent not in roots yet — need full rebuild to link
+            scheduleRebuild()
+            return
+        }
+
+        // Case 2: Root session — update in-place, preserving children
+        if let idx = recentSessions.firstIndex(where: { $0.id == conversationId }) {
+            updatedSession.childSessions = recentSessions[idx].childSessions
+            recentSessions[idx] = updatedSession
+            return
+        }
+
+        // Case 3: Brand new session — insert with animation
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            recentSessions.insert(updatedSession, at: 0)
+            if recentSessions.count > Self.maxSessions {
+                recentSessions = Array(recentSessions.prefix(Self.maxSessions))
+            }
+        }
+    }
+
+    /// Schedule a debounced full rebuild for structural topology changes
+    private func scheduleRebuild() {
+        rebuildDebounceTask?.cancel()
+        rebuildDebounceTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, let self else { return }
+            self.rebuildSessions()
+        }
     }
 
     /// IDs of sessions that just became team coordinators (for UI auto-expand)
@@ -480,8 +541,15 @@ class TelemetryService {
             }
         }
 
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-            recentSessions = rootSessions.sorted { $0.startTime > $1.startTime }
+        let sortedRoots = rootSessions.sorted { $0.startTime > $1.startTime }
+        if recentSessions.isEmpty && !sortedRoots.isEmpty {
+            // Initial load — animate appearance
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                recentSessions = sortedRoots
+            }
+        } else {
+            // Structural topology change — update without animating the whole list
+            recentSessions = sortedRoots
         }
 
         #if DEBUG

@@ -250,7 +250,6 @@ struct TelemetryPanel: View {
             }
         }
         .background(VibrancyBackground())
-        .animation(.easeInOut(duration: 0.3), value: telemetry.isLoading)
         .animation(.easeInOut(duration: 0.3), value: telemetry.recentSessions.isEmpty)
         .animation(.easeInOut(duration: 0.3), value: telemetry.stats != nil)
     }
@@ -640,7 +639,6 @@ struct TelemetryPanel: View {
                                     .id("scroll-bottom")
                             }
                             .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceIds)
-                            .animation(.spring(response: 0.35, dampingFraction: 0.88), value: session.traces.count)
                         }
                         .onChange(of: session.traces.count) { oldCount, newCount in
                             guard autoFollow, newCount > oldCount else { return }
