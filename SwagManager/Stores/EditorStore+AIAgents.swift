@@ -16,6 +16,7 @@ private struct AgentUpdatePayload: Encodable {
     let enabledTools: [String]
     let tone: String
     let verbosity: String
+    let contextConfig: AgentContextConfig?
 
     enum CodingKeys: String, CodingKey {
         case name
@@ -28,6 +29,7 @@ private struct AgentUpdatePayload: Encodable {
         case enabledTools = "enabled_tools"
         case tone
         case verbosity
+        case contextConfig = "context_config"
     }
 }
 
@@ -144,7 +146,8 @@ extension EditorStore {
             isActive: agent.isActive,
             enabledTools: agent.enabledTools ?? [],
             tone: agent.tone ?? "professional",
-            verbosity: agent.verbosity ?? "moderate"
+            verbosity: agent.verbosity ?? "moderate",
+            contextConfig: agent.contextConfig
         )
 
         print("[Agent Update] Updating agent \(agent.id): \(agent.name ?? "unnamed")")

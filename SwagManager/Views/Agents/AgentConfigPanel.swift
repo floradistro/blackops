@@ -21,6 +21,11 @@ struct AgentConfigPanel: View {
     @State private var tone: String = "professional"
     @State private var verbosity: String = "moderate"
 
+    // Context window limits
+    @State private var maxHistoryChars: Int = 400_000
+    @State private var maxToolResultChars: Int = 40_000
+    @State private var maxMessageChars: Int = 20_000
+
     @State private var hasChanges = false
     @State private var isSaving = false
 
@@ -53,6 +58,10 @@ struct AgentConfigPanel: View {
                     Divider()
 
                     modelSection
+
+                    Divider()
+
+                    contextWindowSection
 
                     Divider()
 
@@ -293,6 +302,79 @@ struct AgentConfigPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
     }
 
+    private var contextWindowSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("CONTEXT WINDOW")
+                .font(DesignSystem.Typography.monoHeader)
+                .foregroundStyle(.tertiary)
+
+            VStack(spacing: 10) {
+                // History budget
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("history budget")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                        Text("~\(maxHistoryChars / 4_000)K tokens")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(width: 110, alignment: .leading)
+                    MonoOptionSelector(
+                        options: [100_000, 200_000, 400_000, 600_000],
+                        selection: $maxHistoryChars,
+                        labels: [100_000: "25K", 200_000: "50K", 400_000: "100K", 600_000: "150K"]
+                    )
+                    .onChange(of: maxHistoryChars) { _, _ in hasChanges = true }
+                    Spacer()
+                }
+
+                // Tool result cap
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("tool result cap")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                        Text("~\(maxToolResultChars / 4_000)K tokens")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(width: 110, alignment: .leading)
+                    MonoOptionSelector(
+                        options: [10_000, 20_000, 40_000, 80_000],
+                        selection: $maxToolResultChars,
+                        labels: [10_000: "2.5K", 20_000: "5K", 40_000: "10K", 80_000: "20K"]
+                    )
+                    .onChange(of: maxToolResultChars) { _, _ in hasChanges = true }
+                    Spacer()
+                }
+
+                // Message cap
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("message cap")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                        Text("~\(maxMessageChars / 4_000)K tokens")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(width: 110, alignment: .leading)
+                    MonoOptionSelector(
+                        options: [8_000, 12_000, 20_000, 40_000],
+                        selection: $maxMessageChars,
+                        labels: [8_000: "2K", 12_000: "3K", 20_000: "5K", 40_000: "10K"]
+                    )
+                    .onChange(of: maxMessageChars) { _, _ in hasChanges = true }
+                    Spacer()
+                }
+            }
+        }
+        .padding(DesignSystem.Spacing.md)
+        .background(DesignSystem.Colors.surfaceTertiary)
+        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
+    }
+
     private var systemPromptSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("SYSTEM PROMPT")
@@ -335,6 +417,9 @@ struct AgentConfigPanel: View {
         enabledTools = Set(agent.enabledTools ?? [])
         tone = agent.tone ?? "professional"
         verbosity = agent.verbosity ?? "moderate"
+        maxHistoryChars = agent.contextConfig?.maxHistoryChars ?? 400_000
+        maxToolResultChars = agent.contextConfig?.maxToolResultChars ?? 40_000
+        maxMessageChars = agent.contextConfig?.maxMessageChars ?? 20_000
         hasChanges = false
     }
 
@@ -352,6 +437,11 @@ struct AgentConfigPanel: View {
         updated.enabledTools = Array(enabledTools)
         updated.tone = tone
         updated.verbosity = verbosity
+        updated.contextConfig = AgentContextConfig(
+            maxHistoryChars: maxHistoryChars,
+            maxToolResultChars: maxToolResultChars,
+            maxMessageChars: maxMessageChars
+        )
 
         await store.updateAgent(updated)
 

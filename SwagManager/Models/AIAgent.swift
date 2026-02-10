@@ -33,6 +33,7 @@ struct AIAgent: Codable, Identifiable, Hashable {
     var canSend: Bool?
     var canModify: Bool?
     var apiKey: String?  // Anthropic API key for this agent
+    var contextConfig: AgentContextConfig?  // Context window management
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -60,6 +61,7 @@ struct AIAgent: Codable, Identifiable, Hashable {
         case canSend = "can_send"
         case canModify = "can_modify"
         case apiKey = "api_key"
+        case contextConfig = "context_config"
     }
 
     // Memberwise initializer
@@ -154,5 +156,30 @@ struct AIAgent: Codable, Identifiable, Hashable {
     var shortDescription: String {
         description ?? "AI Agent"
     }
+}
+
+// MARK: - Agent Context Config
+
+struct AgentContextConfig: Codable, Hashable {
+    var maxHistoryChars: Int?       // total history budget (default 400K ~100K tokens)
+    var maxToolResultChars: Int?    // per tool result (default 40K ~10K tokens)
+    var maxMessageChars: Int?       // per history message (default 20K ~5K tokens)
+
+    enum CodingKeys: String, CodingKey {
+        case maxHistoryChars = "max_history_chars"
+        case maxToolResultChars = "max_tool_result_chars"
+        case maxMessageChars = "max_message_chars"
+    }
+
+    static let defaults = AgentContextConfig(
+        maxHistoryChars: 400_000,
+        maxToolResultChars: 40_000,
+        maxMessageChars: 20_000
+    )
+
+    // Display helpers (chars → approx tokens)
+    var historyTokens: Int { (maxHistoryChars ?? 400_000) / 4 }
+    var toolResultTokens: Int { (maxToolResultChars ?? 40_000) / 4 }
+    var messageTokens: Int { (maxMessageChars ?? 20_000) / 4 }
 }
 
