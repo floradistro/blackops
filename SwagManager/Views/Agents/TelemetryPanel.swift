@@ -13,11 +13,9 @@ struct TelemetryPanel: View {
     @State private var expandedTeamIds: Set<String> = []  // Which team sessions are expanded to show children
     @State private var expandAll: Bool = false  // Expand all traces toggle
     @State private var previousTraceCount: Int = 0  // Track to detect new turns
-    @State private var previousSpanCount: Int = 0  // Track to detect new spans within a turn
     @State private var previousSessionCount: Int = 0  // Track to detect new sessions
     @State private var autoFollow: Bool = true  // Auto-follow latest turn when live
     @State private var autoFollowSessions: Bool = true  // Auto-scroll to new sessions in list
-    @State private var newSpanIds: Set<UUID> = []  // Spans that just appeared (for entrance animation)
     @State private var newSessionIds: Set<String> = []  // Sessions that just appeared (for entrance animation)
     @State private var pinnedSpan: TelemetrySpan?  // Pinned span in inspector panel
     var storeId: UUID?
@@ -58,11 +56,7 @@ struct TelemetryPanel: View {
     }
 
     var body: some View {
-        // Force body re-evaluation on any realtime update
-        let _ = telemetry.updateCount
-        let _ = telemetry.recentSessions
-
-        return HSplitView {
+        HSplitView {
             // Left: Session list (compact, scales down for narrow windows)
             traceListView
                 .frame(minWidth: 220, idealWidth: 260, maxWidth: 400)
@@ -446,11 +440,6 @@ struct TelemetryPanel: View {
         return Date().timeIntervalSince(endTime) < 10
     }
 
-    /// Check if a span is freshly arrived (for entrance animation)
-    private func isSpanNew(_ span: TelemetrySpan) -> Bool {
-        newSpanIds.contains(span.id)
-    }
-
     private func sessionDetailView(_ session: TelemetrySession) -> some View {
         VStack(spacing: 0) {
             sessionHeader(session)
@@ -616,7 +605,6 @@ struct TelemetryPanel: View {
                                                         traceStart: trace.startTime,
                                                         traceDuration: trace.duration ?? 1,
                                                         isSelected: pinnedSpan?.id == span.id,
-                                                        isNew: isSpanNew(span),
                                                         onSelect: { pinnedSpan = span }
                                                     )
                                                 }
@@ -633,70 +621,33 @@ struct TelemetryPanel: View {
                                     .id("trace-\(trace.id)")
                                 }
 
-                                // Scroll anchor at the bottom
-                                Color.clear
-                                    .frame(height: 1)
-                                    .id("scroll-bottom")
                             }
                             .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceIds)
                         }
                         .onChange(of: session.traces.count) { oldCount, newCount in
                             guard autoFollow, newCount > oldCount else { return }
-                            // New turn arrived — auto-expand recent traces (unless expandAll is active)
+                            // New turn arrived — auto-expand recent traces
                             if !expandAll {
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
                                     autoExpandRecentTraces(session: session)
                                 }
                             }
-                            // Scroll to the latest trace smoothly
+                            // Scroll to the latest trace
                             if let lastTrace = session.traces.last {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
                                         scrollProxy.scrollTo("trace-\(lastTrace.id)", anchor: .top)
                                     }
                                 }
                             }
                             previousTraceCount = newCount
                         }
-                        .onChange(of: telemetry.updateCount) { _, _ in
-                            // New span arrived in the current expanded trace — track it for animation
-                            guard autoFollow, let session = liveSelectedSession else { return }
-                            let currentSpanCount = session.allSpans.count
-                            if currentSpanCount > previousSpanCount {
-                                // Find new span IDs
-                                let allIds = Set(session.allSpans.map { $0.id })
-                                let newIds = allIds.subtracting(newSpanIds.isEmpty ? [] : newSpanIds)
-                                if !newIds.isEmpty {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
-                                        newSpanIds.formUnion(newIds)
-                                    }
-                                    // Clear "new" status after entrance animation
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                        withAnimation(.easeOut(duration: 0.2)) {
-                                            newSpanIds.subtract(newIds)
-                                        }
-                                    }
-                                }
-                                // Auto-scroll to bottom of expanded trace smoothly
-                                if !expandedTraceIds.isEmpty {
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
-                                            scrollProxy.scrollTo("scroll-bottom", anchor: .bottom)
-                                        }
-                                    }
-                                }
-                            }
-                            previousSpanCount = currentSpanCount
-                        }
                     }
         }
         .background(VibrancyBackground())
         .onAppear {
-            // Initialize counts for change detection
             if let session = liveSelectedSession {
                 previousTraceCount = session.traces.count
-                previousSpanCount = session.allSpans.count
-                // Auto-expand recent traces on first load
                 if !expandAll && expandedTraceIds.isEmpty {
                     autoExpandRecentTraces(session: session)
                 }
