@@ -49,6 +49,10 @@ extension EditorStore {
             if selectedStore == nil, let first = stores.first {
                 selectedStore = first
             }
+        } catch is CancellationError {
+            // Expected during view lifecycle — ignore silently
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // HTTP request cancelled by new configure() call — ignore
         } catch {
             self.error = "Failed to load stores: \(error.localizedDescription)"
             self.showError = true

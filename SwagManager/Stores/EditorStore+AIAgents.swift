@@ -70,6 +70,8 @@ extension EditorStore {
                 .value
 
             aiAgents = response
+        } catch is CancellationError {
+        } catch let urlError as URLError where urlError.code == .cancelled {
         } catch {
             self.error = "Failed to load agents: \(error.localizedDescription)"
             self.showError = true

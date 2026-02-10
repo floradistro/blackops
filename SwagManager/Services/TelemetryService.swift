@@ -666,6 +666,10 @@ class TelemetryService {
             let allAgents = agentSet.union(Set(configuredAgents))
             availableAgents = allAgents.sorted()
 
+        } catch is CancellationError {
+            // Expected during view lifecycle — ignore silently
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // HTTP request cancelled by new configure() call — ignore
         } catch {
             let errMsg = error.localizedDescription
             FreezeDebugger.logStateChange("telemetry.error", old: self.error, new: errMsg)

@@ -22,6 +22,8 @@ extension EditorStore {
 
             self.userTools = tools
             print("[EditorStore] Loaded \(tools.count) user tools")
+        } catch is CancellationError {
+        } catch let urlError as URLError where urlError.code == .cancelled {
         } catch {
             self.error = "Failed to load user tools: \(error.localizedDescription)"
             self.showError = true
@@ -45,6 +47,8 @@ extension EditorStore {
 
             self.userTriggers = triggers
             print("[EditorStore] Loaded \(triggers.count) user triggers")
+        } catch is CancellationError {
+        } catch let urlError as URLError where urlError.code == .cancelled {
         } catch {
             self.error = "Failed to load user triggers: \(error.localizedDescription)"
             self.showError = true
@@ -358,6 +362,10 @@ extension EditorStore {
                 .value
 
             return secrets.map { $0.name }
+        } catch is CancellationError {
+            return []
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return []
         } catch {
             self.error = "Failed to load secrets: \(error.localizedDescription)"
             self.showError = true
