@@ -412,10 +412,13 @@ class TelemetryService {
         )
 
         // Case 1: Child session — find parent and update child in-place
+        // Supports 3-level nesting: root/swarm → coordinator → teammate
         if let parentId = parentChildMap[conversationId] {
+            // Direct parent is a root session (2-level: root → child)
             if let parentIdx = recentSessions.firstIndex(where: { $0.id == parentId }) {
                 var parent = recentSessions[parentIdx]
                 if let childIdx = parent.childSessions.firstIndex(where: { $0.id == conversationId }) {
+                    updatedSession.childSessions = parent.childSessions[childIdx].childSessions
                     parent.childSessions[childIdx] = updatedSession
                     recentSessions[parentIdx] = parent
                     return
@@ -430,14 +433,35 @@ class TelemetryService {
                 }
                 return
             }
+
+            // 3-level path: parent is a coordinator inside a swarm group
+            // Walk root → coordinator → teammate
+            for rootIdx in recentSessions.indices {
+                if let coordIdx = recentSessions[rootIdx].childSessions.firstIndex(where: { $0.id == parentId }) {
+                    var root = recentSessions[rootIdx]
+                    var coordinator = root.childSessions[coordIdx]
+                    if let teammateIdx = coordinator.childSessions.firstIndex(where: { $0.id == conversationId }) {
+                        updatedSession.childSessions = coordinator.childSessions[teammateIdx].childSessions
+                        coordinator.childSessions[teammateIdx] = updatedSession
+                    } else {
+                        coordinator.childSessions.append(updatedSession)
+                        coordinator.childSessions.sort { $0.startTime < $1.startTime }
+                    }
+                    root.childSessions[coordIdx] = coordinator
+                    recentSessions[rootIdx] = root
+                    return
+                }
+            }
+
             // Parent not in roots yet — need full rebuild to link
             scheduleRebuild()
             return
         }
 
-        // Case 2: Root session — update in-place, preserving children
+        // Case 2: Root session — update in-place, preserving children + flags
         if let idx = recentSessions.firstIndex(where: { $0.id == conversationId }) {
             updatedSession.childSessions = recentSessions[idx].childSessions
+            updatedSession.isSyntheticSwarmGroup = recentSessions[idx].isSyntheticSwarmGroup
             recentSessions[idx] = updatedSession
             return
         }
@@ -510,6 +534,31 @@ class TelemetryService {
         // Track which sessions are about to become team coordinators
         let previousCoordinatorIds = Set(recentSessions.filter { $0.isTeamCoordinator }.map { $0.id })
 
+        // Create synthetic parent sessions for orphaned coordinators.
+        // When coordinators share a parent_conversation_id that has no spans/session,
+        // create a synthetic swarm group so they aren't invisible.
+        for (parentId, childIds) in childrenByParent {
+            if allSessions[parentId] == nil {
+                // Find earliest child start time for the synthetic parent
+                let childTimes = childIds.compactMap { allSessions[$0]?.startTime }
+                let earliestTime = childTimes.min() ?? Date()
+                let latestEnd = childIds.compactMap { allSessions[$0]?.endTime }.max()
+
+                var syntheticSession = TelemetrySession(
+                    id: parentId,
+                    traces: [],
+                    startTime: earliestTime,
+                    endTime: latestEnd
+                )
+                syntheticSession.isSyntheticSwarmGroup = true
+                allSessions[parentId] = syntheticSession
+
+                #if DEBUG
+                diagLog("  Created synthetic swarm group \(parentId.prefix(15))... for \(childIds.count) orphaned coordinators")
+                #endif
+            }
+        }
+
         // Link children to parents
         for (parentId, childIds) in childrenByParent {
             guard var parent = allSessions[parentId] else { continue }
@@ -524,6 +573,25 @@ class TelemetryService {
             }
             parent.childSessions.sort { $0.startTime < $1.startTime }
             allSessions[parentId] = parent
+        }
+
+        // Refresh pass: re-fetch child references so grandchildren (teammates)
+        // survive struct copies. Without this, a coordinator's children would be
+        // the version from BEFORE linking, missing their own childSessions.
+        for (parentId, _) in childrenByParent {
+            guard var parent = allSessions[parentId] else { continue }
+            var refreshed = false
+            for i in parent.childSessions.indices {
+                let childId = parent.childSessions[i].id
+                if let freshChild = allSessions[childId],
+                   freshChild.childSessions.count != parent.childSessions[i].childSessions.count {
+                    parent.childSessions[i] = freshChild
+                    refreshed = true
+                }
+            }
+            if refreshed {
+                allSessions[parentId] = parent
+            }
         }
 
         // Build root sessions list (sessions without parents, or orphans)

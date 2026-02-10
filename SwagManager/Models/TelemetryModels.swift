@@ -1244,6 +1244,19 @@ struct TelemetrySession: Identifiable, Hashable {
     /// Child sessions (teammates) linked via parent_conversation_id
     var childSessions: [TelemetrySession] = []
 
+    /// Whether this is a synthetic parent created to group orphaned coordinators
+    var isSyntheticSwarmGroup: Bool = false
+
+    /// Whether this session is a swarm group (synthetic OR has coordinator children)
+    var isSwarmGroup: Bool {
+        isSyntheticSwarmGroup || childSessions.contains { $0.isTeamCoordinator }
+    }
+
+    /// Total grandchild (teammate) count across all child coordinators
+    var totalTeammateCount: Int {
+        childSessions.reduce(0) { $0 + $1.childSessions.count }
+    }
+
     /// Parent conversation ID (if this is a teammate session)
     var parentConversationId: String? {
         // Get from any span's details
@@ -1270,18 +1283,36 @@ struct TelemetrySession: Identifiable, Hashable {
         allSpans.first(where: { $0.teammateName != nil })?.teammateName
     }
 
-    /// Include trace count + span count so SwiftUI detects realtime updates
+    /// Total span count across this session and all descendants (children + grandchildren).
+    /// Used in == / hash so SwiftUI detects when ANY descendant gets new data.
+    var descendantSpanCount: Int {
+        var count = allSpans.count
+        for child in childSessions {
+            count += child.allSpans.count
+            for grandchild in child.childSessions {
+                count += grandchild.allSpans.count
+            }
+        }
+        return count
+    }
+
+    /// Include descendant span count so SwiftUI detects child/grandchild realtime updates
     static func == (lhs: TelemetrySession, rhs: TelemetrySession) -> Bool {
         lhs.id == rhs.id
             && lhs.traces.count == rhs.traces.count
-            && lhs.allSpans.count == rhs.allSpans.count
+            && lhs.descendantSpanCount == rhs.descendantSpanCount
             && lhs.childSessions.count == rhs.childSessions.count
+            && lhs.isSyntheticSwarmGroup == rhs.isSyntheticSwarmGroup
+            && lhs.totalTeammateCount == rhs.totalTeammateCount
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(traces.count)
+        hasher.combine(descendantSpanCount)
         hasher.combine(childSessions.count)
+        hasher.combine(isSyntheticSwarmGroup)
+        hasher.combine(totalTeammateCount)
     }
 
     var duration: TimeInterval? {

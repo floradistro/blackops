@@ -40,16 +40,22 @@ struct TelemetryPanel: View {
         return findSession(id: id)
     }
 
-    /// Find a session by ID, searching both parents and children
+    /// Find a session by ID, searching 3 levels deep (root → coordinator → teammate)
     private func findSession(id: String) -> TelemetrySession? {
-        // First check top-level sessions
+        // Level 1: top-level sessions (roots / swarm groups)
         if let session = telemetry.recentSessions.first(where: { $0.id == id }) {
             return session
         }
-        // Then check child sessions (teammates)
+        // Level 2: child sessions (coordinators / teammates)
         for parent in telemetry.recentSessions {
             if let child = parent.childSessions.first(where: { $0.id == id }) {
                 return child
+            }
+            // Level 3: grandchild sessions (teammates under coordinators)
+            for child in parent.childSessions {
+                if let grandchild = child.childSessions.first(where: { $0.id == id }) {
+                    return grandchild
+                }
             }
         }
         return nil
@@ -150,7 +156,7 @@ struct TelemetryPanel: View {
                 ScrollViewReader { sessionProxy in
                     List(selection: selectedSession) {
                         ForEach(telemetry.recentSessions) { session in
-                            // Parent session row
+                            // All sessions use the same SessionRow (no special swarm style)
                             SessionRow(
                                 session: session,
                                 isSelected: selectedSessionId == session.id,
@@ -174,23 +180,75 @@ struct TelemetryPanel: View {
                                 removal: .opacity
                             ))
 
-                            // Child sessions (teammates) - shown when team is expanded
+                            // Children — shown when parent is expanded
                             if session.isTeamCoordinator && expandedTeamIds.contains(session.id) {
                                 ForEach(session.childSessions) { child in
-                                    TeammateSessionRow(
-                                        session: child,
-                                        isSelected: selectedSessionId == child.id,
-                                        isLive: isSessionLive(child)
-                                    )
-                                    .tag(child)
-                                    .id(child.id)
-                                    .onTapGesture {
-                                        selectedSessionId = child.id
+                                    if child.isTeamCoordinator {
+                                        // Coordinator child (has its own teammates) — show as SessionRow with indent
+                                        SessionRow(
+                                            session: child,
+                                            isSelected: selectedSessionId == child.id,
+                                            isLive: isSessionLive(child),
+                                            isNew: newSessionIds.contains(child.id),
+                                            isExpanded: expandedTeamIds.contains(child.id),
+                                            onToggleExpand: {
+                                                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                                    if expandedTeamIds.contains(child.id) {
+                                                        expandedTeamIds.remove(child.id)
+                                                    } else {
+                                                        expandedTeamIds.insert(child.id)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        .padding(.leading, 16)
+                                        .tag(child)
+                                        .id(child.id)
+                                        .onTapGesture {
+                                            selectedSessionId = child.id
+                                        }
+                                        .transition(.asymmetric(
+                                            insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
+                                            removal: .opacity
+                                        ))
+
+                                        // Grandchild teammates (3rd level)
+                                        if expandedTeamIds.contains(child.id) {
+                                            ForEach(child.childSessions) { grandchild in
+                                                TeammateSessionRow(
+                                                    session: grandchild,
+                                                    isSelected: selectedSessionId == grandchild.id,
+                                                    isLive: isSessionLive(grandchild)
+                                                )
+                                                .padding(.leading, 16)
+                                                .tag(grandchild)
+                                                .id(grandchild.id)
+                                                .onTapGesture {
+                                                    selectedSessionId = grandchild.id
+                                                }
+                                                .transition(.asymmetric(
+                                                    insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
+                                                    removal: .opacity
+                                                ))
+                                            }
+                                        }
+                                    } else {
+                                        // Leaf child (teammate with no children) — TeammateSessionRow
+                                        TeammateSessionRow(
+                                            session: child,
+                                            isSelected: selectedSessionId == child.id,
+                                            isLive: isSessionLive(child)
+                                        )
+                                        .tag(child)
+                                        .id(child.id)
+                                        .onTapGesture {
+                                            selectedSessionId = child.id
+                                        }
+                                        .transition(.asymmetric(
+                                            insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
+                                            removal: .opacity
+                                        ))
                                     }
-                                    .transition(.asymmetric(
-                                        insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
-                                        removal: .opacity
-                                    ))
                                 }
                             }
                         }
@@ -230,11 +288,22 @@ struct TelemetryPanel: View {
 
                         previousSessionCount = newCount
                     }
-                    // Auto-expand sessions that just became team coordinators
-                    // (e.g., when teammate links to parent during realtime)
+                    // Auto-expand new team coordinators + collapse old teams in same parent
                     .onChange(of: telemetry.newTeamCoordinatorIds) { _, newCoordinatorIds in
                         guard !newCoordinatorIds.isEmpty else { return }
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            for session in telemetry.recentSessions where session.isTeamCoordinator {
+                                let childIds = Set(session.childSessions.map { $0.id })
+                                let newInThisParent = newCoordinatorIds.intersection(childIds)
+                                if !newInThisParent.isEmpty {
+                                    // Expand the parent session
+                                    expandedTeamIds.insert(session.id)
+                                    // Collapse old coordinator children in the same parent
+                                    let oldCoordinators = childIds.subtracting(newInThisParent)
+                                    expandedTeamIds.subtract(oldCoordinators)
+                                }
+                            }
+                            // Always expand the new coordinators themselves
                             expandedTeamIds.formUnion(newCoordinatorIds)
                         }
                         // Clear after processing
@@ -1161,19 +1230,24 @@ struct TelemetryPanel: View {
     // MARK: - Helpers
 
     /// Check if a session received data in the last 30 seconds (still active)
-    /// For team sessions, also checks if any child session is live
+    /// For team/swarm sessions, checks children and grandchildren
     private func isSessionLive(_ session: TelemetrySession) -> Bool {
         // Check if this session itself is live
         if let endTime = session.endTime, Date().timeIntervalSince(endTime) < 30 {
             return true
         }
-        // For team coordinators, check if any child is live
-        if session.isTeamCoordinator {
-            return session.childSessions.contains { child in
-                if let endTime = child.endTime {
-                    return Date().timeIntervalSince(endTime) < 30
+        // For team coordinators or swarm groups, check children and grandchildren
+        if session.isTeamCoordinator || session.isSyntheticSwarmGroup {
+            for child in session.childSessions {
+                if let endTime = child.endTime, Date().timeIntervalSince(endTime) < 30 {
+                    return true
                 }
-                return false
+                // Check grandchildren (teammates under coordinators)
+                for grandchild in child.childSessions {
+                    if let endTime = grandchild.endTime, Date().timeIntervalSince(endTime) < 30 {
+                        return true
+                    }
+                }
             }
         }
         return false
