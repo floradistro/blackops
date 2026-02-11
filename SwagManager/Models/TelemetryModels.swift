@@ -325,6 +325,62 @@ struct TelemetrySpan: Identifiable, Codable {
         action.hasPrefix("tool.")
     }
 
+    /// Whether this is a context compaction event
+    var isContextCompaction: Bool {
+        action == "chat.context_compaction"
+    }
+
+    /// Whether this is an API retry event
+    var isApiRetry: Bool {
+        action == "claude_api_retry"
+    }
+
+    /// Whether this is a circuit breaker trigger
+    var isCircuitBreaker: Bool {
+        action == "tool.circuit_breaker"
+    }
+
+    /// Whether this span should be hidden from the trace waterfall.
+    /// Nothing is hidden — all spans are shown.
+    var isWaterfallHidden: Bool {
+        false
+    }
+
+    /// Iteration number (which API round-trip in the agent loop)
+    var iteration: Int? {
+        details?["iteration"]?.value as? Int
+    }
+
+    /// Tool description (human label for what the tool call does)
+    var toolDescription: String? {
+        details?["description"]?.value as? String
+    }
+
+    /// Number of tools requested in an API response
+    var toolCount: Int? {
+        details?["tool_count"]?.value as? Int
+    }
+
+    /// Tool names requested in an API response
+    var toolNames: [String]? {
+        details?["tool_names"]?.value as? [String]
+    }
+
+    /// Messages before compaction
+    var compactionMessagesBefore: Int? {
+        details?["messages_before"]?.value as? Int
+    }
+
+    /// Messages after compaction
+    var compactionMessagesAfter: Int? {
+        details?["messages_after"]?.value as? Int
+    }
+
+    /// Tokens saved by compaction
+    var compactionTokensSaved: Int? {
+        details?["tokens_saved"]?.value as? Int
+    }
+
     // MARK: - Subagent Detection & Display
 
     /// Whether this span represents a subagent execution
@@ -652,13 +708,52 @@ struct TelemetrySpan: Identifiable, Codable {
             return teamDisplayName ?? parts.joined(separator: " • ")
         }
 
-        // For API requests, show cache info
+        // Context compaction events
+        if isContextCompaction {
+            if let before = compactionMessagesBefore, let after = compactionMessagesAfter {
+                let saved = compactionTokensSaved ?? 0
+                return "Compacted \(before) -> \(after) messages (\(saved) tokens saved)"
+            }
+            return "Context auto-compacted"
+        }
+
+        // API retry events
+        if isApiRetry {
+            if let attempt = details?["attempt"]?.value as? Int,
+               let maxAttempts = details?["max_attempts"]?.value as? Int {
+                let errType = errorType ?? "unknown"
+                return "Retry \(attempt)/\(maxAttempts) (\(errType))"
+            }
+            return "API retry"
+        }
+
+        // Circuit breaker triggers
+        if isCircuitBreaker {
+            if let toolName = details?["tool_name"]?.value as? String {
+                return "Blocked: \(toolName)"
+            }
+            return "Circuit breaker triggered"
+        }
+
+        // For API requests, show model + cache info + tool count
         if isApiRequest {
+            var parts: [String] = []
+            if let model = shortModelName {
+                parts.append(model)
+            }
             if let cacheRead = cacheReadTokens, let input = inputTokens, cacheRead > 0 {
                 let cachePercent = Int((Double(cacheRead) / Double(input)) * 100)
-                return "💾 \(cachePercent)% cached"
+                parts.append("\(cachePercent)% cached")
             }
-            return nil
+            if let tc = toolCount, tc > 0 {
+                if let names = toolNames {
+                    let unique = Array(Set(names))
+                    parts.append("\(tc) tool\(tc == 1 ? "" : "s"): \(unique.joined(separator: ", "))")
+                } else {
+                    parts.append("\(tc) tool\(tc == 1 ? "" : "s")")
+                }
+            }
+            return parts.isEmpty ? nil : parts.joined(separator: " | ")
         }
 
         // For chat messages, show much fuller content (500 chars instead of 80)
@@ -1102,6 +1197,10 @@ struct TelemetrySpan: Identifiable, Codable {
     }
 
     private func formatGenericActivity() -> String? {
+        // Prefer explicit description (e.g., command or path)
+        if let desc = toolDescription {
+            return String(desc.prefix(80))
+        }
         // For unknown tools, show first line of result
         if let result = toolResult as? String {
             let firstLine = result.components(separatedBy: .newlines).first ?? result
@@ -1143,6 +1242,11 @@ struct Trace: Identifiable, Hashable {
         hasher.combine(spans.count)
     }
 
+    /// Spans filtered for waterfall display (excludes summary/lifecycle spans)
+    var waterfallSpans: [TelemetrySpan] {
+        spans.filter { !$0.isWaterfallHidden }
+    }
+
     var duration: TimeInterval? {
         guard let end = endTime else { return nil }
         return end.timeIntervalSince(startTime)
@@ -1170,6 +1274,11 @@ struct Trace: Identifiable, Hashable {
 
     var source: String {
         rootSpan?.source ?? spans.first?.source ?? "unknown"
+    }
+
+    /// Whether this trace contains a team.create span
+    var hasTeamCreate: Bool {
+        spans.contains { $0.action == "team.create" }
     }
 
     // MARK: - Aggregated AI Telemetry
@@ -1255,6 +1364,26 @@ struct TelemetrySession: Identifiable, Hashable {
     /// Total grandchild (teammate) count across all child coordinators
     var totalTeammateCount: Int {
         childSessions.reduce(0) { $0 + $1.childSessions.count }
+    }
+
+    /// Aggregate cost across all child sessions
+    var childrenTotalCost: Double {
+        childSessions.reduce(0) { $0 + $1.totalCost }
+    }
+
+    /// Aggregate tokens across all child sessions
+    var childrenTotalTokens: Int {
+        childSessions.reduce(0) { $0 + $1.totalInputTokens + $1.totalOutputTokens }
+    }
+
+    /// Count of completed children (endTime != nil)
+    var childrenCompletedCount: Int {
+        childSessions.filter { $0.endTime != nil }.count
+    }
+
+    /// Count of children with errors
+    var childrenErrorCount: Int {
+        childSessions.filter { $0.hasErrors }.count
     }
 
     /// Parent conversation ID (if this is a teammate session)

@@ -10,7 +10,6 @@ struct TelemetryPanel: View {
     @Environment(\.toolbarState) private var toolbarState
     @State private var selectedSessionId: String?  // Track by ID, not value
     @State private var expandedTraceIds: Set<String> = []  // Which traces are expanded
-    @State private var expandedTeamIds: Set<String> = []  // Which team sessions are expanded to show children
     @State private var expandAll: Bool = false  // Expand all traces toggle
     @State private var previousTraceCount: Int = 0  // Track to detect new turns
     @State private var previousSessionCount: Int = 0  // Track to detect new sessions
@@ -18,6 +17,9 @@ struct TelemetryPanel: View {
     @State private var autoFollowSessions: Bool = true  // Auto-scroll to new sessions in list
     @State private var newSessionIds: Set<String> = []  // Sessions that just appeared (for entrance animation)
     @State private var pinnedSpan: TelemetrySpan?  // Pinned span in inspector panel
+    @State private var expandedChildAgentIds: Set<String> = []    // Which child agents show traces in center panel
+    @State private var expandedChildTraceIds: Set<String> = []    // Which child agent traces show spans
+    @State private var autoExpandedTeamSections: Set<String> = [] // One-shot guard for auto-expand
     var storeId: UUID?
 
     /// Binding that maps selectedSessionId to/from TelemetrySession for List selection
@@ -83,10 +85,22 @@ struct TelemetryPanel: View {
 
             // Right: Pinned span panel (optional inspector, moderate priority)
             if let span = pinnedSpan {
-                pinnedSpanPanel(span)
-                    .frame(minWidth: 280, idealWidth: 380, maxWidth: 600)
-                    .transition(.opacity)
+                PinnedSpanPanel(
+                    span: span,
+                    pinnedSpan: $pinnedSpan,
+                    comparison: telemetry.selectedSpanComparison
+                )
+                .frame(minWidth: 280, idealWidth: 380, maxWidth: 600)
+                .transition(.opacity)
             }
+        }
+        .focusable()
+        .onKeyPress(.escape) {
+            if pinnedSpan != nil {
+                withAnimation(.easeOut(duration: 0.2)) { pinnedSpan = nil }
+                return .handled
+            }
+            return .ignored
         }
         .task(id: storeId) {
             FreezeDebugger.printRunloopContext("TelemetryPanel.task START")
@@ -130,6 +144,10 @@ struct TelemetryPanel: View {
                 Divider()
             }
 
+            // Live cost tracker
+            liveCostBar
+            Divider()
+
             // Filters
             filtersBar
 
@@ -161,96 +179,10 @@ struct TelemetryPanel: View {
                                 session: session,
                                 isSelected: selectedSessionId == session.id,
                                 isLive: isSessionLive(session),
-                                isNew: newSessionIds.contains(session.id),
-                                isExpanded: expandedTeamIds.contains(session.id),
-                                onToggleExpand: session.isTeamCoordinator ? {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                        if expandedTeamIds.contains(session.id) {
-                                            expandedTeamIds.remove(session.id)
-                                        } else {
-                                            expandedTeamIds.insert(session.id)
-                                        }
-                                    }
-                                } : nil
+                                isNew: newSessionIds.contains(session.id)
                             )
                             .tag(session)
                             .id(session.id)
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .offset(y: -6)),
-                                removal: .opacity
-                            ))
-
-                            // Children — shown when parent is expanded
-                            if session.isTeamCoordinator && expandedTeamIds.contains(session.id) {
-                                ForEach(session.childSessions) { child in
-                                    if child.isTeamCoordinator {
-                                        // Coordinator child (has its own teammates) — show as SessionRow with indent
-                                        SessionRow(
-                                            session: child,
-                                            isSelected: selectedSessionId == child.id,
-                                            isLive: isSessionLive(child),
-                                            isNew: newSessionIds.contains(child.id),
-                                            isExpanded: expandedTeamIds.contains(child.id),
-                                            onToggleExpand: {
-                                                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                                    if expandedTeamIds.contains(child.id) {
-                                                        expandedTeamIds.remove(child.id)
-                                                    } else {
-                                                        expandedTeamIds.insert(child.id)
-                                                    }
-                                                }
-                                            }
-                                        )
-                                        .padding(.leading, 16)
-                                        .tag(child)
-                                        .id(child.id)
-                                        .onTapGesture {
-                                            selectedSessionId = child.id
-                                        }
-                                        .transition(.asymmetric(
-                                            insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
-                                            removal: .opacity
-                                        ))
-
-                                        // Grandchild teammates (3rd level)
-                                        if expandedTeamIds.contains(child.id) {
-                                            ForEach(child.childSessions) { grandchild in
-                                                TeammateSessionRow(
-                                                    session: grandchild,
-                                                    isSelected: selectedSessionId == grandchild.id,
-                                                    isLive: isSessionLive(grandchild)
-                                                )
-                                                .padding(.leading, 16)
-                                                .tag(grandchild)
-                                                .id(grandchild.id)
-                                                .onTapGesture {
-                                                    selectedSessionId = grandchild.id
-                                                }
-                                                .transition(.asymmetric(
-                                                    insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
-                                                    removal: .opacity
-                                                ))
-                                            }
-                                        }
-                                    } else {
-                                        // Leaf child (teammate with no children) — TeammateSessionRow
-                                        TeammateSessionRow(
-                                            session: child,
-                                            isSelected: selectedSessionId == child.id,
-                                            isLive: isSessionLive(child)
-                                        )
-                                        .tag(child)
-                                        .id(child.id)
-                                        .onTapGesture {
-                                            selectedSessionId = child.id
-                                        }
-                                        .transition(.asymmetric(
-                                            insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
-                                            removal: .opacity
-                                        ))
-                                    }
-                                }
-                            }
                         }
                     }
                     .listStyle(.plain)
@@ -264,13 +196,6 @@ struct TelemetryPanel: View {
                             let newIds = telemetry.recentSessions.prefix(newCount - oldCount).map { $0.id }
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                 newSessionIds.formUnion(newIds)
-                            }
-
-                            // Auto-expand new team sessions
-                            for session in telemetry.recentSessions.prefix(newCount - oldCount) {
-                                if session.isTeamCoordinator {
-                                    expandedTeamIds.insert(session.id)
-                                }
                             }
 
                             // Scroll to the newest session (first in list)
@@ -288,33 +213,10 @@ struct TelemetryPanel: View {
 
                         previousSessionCount = newCount
                     }
-                    // Auto-expand new team coordinators + collapse old teams in same parent
-                    .onChange(of: telemetry.newTeamCoordinatorIds) { _, newCoordinatorIds in
-                        guard !newCoordinatorIds.isEmpty else { return }
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                            for session in telemetry.recentSessions where session.isTeamCoordinator {
-                                let childIds = Set(session.childSessions.map { $0.id })
-                                let newInThisParent = newCoordinatorIds.intersection(childIds)
-                                if !newInThisParent.isEmpty {
-                                    // Expand the parent session
-                                    expandedTeamIds.insert(session.id)
-                                    // Collapse old coordinator children in the same parent
-                                    let oldCoordinators = childIds.subtracting(newInThisParent)
-                                    expandedTeamIds.subtract(oldCoordinators)
-                                }
-                            }
-                            // Always expand the new coordinators themselves
-                            expandedTeamIds.formUnion(newCoordinatorIds)
-                        }
-                        // Clear after processing
-                        telemetry.newTeamCoordinatorIds = []
-                    }
                 }
             }
         }
         .background(VibrancyBackground())
-        .animation(.easeInOut(duration: 0.3), value: telemetry.recentSessions.isEmpty)
-        .animation(.easeInOut(duration: 0.3), value: telemetry.stats != nil)
     }
 
     // MARK: - Time Range Bar (inline)
@@ -393,6 +295,49 @@ struct TelemetryPanel: View {
                 statItem(label: "p95", value: formatMs(stats.p95Ms), color: TC.forLatency(stats.p95Ms))
                 statItem(label: "p99", value: formatMs(stats.p99Ms), color: TC.forLatency(stats.p99Ms))
             }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+    }
+
+    private var liveCostBar: some View {
+        let sessions = telemetry.recentSessions
+        let totalCost = sessions.reduce(0.0) { $0 + $1.totalCost + $1.childrenTotalCost }
+        let totalTokens = sessions.reduce(0) { $0 + $1.totalInputTokens + $1.totalOutputTokens + $1.childrenTotalTokens }
+        let sessionCount = sessions.count
+
+        return HStack(spacing: 8) {
+            Image(systemName: "dollarsign.circle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(totalCost > 0 ? TC.warning : Color.primary.opacity(0.2))
+
+            if totalCost > 0 {
+                Text(totalCost < 0.01
+                     ? String(format: "$%.5f", totalCost)
+                     : String(format: "$%.4f", totalCost))
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(TC.warning)
+            } else {
+                Text("$0")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.quaternary)
+            }
+
+            Spacer()
+
+            if totalTokens > 0 {
+                Text(totalTokens > 1_000_000
+                     ? String(format: "%.1fM tok", Double(totalTokens) / 1_000_000)
+                     : totalTokens > 1_000
+                     ? String(format: "%.1fK tok", Double(totalTokens) / 1_000)
+                     : "\(totalTokens) tok")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+            }
+
+            Text("\(sessionCount)s")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.quaternary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -512,206 +457,25 @@ struct TelemetryPanel: View {
     private func sessionDetailView(_ session: TelemetrySession) -> some View {
         VStack(spacing: 0) {
             sessionHeader(session)
-
             Divider()
 
-            // Auto-follow bar (shown when session is live)
-            if isSelectedSessionLive {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(TC.success)
-                        .frame(width: 6, height: 6)
-                        .modifier(PulseModifier())
-
-                    Text("LIVE")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundStyle(TC.success)
-
-                    Text("·")
-                        .foregroundStyle(.quaternary)
-
-                    Text("Auto-following latest turn")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        expandAll.toggle()
-                        if expandAll {
-                            // Expand all traces
-                            expandedTraceIds = Set(session.traces.map { $0.id })
-                        } else {
-                            // Collapse all, keep only latest 2-3
-                            autoExpandRecentTraces(session: session)
-                        }
-                    } label: {
-                        Text(expandAll ? "COLLAPSE ALL" : "EXPAND ALL")
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(expandAll ? Color.primary.opacity(0.12) : Color.primary.opacity(0.05))
-                            .foregroundStyle(expandAll ? .primary : .secondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        autoFollow.toggle()
-                    } label: {
-                        Text(autoFollow ? "FOLLOWING" : "PAUSED")
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(autoFollow ? TC.success.opacity(0.15) : Color.primary.opacity(0.05))
-                            .foregroundStyle(autoFollow ? TC.success : .secondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(TC.success.opacity(0.04))
-
+            // Team coordinator banner
+            if session.isTeamCoordinator || session.isSyntheticSwarmGroup {
+                teamCoordinatorBanner(session)
                 Divider()
             }
 
-            // Trace waterfall with inline logs
-            ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(Array(session.traces.enumerated()), id: \.element.id) { index, trace in
-                                    let isLastTrace = index == session.traces.count - 1
-                                    let isLive = isTraceLive(trace, in: session)
+            // Back to coordinator breadcrumb for child sessions
+            if let parentId = session.parentConversationId {
+                coordinatorBreadcrumb(parentId: parentId)
+                Divider()
+            }
 
-                                    VStack(alignment: .leading, spacing: 0) {
-                                        // Trace header row (clickable to expand/collapse)
-                                        Button {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                                if expandedTraceIds.contains(trace.id) {
-                                                    expandedTraceIds.remove(trace.id)
-                                                } else {
-                                                    expandedTraceIds.insert(trace.id)
-                                                }
-                                            }
-                                        } label: {
-                                            HStack(spacing: 8) {
-                                                Image(systemName: expandedTraceIds.contains(trace.id) ? "chevron.down" : "chevron.right")
-                                                    .font(.system(size: 13, weight: .semibold))
-                                                    .foregroundStyle(.tertiary)
-                                                    .frame(width: 12)
-                                                    .rotationEffect(expandedTraceIds.contains(trace.id) ? .zero : .degrees(-0))
-
-                                                // Live dot for active trace
-                                                if isLive {
-                                                    Circle()
-                                                        .fill(TC.success)
-                                                        .frame(width: 5, height: 5)
-                                                        .modifier(PulseModifier())
-                                                }
-
-                                                Text("Turn \(index + 1)")
-                                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-
-                                                if !isLive {
-                                                    Text(trace.hasErrors ? "ERR" : "OK")
-                                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                                        .foregroundStyle(trace.hasErrors ? TC.error : TC.success)
-                                                }
-
-                                                Text("·")
-                                                    .foregroundStyle(.quaternary)
-
-                                                // Tool summary
-                                                let tools = trace.spans.compactMap { $0.toolName }
-                                                let uniqueTools = Set(tools)
-                                                Text("\(tools.count) calls (\(uniqueTools.prefix(3).joined(separator: ", ")))")
-                                                    .font(.system(size: 10))
-                                                    .foregroundStyle(.secondary)
-                                                    .lineLimit(1)
-
-                                                Spacer()
-
-                                                // AI telemetry inline
-                                                if let cost = trace.formattedCost {
-                                                    Text(cost)
-                                                        .font(.system(size: 10, design: .monospaced))
-                                                        .foregroundStyle(TC.warning)
-                                                }
-
-                                                // Only show duration if meaningful (> 0ms) and not live
-                                                if !isLive, let duration = trace.duration, duration > 0.001 {
-                                                    Text(trace.formattedDuration)
-                                                        .font(.system(size: 10, design: .monospaced))
-                                                        .foregroundStyle(.secondary)
-                                                }
-
-                                                if !isLive {
-                                                    Text(trace.startTime, style: .relative)
-                                                        .font(.system(size: 10, design: .monospaced))
-                                                        .foregroundStyle(.tertiary)
-                                                }
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                expandedTraceIds.contains(trace.id)
-                                                    ? (isLive ? TC.success.opacity(0.04) : Color.primary.opacity(0.04))
-                                                    : Color.clear
-                                            )
-                                        }
-                                        .buttonStyle(.plain)
-
-                                        // Expanded: show span waterfall
-                                        if expandedTraceIds.contains(trace.id) {
-                                            VStack(alignment: .leading, spacing: 0) {
-                                                timelineHeader(trace)
-                                                    .padding(.horizontal, 16)
-
-                                                ForEach(trace.spans) { span in
-                                                    SpanRow(
-                                                        span: span,
-                                                        traceStart: trace.startTime,
-                                                        traceDuration: trace.duration ?? 1,
-                                                        isSelected: pinnedSpan?.id == span.id,
-                                                        onSelect: { pinnedSpan = span }
-                                                    )
-                                                }
-                                            }
-                                            .padding(.bottom, 8)
-                                            .background(isLive ? TC.success.opacity(0.02) : Color.primary.opacity(0.02))
-                                            .transition(.opacity.combined(with: .move(edge: .top)))
-                                        }
-
-                                        if !isLastTrace {
-                                            Divider().padding(.leading, 36)
-                                        }
-                                    }
-                                    .id("trace-\(trace.id)")
-                                }
-
-                            }
-                            .animation(.spring(response: 0.4, dampingFraction: 0.88), value: expandedTraceIds)
-                        }
-                        .onChange(of: session.traces.count) { oldCount, newCount in
-                            guard autoFollow, newCount > oldCount else { return }
-                            // New turn arrived — auto-expand recent traces
-                            if !expandAll {
-                                withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
-                                    autoExpandRecentTraces(session: session)
-                                }
-                            }
-                            // Scroll to the latest trace
-                            if let lastTrace = session.traces.last {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        scrollProxy.scrollTo("trace-\(lastTrace.id)", anchor: .top)
-                                    }
-                                }
-                            }
-                            previousTraceCount = newCount
-                        }
-                    }
+            if isSelectedSessionLive {
+                autoFollowBar(session: session)
+                Divider()
+            }
+            traceWaterfall(session: session)
         }
         .background(VibrancyBackground())
         .onAppear {
@@ -724,103 +488,266 @@ struct TelemetryPanel: View {
         }
     }
 
+    @ViewBuilder
+    private func autoFollowBar(session: TelemetrySession) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(TC.success)
+                .frame(width: 6, height: 6)
+                .modifier(PulseModifier())
+
+            Text("LIVE")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(TC.success)
+
+            Text("\u{00B7}")
+                .foregroundStyle(.quaternary)
+
+            Text("Auto-following latest turn")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Button {
+                expandAll.toggle()
+                if expandAll {
+                    expandedTraceIds = Set(session.traces.map { $0.id })
+                } else {
+                    autoExpandRecentTraces(session: session)
+                }
+            } label: {
+                Text(expandAll ? "COLLAPSE ALL" : "EXPAND ALL")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(expandAll ? Color.primary.opacity(0.12) : Color.primary.opacity(0.05))
+                    .foregroundStyle(expandAll ? .primary : .secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                autoFollow.toggle()
+            } label: {
+                Text(autoFollow ? "FOLLOWING" : "PAUSED")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(autoFollow ? TC.success.opacity(0.15) : Color.primary.opacity(0.05))
+                    .foregroundStyle(autoFollow ? TC.success : .secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(TC.success.opacity(0.04))
+    }
+
+    @ViewBuilder
+    private func traceWaterfall(session: TelemetrySession) -> some View {
+        ScrollViewReader { scrollProxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Synthetic swarm group with no traces — team section IS the content
+                    if session.isSyntheticSwarmGroup && session.traces.isEmpty && session.isTeamCoordinator {
+                        TeamMembersSection(
+                            session: session,
+                            selectedSessionId: $selectedSessionId,
+                            expandedChildAgentIds: $expandedChildAgentIds,
+                            expandedChildTraceIds: $expandedChildTraceIds,
+                            pinnedSpan: $pinnedSpan,
+                            autoExpandedTeamSections: $autoExpandedTeamSections,
+                            isSessionLive: isSessionLive
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    }
+
+                    ForEach(Array(session.traces.enumerated()), id: \.element.id) { index, trace in
+                        traceRow(trace: trace, index: index, session: session)
+                    }
+
+                    // Fallback: children exist but no team.create trace found
+                    if session.isTeamCoordinator
+                        && !session.traces.contains(where: { $0.hasTeamCreate }) {
+                        TeamMembersSection(
+                            session: session,
+                            selectedSessionId: $selectedSessionId,
+                            expandedChildAgentIds: $expandedChildAgentIds,
+                            expandedChildTraceIds: $expandedChildTraceIds,
+                            pinnedSpan: $pinnedSpan,
+                            autoExpandedTeamSections: $autoExpandedTeamSections,
+                            isSessionLive: isSessionLive
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+            .onChange(of: session.traces.count) { oldCount, newCount in
+                guard autoFollow, newCount > oldCount else { return }
+                if !expandAll {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) {
+                        autoExpandRecentTraces(session: session)
+                    }
+                }
+                if let lastTrace = session.traces.last {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            scrollProxy.scrollTo("trace-\(lastTrace.id)", anchor: .top)
+                        }
+                    }
+                }
+                previousTraceCount = newCount
+            }
+        }
+    }
+
     private func sessionHeader(_ session: TelemetrySession) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Status + summary line
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(session.hasErrors ? "FAILED" : "SUCCESS")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+        VStack(alignment: .leading, spacing: 4) {
+            // Row 1: Identity — status + agent + model + copy
+            HStack(spacing: 6) {
+                Text(session.hasErrors ? "ERR" : "OK")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .foregroundStyle(session.hasErrors ? TC.error : TC.success)
-
-                Text("·")
-                    .foregroundStyle(.quaternary)
-
-                Text(session.source.replacingOccurrences(of: "_", with: " "))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background((session.hasErrors ? TC.error : TC.success).opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
 
                 if let agent = session.agentName {
-                    Text("·")
-                        .foregroundStyle(.quaternary)
                     Text(agent)
-                        .font(.system(size: 11))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(TC.sourceClaude)
+                        .lineLimit(1)
                 }
 
-                Text("·")
-                    .foregroundStyle(.quaternary)
+                if let model = session.shortModelName {
+                    Text(model)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                }
 
-                Text(session.startTime.formatted(date: .abbreviated, time: .standard))
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                if session.isTeamCoordinator {
+                    HStack(spacing: 3) {
+                        Image(systemName: "person.3.fill")
+                            .font(.system(size: 9))
+                        Text("\(session.childSessions.count)")
+                            .font(.system(size: 10, design: .monospaced))
+                    }
+                    .foregroundStyle(TC.success)
+                }
 
                 Spacer()
 
-                // Copy session ID
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(session.id, forType: .string)
                 } label: {
-                    Text("Copy ID")
-                        .font(.system(size: 10))
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
+                .help("Copy session ID")
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
 
-            Divider()
-
-            // Metrics row
-            HStack(spacing: 0) {
-                // Only show duration if session has completed and duration is meaningful
+            // Row 2: Metrics — wraps gracefully
+            HStack(spacing: 8) {
                 if let duration = session.duration, duration > 0.001 {
-                    metricCell(label: "Duration", value: session.formattedDuration, highlight: duration > 5)
-                    Divider().frame(height: 32)
+                    Text(session.formattedDuration)
                 }
-                metricCell(label: "Turns", value: "\(session.turnCount)")
-                Divider().frame(height: 32)
-                metricCell(label: "Tools", value: "\(session.toolCount)")
+
+                Text("\(session.turnCount)t · \(session.toolCount)fn")
+
                 if session.hasErrors {
-                    Divider().frame(height: 32)
-                    metricCell(label: "Errors", value: "\(session.errorCount)", isError: true)
+                    Text("\(session.errorCount)err")
+                        .foregroundStyle(TC.error)
                 }
 
-                // AI Telemetry metrics
-                if session.hasAITelemetry {
-                    Divider().frame(height: 32)
-                    if session.totalInputTokens > 0 {
-                        metricCell(label: "Tokens", value: "\(session.totalInputTokens) → \(session.totalOutputTokens)", color: TC.info)
-                    }
-                    Divider().frame(height: 32)
-                    if let cost = session.formattedCost {
-                        metricCell(label: "Cost", value: cost, color: TC.warning)
-                    }
-                    if let model = session.shortModelName {
-                        Divider().frame(height: 32)
-                        metricCell(label: "Model", value: model, color: TC.sourceClaude)
-                    }
+                if session.totalInputTokens > 0 {
+                    Text("\(session.totalInputTokens)→\(session.totalOutputTokens)")
+                        .foregroundStyle(TC.info)
                 }
 
-                Spacer()
+                if let cost = session.formattedCost {
+                    Text(cost)
+                        .foregroundStyle(TC.warning)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .font(.system(size: 10, design: .monospaced))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
-    private func metricCell(label: String, value: String, highlight: Bool = false, isError: Bool = false, color: Color? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+    @ViewBuilder
+    private func teamCoordinatorBanner(_ session: TelemetrySession) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(TC.success)
+
+            Text("TEAM")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(TC.success)
+
+            Text("\(session.childSessions.count)")
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.secondary)
-            Text(value)
-                .font(.system(size: 16, weight: .medium, design: .monospaced))
-                .foregroundStyle(color ?? (isError ? TC.error : highlight ? TC.warning : .primary))
+
+            Spacer()
+
+            if session.childrenTotalCost > 0 {
+                Text(String(format: "$%.4f", session.childrenTotalCost))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(TC.warning)
+            }
+
+            if session.childrenTotalTokens > 0 {
+                let tokens = session.childrenTotalTokens
+                Text(tokens > 1_000_000
+                     ? String(format: "%.1fM", Double(tokens) / 1_000_000)
+                     : tokens > 1_000
+                     ? String(format: "%.1fK", Double(tokens) / 1_000)
+                     : "\(tokens) tok")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(TC.info)
+            }
         }
-        .padding(.horizontal, 16)
-        .frame(minWidth: 70, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(TC.success.opacity(0.04))
+    }
+
+    @ViewBuilder
+    private func coordinatorBreadcrumb(parentId: String) -> some View {
+        let parentSession = findSession(id: parentId)
+        let coordinatorName = parentSession?.agentName ?? parentSession?.teamName ?? "Coordinator"
+
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                selectedSessionId = parentId
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 10, weight: .semibold))
+                Text("Team: \(coordinatorName)")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundStyle(TC.success)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(TC.success.opacity(0.04))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func timelineHeader(_ trace: Trace) -> some View {
@@ -828,23 +755,17 @@ struct TelemetryPanel: View {
             Text("Operation")
                 .frame(width: 200, alignment: .leading)
 
-            // Time markers (skip 0ms marker)
             GeometryReader { geo in
                 let duration = trace.duration ?? 1
-                let markers = stride(from: 0.0, through: duration, by: max(duration / 4, 0.001))
 
                 ZStack(alignment: .leading) {
-                    ForEach(Array(markers.enumerated()), id: \.offset) { _, time in
-                        // Skip the first marker (0ms)
-                        if time > 0.0001 {
-                            let x = (time / duration) * geo.size.width
-                            VStack {
-                                Text(formatDuration(time))
-                                    .font(.system(size: 13, design: .monospaced))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .position(x: x, y: 8)
-                        }
+                    // 3 evenly-spaced markers at 25%, 50%, 75%
+                    ForEach([0.25, 0.5, 0.75], id: \.self) { pct in
+                        Text(formatDuration(duration * pct))
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.quaternary)
+                            .fixedSize()
+                            .position(x: geo.size.width * pct, y: 8)
                     }
                 }
             }
@@ -865,366 +786,148 @@ struct TelemetryPanel: View {
         return String(format: "%.2fs", seconds)
     }
 
+    // MARK: - Trace Row (extracted for type-checker)
+
+    @ViewBuilder
+    private func traceRow(trace: Trace, index: Int, session: TelemetrySession) -> some View {
+        let isLastTrace = index == session.traces.count - 1
+        let isLive = isTraceLive(trace, in: session)
+
+        VStack(alignment: .leading, spacing: 0) {
+            // Trace header row (clickable to expand/collapse)
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    if expandedTraceIds.contains(trace.id) {
+                        expandedTraceIds.remove(trace.id)
+                    } else {
+                        expandedTraceIds.insert(trace.id)
+                    }
+                }
+            } label: {
+                traceHeaderLabel(trace: trace, index: index, isLive: isLive)
+            }
+            .buttonStyle(.plain)
+
+            // Expanded: show span waterfall
+            if expandedTraceIds.contains(trace.id) {
+                VStack(alignment: .leading, spacing: 0) {
+                    timelineHeader(trace)
+                        .padding(.horizontal, 16)
+
+                    ForEach(trace.waterfallSpans) { span in
+                        SpanRow(
+                            span: span,
+                            traceStart: trace.startTime,
+                            traceDuration: trace.duration ?? 1,
+                            isSelected: pinnedSpan?.id == span.id,
+                            onSelect: { pinnedSpan = span }
+                        )
+                    }
+
+                    // Team members inline — anchored to the trace that spawned the team
+                    if trace.hasTeamCreate && !session.childSessions.isEmpty {
+                        TeamMembersSection(
+                            session: session,
+                            selectedSessionId: $selectedSessionId,
+                            expandedChildAgentIds: $expandedChildAgentIds,
+                            expandedChildTraceIds: $expandedChildTraceIds,
+                            pinnedSpan: $pinnedSpan,
+                            autoExpandedTeamSections: $autoExpandedTeamSections,
+                            isSessionLive: isSessionLive
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                    }
+                }
+                .padding(.bottom, 8)
+                .background(isLive ? TC.success.opacity(0.02) : Color.primary.opacity(0.02))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            if !isLastTrace {
+                Divider().padding(.leading, 36)
+            }
+        }
+        .id("trace-\(trace.id)")
+    }
+
+    @ViewBuilder
+    private func traceHeaderLabel(trace: Trace, index: Int, isLive: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: expandedTraceIds.contains(trace.id) ? "chevron.down" : "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .frame(width: 12)
+
+            if isLive {
+                Circle()
+                    .fill(TC.success)
+                    .frame(width: 5, height: 5)
+                    .modifier(PulseModifier())
+            }
+
+            Text("Turn \(index + 1)")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .fixedSize()
+
+            if !isLive {
+                Text(trace.hasErrors ? "ERR" : "OK")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundStyle(trace.hasErrors ? TC.error : TC.success)
+                    .fixedSize()
+            }
+
+            // Tool summary — truncates gracefully
+            let tools = trace.waterfallSpans.compactMap { $0.toolName }
+            let uniqueTools = Set(tools)
+            if !tools.isEmpty {
+                Text("\(tools.count)fn")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                Text(uniqueTools.prefix(2).joined(separator: ", "))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            Spacer(minLength: 4)
+
+            // Right-aligned metrics — fixed size so they don't compress
+            HStack(spacing: 6) {
+                if let cost = trace.formattedCost {
+                    Text(cost)
+                        .foregroundStyle(TC.warning)
+                }
+
+                if !isLive, let duration = trace.duration, duration > 0.001 {
+                    Text(trace.formattedDuration)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !isLive {
+                    Text(trace.startTime, style: .relative)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .font(.system(size: 10, design: .monospaced))
+            .fixedSize()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .background(
+            expandedTraceIds.contains(trace.id)
+                ? (isLive ? TC.success.opacity(0.04) : Color.primary.opacity(0.04))
+                : Color.clear
+        )
+    }
+
     /// Auto-expand the most recent 2-3 traces (keeps older ones collapsed)
     private func autoExpandRecentTraces(session: TelemetrySession) {
         let recentCount = min(3, session.traces.count)
         expandedTraceIds = Set(session.traces.suffix(recentCount).map { $0.id })
-    }
-
-
-    // MARK: - Span Detail Content (shared between inline and pinned)
-
-    @ViewBuilder
-    private func spanDetailContent(_ span: TelemetrySpan) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-
-            // ── Core metadata ──
-            VStack(alignment: .leading, spacing: 6) {
-                spanDetailRow("span_id", span.id.uuidString)
-                if let parentId = span.parentId {
-                    spanDetailRow("parent_id", parentId.uuidString)
-                }
-                spanDetailRow("source", span.source)
-                spanDetailRow("severity", span.severity)
-                spanDetailRow("duration_ms", "\(span.durationMs ?? 0)")
-                spanDetailRow("timestamp", span.createdAt.formatted(date: .abbreviated, time: .standard))
-
-                // OTEL context
-                if let traceId = span.otelTraceId {
-                    spanDetailRow("trace_id", traceId)
-                }
-                if let spanId = span.otelSpanId {
-                    spanDetailRow("w3c_span_id", spanId)
-                }
-                if let kind = span.otelSpanKind {
-                    spanDetailRow("span_kind", kind)
-                }
-                if let service = span.otelServiceName {
-                    spanDetailRow("service", service)
-                }
-            }
-
-            // ── AI Telemetry (API request spans) ──
-            if span.isApiRequest {
-                Divider()
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("AI TELEMETRY")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-
-                    if let model = span.model {
-                        spanDetailRow("model", model)
-                    }
-                    if let tokens = span.formattedTokens {
-                        spanDetailRow("tokens", tokens)
-                    }
-                    if let input = span.inputTokens {
-                        spanDetailRow("input_tokens", "\(input)")
-                    }
-                    if let output = span.outputTokens {
-                        spanDetailRow("output_tokens", "\(output)")
-                    }
-                    if let cacheRead = span.cacheReadTokens, cacheRead > 0 {
-                        spanDetailRow("cache_read", "\(cacheRead)")
-                    }
-                    if let cacheCreate = span.cacheCreationTokens, cacheCreate > 0 {
-                        spanDetailRow("cache_create", "\(cacheCreate)")
-                    }
-                    if let cost = span.formattedCost {
-                        spanDetailRow("cost", cost)
-                    }
-                    if let turn = span.turnNumber {
-                        spanDetailRow("turn", "\(turn)")
-                    }
-                    if let stop = span.stopReason {
-                        spanDetailRow("stop_reason", stop)
-                    }
-                }
-            }
-
-            // ── Tool Input (tool spans only) ──
-            if span.isToolSpan, let input = span.toolInput, !input.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("TOOL INPUT")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.tertiary)
-                        Spacer()
-                        if let bytes = span.inputBytes {
-                            Text("\(bytes)B")
-                                .font(.system(size: 13, design: .monospaced))
-                                .foregroundStyle(.quaternary)
-                        }
-                        Button {
-                            let json = (try? JSONSerialization.data(withJSONObject: input, options: .prettyPrinted))
-                                .flatMap { String(data: $0, encoding: .utf8) } ?? "\(input)"
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(json, forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    ForEach(Array(input.keys.sorted()), id: \.self) { key in
-                        HStack(alignment: .top, spacing: 8) {
-                            Text(key)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(TC.jsonKey)
-                                .frame(width: 80, alignment: .trailing)
-                            formattedValue(input[key])
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
-            }
-
-            // ── Tool Output (tool spans only) ──
-            if span.isToolSpan {
-                if let error = span.toolError {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("TOOL OUTPUT")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.tertiary)
-                        Text(error)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(TC.error)
-                            .textSelection(.enabled)
-                    }
-                } else if let result = span.toolResult {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("TOOL OUTPUT")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(.tertiary)
-                            Spacer()
-                            if let bytes = span.outputBytes {
-                                Text("\(bytes)B")
-                                    .font(.system(size: 13, design: .monospaced))
-                                    .foregroundStyle(.quaternary)
-                            }
-                            Button {
-                                let str: String
-                                if let dict = result as? [String: Any] {
-                                    str = (try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted))
-                                        .flatMap { String(data: $0, encoding: .utf8) } ?? "\(dict)"
-                                } else { str = "\(result)" }
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(str, forType: .string)
-                            } label: {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        if let dict = result as? [String: Any] {
-                            ForEach(Array(dict.keys.sorted().prefix(20)), id: \.self) { key in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text(key)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(TC.jsonKey)
-                                        .frame(width: 80, alignment: .trailing)
-                                    formattedValue(dict[key])
-                                        .textSelection(.enabled)
-                                }
-                            }
-                        } else if let str = result as? String {
-                            Text(str.prefix(500))
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
-
-                // Marginal cost for tool spans
-                if let cost = span.formattedMarginalCost {
-                    spanDetailRow("turn_cost", cost)
-                }
-                if let payload = span.formattedPayloadSize {
-                    spanDetailRow("payload", payload)
-                }
-            }
-
-            // ── Error detail ──
-            if let error = span.errorMessage {
-                Divider()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("ERROR")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(TC.error)
-                    Text(error)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(TC.error)
-                        .textSelection(.enabled)
-                }
-            }
-
-            // ── Raw attributes ──
-            if let details = span.details, !details.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("ATTRIBUTES")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                    ExpandableJSON(details: details)
-                }
-            }
-        }
-    }
-
-    // MARK: - Span Comparison Bar
-
-    private func spanComparisonBar(_ span: TelemetrySpan, comparison: SpanComparison) -> some View {
-        HStack(spacing: 12) {
-            // Percentile rank
-            HStack(spacing: 4) {
-                Image(systemName: comparison.isSlow ? "exclamationmark.triangle.fill" : "gauge.with.dots.needle.33percent")
-                    .font(.system(size: 10))
-                    .foregroundStyle(comparison.isSlow ? TC.error : TC.success)
-                Text("P\(Int(comparison.percentileRank))")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(comparison.isSlow ? TC.error : .primary)
-            }
-
-            Divider().frame(height: 14)
-
-            // Avg comparison
-            HStack(spacing: 4) {
-                Text("avg")
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                Text(formatMs(comparison.avgMs))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
-            // P95 comparison
-            HStack(spacing: 4) {
-                Text("p95")
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                Text(formatMs(comparison.p95Ms))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
-            Divider().frame(height: 14)
-
-            // Error rate
-            HStack(spacing: 4) {
-                Text("err")
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                Text(String(format: "%.1f%%", comparison.errorRate))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(comparison.errorRate > 5 ? TC.error : .secondary)
-            }
-
-            // 24h volume
-            HStack(spacing: 4) {
-                Text("24h")
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                Text("\(comparison.totalCalls24h)")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if comparison.isSlow {
-                Text("SLOW")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundStyle(TC.error)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(TC.error.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(comparison.isSlow ? TC.error.opacity(0.04) : Color.primary.opacity(0.02))
-    }
-
-    // MARK: - Span Detail Helpers
-
-    private func spanDetailRow(_ key: String, _ value: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(key)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.tertiary)
-                .frame(width: 100, alignment: .trailing)
-            Text(value)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-        }
-    }
-
-    @ViewBuilder
-    private func formattedValue(_ value: Any?) -> some View {
-        if let str = value as? String {
-            Text(str)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(TC.jsonString)
-        } else if let num = value as? NSNumber {
-            if CFGetTypeID(num) == CFBooleanGetTypeID() {
-                Text(num.boolValue ? "true" : "false")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(TC.jsonBool)
-            } else {
-                Text("\(num)")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(TC.jsonNumber)
-            }
-        } else if let bool = value as? Bool {
-            Text(bool ? "true" : "false")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(TC.jsonBool)
-        } else if let int = value as? Int {
-            Text("\(int)")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(TC.jsonNumber)
-        } else if let double = value as? Double {
-            Text(String(format: "%.2f", double))
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(TC.jsonNumber)
-        } else if let dict = value as? [String: Any] {
-            Text("{\(dict.count) keys}")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
-        } else if let arr = value as? [Any] {
-            Text("[\(arr.count) items]")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
-        } else if value == nil {
-            Text("null")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.quaternary)
-        } else {
-            Text("\(String(describing: value))")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func errorTypeBadgeColor(_ type: String) -> Color {
-        switch type {
-        case "rate_limit": return TC.warning
-        case "auth": return Color(red: 0.8, green: 0.3, blue: 0.3)
-        case "validation": return TC.info
-        case "not_found": return .secondary
-        case "recoverable": return TC.warning
-        case "permanent": return TC.error
-        default: return .secondary
-        }
     }
 
     // MARK: - Helpers
@@ -1232,17 +935,14 @@ struct TelemetryPanel: View {
     /// Check if a session received data in the last 30 seconds (still active)
     /// For team/swarm sessions, checks children and grandchildren
     private func isSessionLive(_ session: TelemetrySession) -> Bool {
-        // Check if this session itself is live
         if let endTime = session.endTime, Date().timeIntervalSince(endTime) < 30 {
             return true
         }
-        // For team coordinators or swarm groups, check children and grandchildren
         if session.isTeamCoordinator || session.isSyntheticSwarmGroup {
             for child in session.childSessions {
                 if let endTime = child.endTime, Date().timeIntervalSince(endTime) < 30 {
                     return true
                 }
-                // Check grandchildren (teammates under coordinators)
                 for grandchild in child.childSessions {
                     if let endTime = grandchild.endTime, Date().timeIntervalSince(endTime) < 30 {
                         return true
@@ -1251,58 +951,6 @@ struct TelemetryPanel: View {
             }
         }
         return false
-    }
-
-    // MARK: - Pinned Span Panel (full-height 3rd column)
-
-    private func pinnedSpanPanel(_ span: TelemetrySpan) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header (top padding for title bar clearance)
-            HStack(spacing: 8) {
-                Text(span.isError ? "ERROR" : "OK")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(span.isError ? TC.error : TC.success)
-
-                Text(span.toolName ?? span.action)
-                    .font(.system(.subheadline, design: .monospaced, weight: .medium))
-
-                Spacer()
-
-                Text(span.formattedDuration)
-                    .font(.system(.subheadline, design: .monospaced))
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    pinnedSpan = nil
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            // Comparison bar
-            if let comparison = telemetry.selectedSpanComparison {
-                spanComparisonBar(span, comparison: comparison)
-            }
-
-            Divider()
-
-            // Full scrollable detail (reuses spanDetailContent)
-            ScrollView {
-                spanDetailContent(span)
-                    .padding(16)
-            }
-        }
-        .background(VibrancyBackground())
-        .task(id: span.id) {
-            if span.isToolSpan {
-                await telemetry.fetchSpanComparison(spanId: span.id)
-            }
-        }
     }
 
     // MARK: - Empty State

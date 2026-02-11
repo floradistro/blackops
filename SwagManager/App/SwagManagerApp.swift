@@ -71,8 +71,16 @@ struct AgentMenuCommands: Commands {
     let store: EditorStore
     let toolbarState: ToolbarState
 
+    private var menuTitle: String {
+        guard let id = toolbarState.selectedAgentId,
+              let agent = store.aiAgents.first(where: { $0.id == id }) else {
+            return "Agent"
+        }
+        return agent.displayName
+    }
+
     var body: some Commands {
-        CommandMenu("Agent") {
+        CommandMenu(menuTitle) {
             ForEach(store.aiAgents) { agent in
                 Button {
                     Task { @MainActor in

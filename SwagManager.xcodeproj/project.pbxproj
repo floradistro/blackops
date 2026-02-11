@@ -8,12 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		016B1ADA701486EC2B715B92 /* GlassComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C641288A47B71AED2B5B2A /* GlassComponents.swift */; };
-		01C113F80E1B42F783EB72DC /* MainDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DA9C0CED034F4785F1B2FB /* MainDetailView.swift */; };
 		TOOLBARST002 /* ToolbarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = TOOLBARST001 /* ToolbarState.swift */; };
-		157B109A519D43198FF416C5 /* DetailWrappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C24DBE2DEB147308D183279 /* DetailWrappers.swift */; };
 		1AB7818AFD6D8215FE6BC2F7 /* BuildFile in Sources */ = {isa = PBXBuildFile; };
 		21A51D2DA2CCB6420E0D3B44 /* BuildFile in Sources */ = {isa = PBXBuildFile; };
-		3BF1D0F782574BF28E60059A /* MainSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6409AB0A36FA4B0DAFE9CD1F /* MainSidebar.swift */; };
 		6795C10CF210455184DC0017 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75C8C1D400444D21A994CFD6 /* Logger.swift */; };
 		69E8F88CF5E738D72FDE2C5A /* EditorStore+StoreManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE532C0107D5B6F73F8FB4C9 /* EditorStore+StoreManagement.swift */; };
 		6FF658B918CE4253A4309A96 /* AppleContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA20C4960DD4A76BE9704B6 /* AppleContentView.swift */; };
@@ -42,7 +39,6 @@
 		BF917 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF917 /* ButtonStyles.swift */; };
 		BFB68F9CE43C11A18522A01C /* SupabaseDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847EF2E6EF2603E411B2BF5B /* SupabaseDecoder.swift */; };
 		D017E131684C0759D1D1C35B /* StoreModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCADD87914F0AB0C5B180C63 /* StoreModels.swift */; };
-		E69EC3886DAC42A5B1E04F53 /* SDSidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5B099B3F1841D384B8DBC4 /* SDSidebarItem.swift */; };
 		TELEMPANEL002 /* TelemetryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMPANEL001 /* TelemetryPanel.swift */; };
 		TELEMSERV002 /* TelemetryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMSERV001 /* TelemetryService.swift */; };
 		TELEMMODEL002 /* TelemetryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMMODEL001 /* TelemetryModels.swift */; };
@@ -55,15 +51,11 @@
 /* Begin PBXFileReference section */
 		08637FF5F3F22AD1B75536D2 /* ReactRenderTemplate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReactRenderTemplate.swift; sourceTree = "<group>"; };
 		246D1E14FF36451D9E0A3154 /* NavigationItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NavigationItem.swift; path = SwagManager/Core/Navigation/NavigationItem.swift; sourceTree = "<group>"; };
-		2C24DBE2DEB147308D183279 /* DetailWrappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManager/Core/Views/Detail/DetailWrappers.swift; sourceTree = "<group>"; };
 		2EA20C4960DD4A76BE9704B6 /* AppleContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleContentView.swift; path = SwagManager/Core/Views/AppleContentView.swift; sourceTree = "<group>"; };
 		4D0A3267247E48979D99C75F /* SelectableChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectableChip.swift; path = SwagManager/Components/SelectableChip.swift; sourceTree = "<group>"; };
-		4F5B099B3F1841D384B8DBC4 /* SDSidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManager/Core/Navigation/SDSidebarItem.swift; sourceTree = "<group>"; };
-		6409AB0A36FA4B0DAFE9CD1F /* MainSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManager/Core/Views/Sidebar/MainSidebar.swift; sourceTree = "<group>"; };
 		75C8C1D400444D21A994CFD6 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Logger.swift; path = SwagManager/Utilities/Logger.swift; sourceTree = "<group>"; };
 		76F09114B64EC1881FD6A75D /* NewStoreSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sheets/NewStoreSheet.swift; sourceTree = "<group>"; };
 		847EF2E6EF2603E411B2BF5B /* SupabaseDecoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SupabaseDecoder.swift; sourceTree = "<group>"; };
-		87DA9C0CED034F4785F1B2FB /* MainDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManager/Core/Views/Detail/MainDetailView.swift; sourceTree = "<group>"; };
 		9784A1FFCD36C824D3876DED /* FreezeDebugger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeDebugger.swift; sourceTree = "<group>"; };
 		AA1B2C3D4E5F678901234002 /* AIAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAgent.swift; sourceTree = "<group>"; };
 		AE532C0107D5B6F73F8FB4C9 /* EditorStore+StoreManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+StoreManagement.swift"; sourceTree = "<group>"; };
@@ -473,10 +465,6 @@
 				1AB7818AFD6D8215FE6BC2F7 /* BuildFile in Sources */,
 				016B1ADA701486EC2B715B92 /* GlassComponents.swift in Sources */,
 				21A51D2DA2CCB6420E0D3B44 /* BuildFile in Sources */,
-				3BF1D0F782574BF28E60059A /* MainSidebar.swift in Sources */,
-				01C113F80E1B42F783EB72DC /* MainDetailView.swift in Sources */,
-				157B109A519D43198FF416C5 /* DetailWrappers.swift in Sources */,
-				E69EC3886DAC42A5B1E04F53 /* SDSidebarItem.swift in Sources */,
 				D017E131684C0759D1D1C35B /* StoreModels.swift in Sources */,
 				TOOLBARST002 /* ToolbarState.swift in Sources */,
 				B25D681FC4B50617B90180BD /* FreezeDebugger.swift in Sources */,

@@ -218,28 +218,36 @@ Deno.serve(async (req: Request) => {
       console.warn(`No store found for email address: ${toEmail}`);
     }
 
-    // Match customer by email (scoped to store if known)
+    // Match customer by email via v_store_customers (real platform_users data)
     let customerId: string | null = null;
-    const customerQuery = supabase
-      .from("customers")
-      .select("id, store_id")
-      .ilike("email", fromEmail)
-      .limit(1);
-
+    let customerStoreId: string | null = null;
     if (storeId) {
-      customerQuery.eq("store_id", storeId);
-    }
-
-    const { data: customer } = await customerQuery.maybeSingle();
-    if (customer) {
-      customerId = customer.id;
-      // If we didn't have a store_id from routing, use customer's store
-      if (!storeId && customer.store_id) {
-        // Note: We don't reassign storeId here as it's const, but we use customer's store below
+      const { data: customer } = await supabase
+        .from("v_store_customers")
+        .select("id, store_id")
+        .eq("store_id", storeId)
+        .ilike("email", fromEmail)
+        .limit(1)
+        .maybeSingle();
+      if (customer) {
+        customerId = customer.id;
+        customerStoreId = customer.store_id;
+      }
+    } else {
+      // No store context — search all stores for this email
+      const { data: customer } = await supabase
+        .from("v_store_customers")
+        .select("id, store_id")
+        .ilike("email", fromEmail)
+        .limit(1)
+        .maybeSingle();
+      if (customer) {
+        customerId = customer.id;
+        customerStoreId = customer.store_id;
       }
     }
 
-    const effectiveStoreId = storeId || customer?.store_id || null;
+    const effectiveStoreId = storeId || customerStoreId || null;
 
     // Match order by scanning subject + body for order numbers
     let orderId: string | null = null;

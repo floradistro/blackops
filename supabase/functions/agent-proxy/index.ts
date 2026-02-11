@@ -84,6 +84,7 @@ serve(async (req: Request) => {
       "claude-sonnet-4-20250514",
       "claude-haiku-4-5-20251001",
       "claude-opus-4-20250514",
+      "claude-opus-4-6",
     ];
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : "claude-sonnet-4-20250514";
 
@@ -98,7 +99,15 @@ serve(async (req: Request) => {
       messages,
       stream: true, // Always stream from Anthropic
     };
-    if (system) apiParams.system = system;
+
+    // Wrap system prompt with cache_control for Anthropic prompt caching
+    if (system) {
+      if (typeof system === "string") {
+        apiParams.system = [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+      } else {
+        apiParams.system = system; // Already formatted (array with cache_control)
+      }
+    }
     if (tools?.length) apiParams.tools = tools;
     if (temperature !== undefined) apiParams.temperature = temperature;
 

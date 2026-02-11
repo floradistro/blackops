@@ -59,6 +59,8 @@ class TelemetryService {
     private var loadTask: Task<Void, Never>?
     // Track which conversation IDs we've already queried for parent links
     private var parentLookupInFlight: Set<String> = []
+    // Retry counter for parent lookups (max 3 attempts per conversation)
+    private var parentLookupAttempts: [String: Int] = [:]
 
     enum TimeRange: String, CaseIterable {
         case last15m = "15m"
@@ -288,38 +290,53 @@ class TelemetryService {
     }
 
     /// Query DB for parent_conversation_id when Realtime payload was truncated.
-    /// Runs once per unknown conversation_id, ~10ms indexed query.
+    /// Retries up to 3 times per conversation as more spans arrive.
     private func lookupParentFromDB(conversationId: String) {
-        // Already queried or already known?
-        guard !parentLookupInFlight.contains(conversationId),
-              parentChildMap[conversationId] == nil else { return }
+        guard parentChildMap[conversationId] == nil else { return }
+
+        // Limit retries (child spans arrive over time — later attempts find more data)
+        let attempts = parentLookupAttempts[conversationId, default: 0]
+        guard attempts < 3 else { return }
+
+        // Prevent concurrent lookups for the same conversation
+        guard !parentLookupInFlight.contains(conversationId) else { return }
         parentLookupInFlight.insert(conversationId)
+        parentLookupAttempts[conversationId] = attempts + 1
 
         Task { @MainActor [weak self] in
-            guard let self = self else { return }
+            defer { self?.parentLookupInFlight.remove(conversationId) }
+            guard let self else { return }
             do {
                 let supabase = SupabaseService.shared.adminClient
 
-                // Fetch one span from this conversation that has parent_conversation_id
+                // Query ANY span for this conversation — parent_conversation_id
+                // can be in details of any action type, not just team.* actions
                 let response = try await supabase
                     .from("audit_logs")
                     .select("details")
                     .eq("conversation_id", value: conversationId)
-                    .like("action", pattern: "team.%")
-                    .limit(1)
+                    .limit(10)
                     .execute()
 
-                // Parse raw JSON to extract parent_conversation_id reliably
-                if let rows = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]],
-                   let details = rows.first?["details"] as? [String: Any],
-                   let parentId = details["parent_conversation_id"] as? String,
-                   !parentId.isEmpty {
-                    self.parentChildMap[conversationId] = parentId
-                    #if DEBUG
-                    print("[RT-DB] Found parent for \(conversationId.prefix(15)): \(parentId.prefix(15))")
-                    #endif
-                    self.scheduleRebuild()
+                // Check each span's details for parent_conversation_id
+                if let rows = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
+                    for row in rows {
+                        if let details = row["details"] as? [String: Any],
+                           let parentId = details["parent_conversation_id"] as? String,
+                           !parentId.isEmpty {
+                            self.parentChildMap[conversationId] = parentId
+                            #if DEBUG
+                            print("[RT-DB] Found parent for \(conversationId.prefix(15)): \(parentId.prefix(15)) (attempt \(attempts + 1))")
+                            #endif
+                            self.scheduleRebuild()
+                            return
+                        }
+                    }
                 }
+
+                #if DEBUG
+                print("[RT-DB] No parent found for \(conversationId.prefix(15)) (attempt \(attempts + 1)/3)")
+                #endif
             } catch {
                 #if DEBUG
                 print("[RT-DB] Lookup error for \(conversationId.prefix(15)): \(error)")
@@ -423,13 +440,11 @@ class TelemetryService {
                     recentSessions[parentIdx] = parent
                     return
                 }
-                // New child for existing parent — structural change
+                // New child for existing parent — animate the team transition
                 parent.childSessions.append(updatedSession)
                 parent.childSessions.sort { $0.startTime < $1.startTime }
-                recentSessions[parentIdx] = parent
-                // Signal new team coordinator for auto-expand
-                if !newTeamCoordinatorIds.contains(parentId) {
-                    newTeamCoordinatorIds = [parentId]
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    recentSessions[parentIdx] = parent
                 }
                 return
             }
@@ -448,7 +463,9 @@ class TelemetryService {
                         coordinator.childSessions.sort { $0.startTime < $1.startTime }
                     }
                     root.childSessions[coordIdx] = coordinator
-                    recentSessions[rootIdx] = root
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        recentSessions[rootIdx] = root
+                    }
                     return
                 }
             }
@@ -616,8 +633,10 @@ class TelemetryService {
                 recentSessions = sortedRoots
             }
         } else {
-            // Structural topology change — update without animating the whole list
-            recentSessions = sortedRoots
+            // Structural topology change — animate the transition (child moves under parent)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                recentSessions = sortedRoots
+            }
         }
 
         #if DEBUG
@@ -675,6 +694,7 @@ class TelemetryService {
             // Keep entries whose child or parent is still in sessionMap
             let activeIds = Set(sessionMap.keys)
             parentChildMap = parentChildMap.filter { activeIds.contains($0.key) || activeIds.contains($0.value) }
+            parentLookupAttempts = parentLookupAttempts.filter { activeIds.contains($0.key) }
         }
     }
 
