@@ -4,7 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Anthropic from "npm:@anthropic-ai/sdk@0.30.1";
+import Anthropic from "npm:@anthropic-ai/sdk@0.74.0";
 
 // CORS: use ALLOWED_ORIGINS env var (comma-separated) or fall back to wildcard for local dev
 const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "*").split(",").map(s => s.trim());
@@ -45,19 +45,40 @@ serve(async (req: Request) => {
   const token = authHeader.replace("Bearer ", "");
 
   try {
-    // Verify the JWT is valid by creating a user-scoped client
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
+    // Check if token is a service-role key (new sb_secret_* format OR legacy JWT)
+    const isServiceRole =
+      token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+      token === (Deno.env.get("SERVICE_ROLE_JWT") || "");
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
+    let user: { id: string; email?: string } | null = null;
+
+    if (!isServiceRole) {
+      // Verify the JWT is valid by creating a user-scoped client
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
+        });
+      }
+      user = authUser;
+
+      // Rate limiting (skip for service-role)
+      const { data: rl } = await supabase.rpc("check_rate_limit", {
+        p_user_id: user.id, p_window_seconds: 60, p_max_requests: 20
       });
+      if (rl?.[0] && !rl[0].allowed) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+          status: 429,
+          headers: { "Retry-After": String(rl[0].retry_after_seconds), "Content-Type": "application/json", ...getCorsHeaders(req) },
+        });
+      }
     }
 
     // Parse request body
@@ -70,6 +91,8 @@ serve(async (req: Request) => {
       max_tokens: requestedMaxTokens = 4096,
       temperature,
       stream = true,
+      betas,
+      context_management,
     } = body;
 
     if (!messages || !Array.isArray(messages)) {
@@ -110,13 +133,14 @@ serve(async (req: Request) => {
     }
     if (tools?.length) apiParams.tools = tools;
     if (temperature !== undefined) apiParams.temperature = temperature;
+    if (betas?.length) apiParams.betas = betas;
+    if (context_management) apiParams.context_management = context_management;
 
     if (!stream) {
       // Non-streaming: collect full response and return JSON
-      const response = await anthropic.messages.create({
-        ...apiParams,
-        stream: false,
-      } as any);
+      const response = betas?.length
+        ? await anthropic.beta.messages.create({ ...apiParams, stream: false } as any)
+        : await anthropic.messages.create({ ...apiParams, stream: false } as any);
       return new Response(JSON.stringify(response), {
         headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
       });
@@ -127,7 +151,9 @@ serve(async (req: Request) => {
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          const response = await anthropic.messages.create(apiParams as any);
+          const response = betas?.length
+            ? await anthropic.beta.messages.create({ ...apiParams, stream: true } as any)
+            : await anthropic.messages.create(apiParams as any);
 
           for await (const event of response as any) {
             controller.enqueue(
@@ -137,9 +163,10 @@ serve(async (req: Request) => {
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch (err) {
+          const safeError = sanitizeError(err);
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ type: "error", error: String(err) })}\n\n`
+              `data: ${JSON.stringify({ type: "error", error: safeError })}\n\n`
             )
           );
         }
@@ -156,9 +183,21 @@ serve(async (req: Request) => {
       },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: sanitizeError(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...getCorsHeaders(req) },
     });
   }
 });
+
+/** Strip sensitive details from error messages */
+function sanitizeError(err: unknown): string {
+  const msg = String(err);
+  // Remove API keys, passwords, stack traces
+  return msg
+    .replace(/sk-[a-zA-Z0-9_-]+/g, "sk-***")
+    .replace(/key[=:]\s*["']?[a-zA-Z0-9_-]{20,}["']?/gi, "key=***")
+    .replace(/password[=:]\s*["']?[^\s"']+["']?/gi, "password=***")
+    .replace(/\n\s+at\s+.*/g, "") // strip stack traces
+    .substring(0, 500);
+}
