@@ -30,36 +30,109 @@ struct AppleContentView: View {
     @Environment(\.editorStore) private var store
     @Environment(\.toolbarState) private var toolbarState
 
+    @State private var activeView: ActiveView = .telemetry
+
+    enum ActiveView: String, CaseIterable {
+        case telemetry = "Telemetry"
+        case workflows = "Workflows"
+
+        var icon: String {
+            switch self {
+            case .telemetry: return "waveform.path.ecg"
+            case .workflows: return "arrow.triangle.branch"
+            }
+        }
+
+        var shortcut: KeyEquivalent {
+            switch self {
+            case .telemetry: return "1"
+            case .workflows: return "2"
+            }
+        }
+    }
+
     private var bindableToolbar: Bindable<ToolbarState> {
         Bindable(toolbarState)
     }
 
     var body: some View {
-        TelemetryPanel(storeId: store.selectedStore?.id)
-            .background(WindowVibrancy())
-            .inspector(isPresented: bindableToolbar.showConfig) {
-                inspectorContent
-                    .inspectorColumnWidth(min: 300, ideal: 380, max: 500)
+        Group {
+            switch activeView {
+            case .telemetry:
+                TelemetryPanel(storeId: store.selectedStore?.id)
+            case .workflows:
+                WorkflowDashboard(storeId: store.selectedStore?.id)
             }
-            .task {
-                await store.loadStores()
-                if store.selectedStore != nil {
-                    await store.loadAIAgents()
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            viewSwitcher
+        }
+        .background(WindowVibrancy())
+        .inspector(isPresented: bindableToolbar.showConfig) {
+            inspectorContent
+                .inspectorColumnWidth(min: 300, ideal: 380, max: 500)
+        }
+        .task {
+            await store.loadStores()
+            if store.selectedStore != nil {
+                await store.loadAIAgents()
+            }
+        }
+        .onChange(of: store.selectedStore?.id) { _, newId in
+            toolbarState.selectedAgentId = nil
+            toolbarState.agentHasChanges = false
+            if newId != nil {
+                Task { await store.loadAIAgents() }
+            }
+        }
+        .alert("Error", isPresented: Bindable(store).showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(store.error ?? "An unknown error occurred.")
+        }
+        .keyboardShortcut("1", modifiers: .command, action: { activeView = .telemetry })
+        .keyboardShortcut("2", modifiers: .command, action: { activeView = .workflows })
+        .freezeDebugLifecycle("AppleContentView")
+    }
+
+    // MARK: - View Switcher
+
+    private var viewSwitcher: some View {
+        HStack(spacing: DS.Spacing.xxs) {
+            ForEach(ActiveView.allCases, id: \.self) { view in
+                Button {
+                    withAnimation(DS.Animation.fast) {
+                        activeView = view
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: view.icon)
+                            .font(DesignSystem.font(10, weight: .medium))
+                        Text(view.rawValue)
+                            .font(DS.Typography.monoCaption)
+                            .textCase(.uppercase)
+                    }
+                    .padding(.horizontal, DS.Spacing.sm)
+                    .padding(.vertical, 3)
+                    .background(
+                        activeView == view ? DS.Colors.surfaceActive : Color.clear,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.sm)
+                    )
+                    .foregroundStyle(activeView == view ? DS.Colors.textPrimary : DS.Colors.textTertiary)
                 }
+                .buttonStyle(.plain)
             }
-            .onChange(of: store.selectedStore?.id) { _, newId in
-                toolbarState.selectedAgentId = nil
-                toolbarState.agentHasChanges = false
-                if newId != nil {
-                    Task { await store.loadAIAgents() }
+
+            Spacer()
+        }
+        .padding(.horizontal, DS.Spacing.md)
+        .padding(.vertical, 3)
+        .background {
+            DS.Colors.surfaceTertiary
+                .overlay(alignment: .bottom) {
+                    Divider().opacity(0.3)
                 }
-            }
-            .alert("Error", isPresented: Bindable(store).showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(store.error ?? "An unknown error occurred.")
-            }
-            .freezeDebugLifecycle("AppleContentView")
+        }
     }
 
     // MARK: - Inspector Content
@@ -76,6 +149,19 @@ struct AppleContentView: View {
                 Text("Select an agent from the Agent menu.")
             }
         }
+    }
+}
+
+// MARK: - Keyboard Shortcut View Extension
+
+private extension View {
+    func keyboardShortcut(_ key: KeyEquivalent, modifiers: EventModifiers, action: @escaping () -> Void) -> some View {
+        self.background(
+            Button("") { action() }
+                .keyboardShortcut(key, modifiers: modifiers)
+                .frame(width: 0, height: 0)
+                .opacity(0)
+        )
     }
 }
 

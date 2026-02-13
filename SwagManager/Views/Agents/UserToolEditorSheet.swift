@@ -87,7 +87,7 @@ struct UserToolEditorSheet: View {
 
             // Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxl) {
                     basicInfoSection
                     executionTypeSection
                     if executionType == .http {
@@ -96,7 +96,7 @@ struct UserToolEditorSheet: View {
                     inputParametersSection
                     settingsSection
                 }
-                .padding(24)
+                .padding(DesignSystem.Spacing.xxl)
             }
 
             Divider()
@@ -120,30 +120,30 @@ struct UserToolEditorSheet: View {
     private var sheetHeader: some View {
         HStack {
             Text(tool == nil ? "NEW" : "EDIT")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(DesignSystem.monoFont(10, weight: .semibold))
                 .foregroundStyle(.tertiary)
             Text("Tool")
                 .font(.system(.subheadline, design: .monospaced, weight: .medium))
             Spacer()
             Button("Close") { dismiss() }
-                .font(.system(size: 11))
+                .font(DesignSystem.font(11))
                 .foregroundStyle(.secondary)
                 .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.horizontal, DesignSystem.Spacing.xl)
+        .padding(.vertical, DesignSystem.Spacing.md + 2)
     }
 
     // MARK: - Basic Info
 
     private var basicInfoSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             Text("BASIC INFO")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(DesignSystem.monoFont(10, weight: .semibold))
                 .foregroundStyle(.tertiary)
 
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
+            VStack(spacing: DesignSystem.Spacing.md) {
+                HStack(spacing: DesignSystem.Spacing.md) {
                     // Icon picker - minimal
                     Menu {
                         ForEach(icons, id: \.self) { iconName in
@@ -162,17 +162,17 @@ struct UserToolEditorSheet: View {
                     }
                     .buttonStyle(.plain)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                         TextField("Display Name", text: $displayName)
                             .textFieldStyle(.plain)
                             .font(.system(.body, weight: .medium))
-                            .padding(8)
+                            .padding(DesignSystem.Spacing.sm)
                             .background(Color.primary.opacity(0.03))
 
                         TextField("internal_name", text: $name)
                             .textFieldStyle(.plain)
                             .font(.system(.caption, design: .monospaced))
-                            .padding(8)
+                            .padding(DesignSystem.Spacing.sm)
                             .background(Color.primary.opacity(0.03))
                             .disableAutocorrection(true)
                     }
@@ -182,12 +182,12 @@ struct UserToolEditorSheet: View {
                     .textFieldStyle(.plain)
                     .font(.system(.caption))
                     .lineLimit(2...3)
-                    .padding(8)
+                    .padding(DesignSystem.Spacing.sm)
                     .background(Color.primary.opacity(0.03))
 
                 HStack {
                     Text("Category")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Picker("", selection: $category) {
@@ -205,21 +205,21 @@ struct UserToolEditorSheet: View {
     // MARK: - Execution Type
 
     private var executionTypeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             Text("EXECUTION")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(DesignSystem.monoFont(10, weight: .semibold))
                 .foregroundStyle(.tertiary)
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+                HStack(spacing: DesignSystem.Spacing.xs) {
                     ForEach(UserTool.ExecutionType.allCases, id: \.self) { type in
                         Button {
                             executionType = type
                         } label: {
                             Text(type.displayName)
-                                .font(.system(size: 11, design: .monospaced))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
+                                .font(DesignSystem.monoFont(11))
+                                .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+                                .padding(.vertical, DesignSystem.Spacing.xs + 1)
                                 .background(executionType == type ? Color.primary.opacity(0.12) : Color.primary.opacity(0.04))
                                 .foregroundStyle(executionType == type ? .primary : .secondary)
                         }
@@ -240,16 +240,16 @@ struct UserToolEditorSheet: View {
     }
 
     private var rpcConfigSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
             TextField("function_name", text: $rpcFunction)
                 .textFieldStyle(.plain)
                 .font(.system(.body, design: .monospaced))
-                .padding(10)
+                .padding(DesignSystem.Spacing.sm + 2)
                 .background(Color.primary.opacity(0.03))
                 .autocorrectionDisabled()
 
             Text("RPC receives (p_store_id UUID, p_args JSONB). store_id auto-injected.")
-                .font(.system(size: 10, design: .monospaced))
+                .font(DesignSystem.monoFont(10))
                 .foregroundStyle(.tertiary)
         }
     }
@@ -257,23 +257,23 @@ struct UserToolEditorSheet: View {
     private var httpConfigSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             // URL & Method
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
                 TextField("https://api.example.com/endpoint", text: $httpUrl)
                     .textFieldStyle(.plain)
                     .font(.system(.caption, design: .monospaced))
-                    .padding(10)
+                    .padding(DesignSystem.Spacing.sm + 2)
                     .background(Color.primary.opacity(0.03))
                     .autocorrectionDisabled()
 
-                HStack(spacing: 4) {
+                HStack(spacing: DesignSystem.Spacing.xs) {
                     ForEach(HTTPConfig.HTTPMethod.allCases, id: \.self) { method in
                         Button {
                             httpMethod = method
                         } label: {
                             Text(method.rawValue)
-                                .font(.system(size: 11, design: .monospaced))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
+                                .font(DesignSystem.monoFont(11))
+                                .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+                                .padding(.vertical, DesignSystem.Spacing.xs + 1)
                                 .background(httpMethod == method ? Color.primary.opacity(0.12) : Color.primary.opacity(0.04))
                                 .foregroundStyle(httpMethod == method ? .primary : .secondary)
                         }
@@ -286,42 +286,42 @@ struct UserToolEditorSheet: View {
             responseMappingSection
 
             Text("Server-side execution. Secrets encrypted, injected via {{SECRET_NAME}}.")
-                .font(.system(size: 10, design: .monospaced))
+                .font(DesignSystem.monoFont(10))
                 .foregroundStyle(.tertiary)
         }
     }
 
     private var responseMappingSection: some View {
         DisclosureGroup {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
+                HStack(spacing: DesignSystem.Spacing.sm) {
                     Text("result")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(.secondary)
                         .frame(width: 50, alignment: .leading)
                     TextField("data.url", text: $resultPath)
                         .textFieldStyle(.plain)
                         .font(.system(.caption, design: .monospaced))
-                        .padding(6)
+                        .padding(DesignSystem.Spacing.sm - 2)
                         .background(Color.primary.opacity(0.03))
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: DesignSystem.Spacing.sm) {
                     Text("error")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(.secondary)
                         .frame(width: 50, alignment: .leading)
                     TextField("error.message", text: $errorPath)
                         .textFieldStyle(.plain)
                         .font(.system(.caption, design: .monospaced))
-                        .padding(6)
+                        .padding(DesignSystem.Spacing.sm - 2)
                         .background(Color.primary.opacity(0.03))
                 }
             }
-            .padding(.top, 6)
+            .padding(.top, DesignSystem.Spacing.sm - 2)
         } label: {
             Text("RESPONSE MAPPING")
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .font(DesignSystem.monoFont(9, weight: .semibold))
                 .foregroundStyle(.tertiary)
         }
     }
@@ -329,10 +329,10 @@ struct UserToolEditorSheet: View {
     // MARK: - Batch Config Section
 
     private var batchConfigSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             HStack {
                 Text("BATCH")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 Spacer()
                 Toggle("", isOn: $batchEnabled)
@@ -342,11 +342,11 @@ struct UserToolEditorSheet: View {
             }
 
             if batchEnabled {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
+                    HStack(spacing: DesignSystem.Spacing.xl) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("concurrent")
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(DesignSystem.monoFont(9))
                                 .foregroundStyle(.tertiary)
                             Stepper("\(batchMaxConcurrent)", value: $batchMaxConcurrent, in: 1...20)
                                 .frame(width: 90)
@@ -354,7 +354,7 @@ struct UserToolEditorSheet: View {
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text("delay ms")
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(DesignSystem.monoFont(9))
                                 .foregroundStyle(.tertiary)
                             Stepper("\(batchDelayMs)", value: $batchDelayMs, in: 0...5000, step: 50)
                                 .frame(width: 90)
@@ -362,7 +362,7 @@ struct UserToolEditorSheet: View {
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text("batch size")
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(DesignSystem.monoFont(9))
                                 .foregroundStyle(.tertiary)
                             Stepper("\(batchSize)", value: $batchSize, in: 1...100)
                                 .frame(width: 90)
@@ -371,36 +371,36 @@ struct UserToolEditorSheet: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text("input array path")
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(DesignSystem.monoFont(9))
                             .foregroundStyle(.tertiary)
                         TextField("image_urls, prompts, recipients", text: $batchInputPath)
                             .textFieldStyle(.plain)
                             .font(.system(.caption, design: .monospaced))
-                            .padding(6)
+                            .padding(DesignSystem.Spacing.sm - 2)
                             .background(Color.primary.opacity(0.03))
                     }
 
                     Toggle("continue on failure", isOn: $batchContinueOnError)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.secondary)
                 }
             } else {
                 Text("Process multiple items in a single call")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(.tertiary)
             }
         }
     }
 
     private var sqlConfigSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
             // Table selector
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                 Text("TABLES")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(9, weight: .semibold))
                     .foregroundStyle(.tertiary)
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 4) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: DesignSystem.Spacing.xs) {
                     ForEach(availableTables, id: \.0) { table, desc in
                         Button {
                             if selectedTables.contains(table) {
@@ -409,16 +409,16 @@ struct UserToolEditorSheet: View {
                                 selectedTables.insert(table)
                             }
                         } label: {
-                            HStack(spacing: 4) {
-                                Text(selectedTables.contains(table) ? "✓" : "○")
-                                    .font(.system(size: 9, design: .monospaced))
+                            HStack(spacing: DesignSystem.Spacing.xs) {
+                                Text(selectedTables.contains(table) ? "\u{2713}" : "\u{25CB}")
+                                    .font(DesignSystem.monoFont(9))
                                     .foregroundStyle(selectedTables.contains(table) ? .primary : .tertiary)
                                 Text(table)
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(DesignSystem.monoFont(10))
                                     .foregroundStyle(selectedTables.contains(table) ? .primary : .secondary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(6)
+                            .padding(DesignSystem.Spacing.sm - 2)
                             .background(selectedTables.contains(table) ? Color.primary.opacity(0.06) : Color.primary.opacity(0.02))
                         }
                         .buttonStyle(.plain)
@@ -428,21 +428,21 @@ struct UserToolEditorSheet: View {
             }
 
             // SQL Editor
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                 Text("QUERY")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(9, weight: .semibold))
                     .foregroundStyle(.tertiary)
 
                 TextEditor(text: $sqlTemplate)
                     .font(.system(.caption, design: .monospaced))
                     .frame(height: 100)
                     .scrollContentBackground(.hidden)
-                    .padding(8)
+                    .padding(DesignSystem.Spacing.sm)
                     .background(Color.primary.opacity(0.03))
             }
 
             Text("SELECT only. store_id auto-injected. Use $param for inputs.")
-                .font(.system(size: 10, design: .monospaced))
+                .font(DesignSystem.monoFont(10))
                 .foregroundStyle(.tertiary)
         }
     }
@@ -450,17 +450,17 @@ struct UserToolEditorSheet: View {
     // MARK: - Input Parameters
 
     private var inputParametersSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
             HStack {
                 Text("INPUT PARAMETERS")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 Spacer()
                 Button {
                     inputParameters.append(InputParameter(name: "", type: "string", description: "", required: true))
                 } label: {
                     Text("+ add")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
@@ -468,11 +468,11 @@ struct UserToolEditorSheet: View {
 
             if inputParameters.isEmpty {
                 Text("No parameters defined")
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(DesignSystem.monoFont(11))
                     .foregroundStyle(.tertiary)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, DesignSystem.Spacing.sm)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: DesignSystem.Spacing.sm - 2) {
                     ForEach($inputParameters) { $param in
                         InputParameterRow(parameter: $param) {
                             inputParameters.removeAll { $0.id == param.id }
@@ -486,15 +486,15 @@ struct UserToolEditorSheet: View {
     // MARK: - Settings
 
     private var settingsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
             Text("SETTINGS")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(DesignSystem.monoFont(10, weight: .semibold))
                 .foregroundStyle(.tertiary)
 
-            VStack(spacing: 8) {
+            VStack(spacing: DesignSystem.Spacing.sm) {
                 HStack {
                     Text("read only")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Toggle("", isOn: $isReadOnly)
@@ -504,7 +504,7 @@ struct UserToolEditorSheet: View {
                 }
                 HStack {
                     Text("requires approval")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Toggle("", isOn: $requiresApproval)
@@ -514,7 +514,7 @@ struct UserToolEditorSheet: View {
                 }
                 HStack {
                     Text("active")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Toggle("", isOn: $isActive)
@@ -527,7 +527,7 @@ struct UserToolEditorSheet: View {
 
                 HStack {
                     Text("timeout")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.secondary)
                     Spacer()
                     MonoOptionSelector(
@@ -544,12 +544,15 @@ struct UserToolEditorSheet: View {
 
     private var sheetFooter: some View {
         HStack {
-            if tool != nil {
+            if let tool = tool {
                 Button("Delete") {
-                    // Handle delete
+                    Task {
+                        _ = await store.deleteUserTool(tool)
+                        dismiss()
+                    }
                 }
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.secondary)
+                .font(DesignSystem.monoFont(11))
+                .foregroundStyle(DesignSystem.Colors.error.opacity(0.8))
                 .buttonStyle(.plain)
             }
 
@@ -557,7 +560,7 @@ struct UserToolEditorSheet: View {
 
             if isSaving {
                 Text("saving...")
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(DesignSystem.monoFont(11))
                     .foregroundStyle(.tertiary)
             }
 
@@ -568,8 +571,8 @@ struct UserToolEditorSheet: View {
             .controlSize(.small)
             .disabled(!isValid || isSaving)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, DesignSystem.Spacing.xl)
+        .padding(.vertical, DesignSystem.Spacing.md)
     }
 
     // MARK: - Validation
@@ -747,11 +750,11 @@ struct InputParameterRow: View {
     private let types = ["string", "number", "boolean", "array"]
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignSystem.Spacing.sm) {
             TextField("name", text: $parameter.name)
                 .textFieldStyle(.plain)
                 .font(.system(.caption, design: .monospaced))
-                .padding(6)
+                .padding(DesignSystem.Spacing.sm - 2)
                 .background(Color.primary.opacity(0.03))
                 .frame(width: 90)
 
@@ -766,22 +769,22 @@ struct InputParameterRow: View {
             TextField("description", text: $parameter.description)
                 .textFieldStyle(.plain)
                 .font(.system(.caption, design: .monospaced))
-                .padding(6)
+                .padding(DesignSystem.Spacing.sm - 2)
                 .background(Color.primary.opacity(0.03))
 
             Text(parameter.required ? "req" : "opt")
-                .font(.system(size: 9, design: .monospaced))
+                .font(DesignSystem.monoFont(9))
                 .foregroundStyle(parameter.required ? .primary : .tertiary)
                 .onTapGesture { parameter.required.toggle() }
 
             Button { onDelete() } label: {
-                Text("×")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text("\u{00D7}")
+                    .font(DesignSystem.monoFont(12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
         }
-        .padding(6)
+        .padding(DesignSystem.Spacing.sm - 2)
         .background(Color.primary.opacity(0.02))
     }
 }

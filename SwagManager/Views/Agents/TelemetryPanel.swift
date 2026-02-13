@@ -42,7 +42,7 @@ struct TelemetryPanel: View {
         return findSession(id: id)
     }
 
-    /// Find a session by ID, searching 3 levels deep (root → coordinator → teammate)
+    /// Find a session by ID, searching 3 levels deep (root -> coordinator -> teammate)
     private func findSession(id: String) -> TelemetrySession? {
         // Level 1: top-level sessions (roots / swarm groups)
         if let session = telemetry.recentSessions.first(where: { $0.id == id }) {
@@ -120,7 +120,7 @@ struct TelemetryPanel: View {
             FreezeDebugger.printRunloopContext("TelemetryPanel.task END")
         }
         .onDisappear {
-            // Don't stop realtime — service manages its own lifecycle
+            // Don't stop realtime -- service manages its own lifecycle
             toolbarState.reset()
         }
         .onChange(of: telemetry.isLive) { _, newValue in
@@ -161,7 +161,7 @@ struct TelemetryPanel: View {
                 Spacer()
             } else if telemetry.recentSessions.isEmpty {
                 Spacer()
-                VStack(spacing: 8) {
+                VStack(spacing: DesignSystem.Spacing.sm) {
                     Image(systemName: "waveform.path.ecg")
                         .font(.largeTitle)
                         .foregroundStyle(.tertiary)
@@ -222,7 +222,7 @@ struct TelemetryPanel: View {
     // MARK: - Time Range Bar (inline)
 
     private var timeRangeBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: DesignSystem.Spacing.sm - 2) {
             // Time range pills
             HStack(spacing: 1) {
                 ForEach(TelemetryService.TimeRange.allCases, id: \.self) { range in
@@ -233,15 +233,15 @@ struct TelemetryPanel: View {
                         }
                     } label: {
                         Text(range.rawValue)
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
+                            .font(DesignSystem.monoFont(13, weight: .medium))
+                            .padding(.horizontal, DesignSystem.Spacing.sm - 2)
+                            .padding(.vertical, DesignSystem.Spacing.xxs + 1)
                             .background(
                                 toolbarState.telemetryTimeRange == range
                                     ? Color.accentColor.opacity(0.15)
                                     : Color.primary.opacity(0.04)
                             )
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.xs))
                     }
                     .buttonStyle(.plain)
                 }
@@ -253,10 +253,10 @@ struct TelemetryPanel: View {
             if toolbarState.telemetryIsLive {
                 HStack(spacing: 3) {
                     Circle()
-                        .fill(Color.green)
+                        .fill(DesignSystem.Colors.success)
                         .frame(width: 5, height: 5)
                     Text("LIVE")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .font(DesignSystem.monoFont(12, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -266,20 +266,20 @@ struct TelemetryPanel: View {
                 Task { await toolbarState.telemetryRefreshAction?() }
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(DesignSystem.font(10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .help("Refresh telemetry")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
     }
 
     private func statsBar(_ stats: TelemetryStats) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: DesignSystem.Spacing.sm + 2) {
             // Left: counts - inline
-            HStack(spacing: 8) {
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 statItem(label: "tr", value: "\(stats.totalTraces)")
                 statItem(label: "sp", value: "\(stats.totalSpans)")
                 if stats.errors > 0 {
@@ -290,14 +290,14 @@ struct TelemetryPanel: View {
             Spacer()
 
             // Right: latency percentiles - inline
-            HStack(spacing: 8) {
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 statItem(label: "p50", value: formatMs(stats.p50Ms), color: TC.forLatency(stats.p50Ms))
                 statItem(label: "p95", value: formatMs(stats.p95Ms), color: TC.forLatency(stats.p95Ms))
                 statItem(label: "p99", value: formatMs(stats.p99Ms), color: TC.forLatency(stats.p99Ms))
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+        .padding(.vertical, DesignSystem.Spacing.xs + 1)
     }
 
     private var liveCostBar: some View {
@@ -306,20 +306,20 @@ struct TelemetryPanel: View {
         let totalTokens = sessions.reduce(0) { $0 + $1.totalInputTokens + $1.totalOutputTokens + $1.childrenTotalTokens }
         let sessionCount = sessions.count
 
-        return HStack(spacing: 8) {
+        return HStack(spacing: DesignSystem.Spacing.sm) {
             Image(systemName: "dollarsign.circle.fill")
-                .font(.system(size: 11))
+                .font(DesignSystem.font(11))
                 .foregroundStyle(totalCost > 0 ? TC.warning : Color.primary.opacity(0.2))
 
             if totalCost > 0 {
                 Text(totalCost < 0.01
                      ? String(format: "$%.5f", totalCost)
                      : String(format: "$%.4f", totalCost))
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(12, weight: .semibold))
                     .foregroundStyle(TC.warning)
             } else {
                 Text("$0")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(12, weight: .medium))
                     .foregroundStyle(.quaternary)
             }
 
@@ -331,25 +331,25 @@ struct TelemetryPanel: View {
                      : totalTokens > 1_000
                      ? String(format: "%.1fK tok", Double(totalTokens) / 1_000)
                      : "\(totalTokens) tok")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(.tertiary)
             }
 
             Text("\(sessionCount)s")
-                .font(.system(size: 10, design: .monospaced))
+                .font(DesignSystem.monoFont(10))
                 .foregroundStyle(.quaternary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+        .padding(.vertical, DesignSystem.Spacing.xs + 1)
     }
 
     private func statItem(label: String, value: String, color: Color = .secondary) -> some View {
-        HStack(spacing: 2) {
+        HStack(spacing: DesignSystem.Spacing.xxs) {
             Text(value)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .font(DesignSystem.monoFont(10, weight: .medium))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 12, design: .monospaced))
+                .font(DesignSystem.monoFont(12))
                 .foregroundStyle(.quaternary)
         }
     }
@@ -365,7 +365,7 @@ struct TelemetryPanel: View {
     // MARK: - Filters Bar
 
     private var filtersBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: DesignSystem.Spacing.sm - 2) {
             // Compact source picker
             Menu {
                 Button("All") { telemetry.sourceFilter = nil }
@@ -377,12 +377,12 @@ struct TelemetryPanel: View {
             } label: {
                 HStack(spacing: 3) {
                     Text(telemetry.sourceFilter?.components(separatedBy: "_").first?.prefix(4).uppercased() ?? "SRC")
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(DesignSystem.monoFont(13, weight: .medium))
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(DesignSystem.font(11, weight: .semibold))
                 }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
+                .padding(.horizontal, DesignSystem.Spacing.sm - 2)
+                .padding(.vertical, DesignSystem.Spacing.xs)
                 .background(telemetry.sourceFilter != nil ? Color.primary.opacity(0.08) : Color.primary.opacity(0.04))
             }
             .buttonStyle(.plain)
@@ -401,12 +401,12 @@ struct TelemetryPanel: View {
                 } label: {
                     HStack(spacing: 3) {
                         Text(telemetry.agentFilter?.prefix(6).uppercased() ?? "AGENT")
-                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .font(DesignSystem.monoFont(13, weight: .medium))
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(DesignSystem.font(11, weight: .semibold))
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, DesignSystem.Spacing.sm - 2)
+                    .padding(.vertical, DesignSystem.Spacing.xs)
                     .background(telemetry.agentFilter != nil ? Color.primary.opacity(0.08) : Color.primary.opacity(0.04))
                 }
                 .buttonStyle(.plain)
@@ -421,10 +421,10 @@ struct TelemetryPanel: View {
                 Task { await telemetry.fetchRecentTraces(storeId: storeId) }
             } label: {
                 Text("ERR")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(telemetry.onlyErrors ? Color.red.opacity(0.15) : Color.primary.opacity(0.04))
+                    .font(DesignSystem.monoFont(13, weight: .medium))
+                    .padding(.horizontal, DesignSystem.Spacing.sm - 2)
+                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .background(telemetry.onlyErrors ? DesignSystem.Colors.error.opacity(0.15) : Color.primary.opacity(0.04))
                     .foregroundStyle(telemetry.onlyErrors ? TC.error : .secondary)
             }
             .buttonStyle(.plain)
@@ -432,11 +432,11 @@ struct TelemetryPanel: View {
             Spacer()
 
             Text("\(telemetry.recentSessions.count)")
-                .font(.system(size: 13, design: .monospaced))
+                .font(DesignSystem.Typography.footnote)
                 .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+        .padding(.vertical, DesignSystem.Spacing.xs + 1)
     }
 
     // MARK: - Session Detail View (shows all traces in a session)
@@ -490,21 +490,21 @@ struct TelemetryPanel: View {
 
     @ViewBuilder
     private func autoFollowBar(session: TelemetrySession) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: DesignSystem.Spacing.sm - 2) {
             Circle()
                 .fill(TC.success)
                 .frame(width: 6, height: 6)
                 .modifier(PulseModifier())
 
             Text("LIVE")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .font(DesignSystem.monoFont(13, weight: .bold))
                 .foregroundStyle(TC.success)
 
             Text("\u{00B7}")
                 .foregroundStyle(.quaternary)
 
             Text("Auto-following latest turn")
-                .font(.system(size: 10))
+                .font(DesignSystem.font(10))
                 .foregroundStyle(.secondary)
 
             Spacer()
@@ -518,12 +518,12 @@ struct TelemetryPanel: View {
                 }
             } label: {
                 Text(expandAll ? "COLLAPSE ALL" : "EXPAND ALL")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .font(DesignSystem.monoFont(13, weight: .medium))
+                    .padding(.horizontal, DesignSystem.Spacing.sm)
+                    .padding(.vertical, DesignSystem.Spacing.xxs + 1)
                     .background(expandAll ? Color.primary.opacity(0.12) : Color.primary.opacity(0.05))
                     .foregroundStyle(expandAll ? .primary : .secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.xs))
             }
             .buttonStyle(.plain)
 
@@ -531,17 +531,17 @@ struct TelemetryPanel: View {
                 autoFollow.toggle()
             } label: {
                 Text(autoFollow ? "FOLLOWING" : "PAUSED")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .font(DesignSystem.monoFont(13, weight: .medium))
+                    .padding(.horizontal, DesignSystem.Spacing.sm)
+                    .padding(.vertical, DesignSystem.Spacing.xxs + 1)
                     .background(autoFollow ? TC.success.opacity(0.15) : Color.primary.opacity(0.05))
                     .foregroundStyle(autoFollow ? TC.success : .secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.xs))
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.lg)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
         .background(TC.success.opacity(0.04))
     }
 
@@ -550,7 +550,7 @@ struct TelemetryPanel: View {
         ScrollViewReader { scrollProxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Synthetic swarm group with no traces — team section IS the content
+                    // Synthetic swarm group with no traces -- team section IS the content
                     if session.isSyntheticSwarmGroup && session.traces.isEmpty && session.isTeamCoordinator {
                         TeamMembersSection(
                             session: session,
@@ -561,8 +561,8 @@ struct TelemetryPanel: View {
                             autoExpandedTeamSections: $autoExpandedTeamSections,
                             isSessionLive: isSessionLive
                         )
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, DesignSystem.Spacing.lg)
+                        .padding(.vertical, DesignSystem.Spacing.sm)
                     }
 
                     ForEach(Array(session.traces.enumerated()), id: \.element.id) { index, trace in
@@ -581,8 +581,8 @@ struct TelemetryPanel: View {
                             autoExpandedTeamSections: $autoExpandedTeamSections,
                             isSessionLive: isSessionLive
                         )
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, DesignSystem.Spacing.lg)
+                        .padding(.vertical, DesignSystem.Spacing.sm)
                     }
                 }
             }
@@ -606,36 +606,36 @@ struct TelemetryPanel: View {
     }
 
     private func sessionHeader(_ session: TelemetrySession) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Row 1: Identity — status + agent + model + copy
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+            // Row 1: Identity -- status + agent + model + copy
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 Text(session.hasErrors ? "ERR" : "OK")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(DesignSystem.monoFont(9, weight: .bold))
                     .foregroundStyle(session.hasErrors ? TC.error : TC.success)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, DesignSystem.Spacing.xs + 1)
+                    .padding(.vertical, DesignSystem.Spacing.xxs)
                     .background((session.hasErrors ? TC.error : TC.success).opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 3))
 
                 if let agent = session.agentName {
                     Text(agent)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(TC.sourceClaude)
                         .lineLimit(1)
                 }
 
                 if let model = session.shortModelName {
                     Text(model)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(.tertiary)
                 }
 
                 if session.isTeamCoordinator {
                     HStack(spacing: 3) {
                         Image(systemName: "person.3.fill")
-                            .font(.system(size: 9))
+                            .font(DesignSystem.font(9))
                         Text("\(session.childSessions.count)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                     }
                     .foregroundStyle(TC.success)
                 }
@@ -647,20 +647,20 @@ struct TelemetryPanel: View {
                     NSPasteboard.general.setString(session.id, forType: .string)
                 } label: {
                     Image(systemName: "doc.on.doc")
-                        .font(.system(size: 9))
+                        .font(DesignSystem.font(9))
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
                 .help("Copy session ID")
             }
 
-            // Row 2: Metrics — wraps gracefully
-            HStack(spacing: 8) {
+            // Row 2: Metrics -- wraps gracefully
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 if let duration = session.duration, duration > 0.001 {
                     Text(session.formattedDuration)
                 }
 
-                Text("\(session.turnCount)t · \(session.toolCount)fn")
+                Text("\(session.turnCount)t \u{00B7} \(session.toolCount)fn")
 
                 if session.hasErrors {
                     Text("\(session.errorCount)err")
@@ -668,7 +668,7 @@ struct TelemetryPanel: View {
                 }
 
                 if session.totalInputTokens > 0 {
-                    Text("\(session.totalInputTokens)→\(session.totalOutputTokens)")
+                    Text("\(session.totalInputTokens)\u{2192}\(session.totalOutputTokens)")
                         .foregroundStyle(TC.info)
                 }
 
@@ -677,34 +677,34 @@ struct TelemetryPanel: View {
                         .foregroundStyle(TC.warning)
                 }
             }
-            .font(.system(size: 10, design: .monospaced))
+            .font(DesignSystem.monoFont(10))
             .foregroundStyle(.secondary)
             .lineLimit(1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
     }
 
     @ViewBuilder
     private func teamCoordinatorBanner(_ session: TelemetrySession) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: DesignSystem.Spacing.sm - 2) {
             Image(systemName: "person.3.fill")
-                .font(.system(size: 12))
+                .font(DesignSystem.font(12))
                 .foregroundStyle(TC.success)
 
             Text("TEAM")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(DesignSystem.monoFont(10, weight: .bold))
                 .foregroundStyle(TC.success)
 
             Text("\(session.childSessions.count)")
-                .font(.system(size: 10, design: .monospaced))
+                .font(DesignSystem.monoFont(10))
                 .foregroundStyle(.secondary)
 
             Spacer()
 
             if session.childrenTotalCost > 0 {
                 Text(String(format: "$%.4f", session.childrenTotalCost))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(TC.warning)
             }
 
@@ -715,12 +715,12 @@ struct TelemetryPanel: View {
                      : tokens > 1_000
                      ? String(format: "%.1fK", Double(tokens) / 1_000)
                      : "\(tokens) tok")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(TC.info)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.xs + 1)
         .background(TC.success.opacity(0.04))
     }
 
@@ -734,15 +734,15 @@ struct TelemetryPanel: View {
                 selectedSessionId = parentId
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(DesignSystem.font(10, weight: .semibold))
                 Text("Team: \(coordinatorName)")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(DesignSystem.font(11, weight: .medium))
             }
             .foregroundStyle(TC.success)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .padding(.vertical, DesignSystem.Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(TC.success.opacity(0.04))
             .contentShape(Rectangle())
@@ -762,16 +762,16 @@ struct TelemetryPanel: View {
                     // 3 evenly-spaced markers at 25%, 50%, 75%
                     ForEach([0.25, 0.5, 0.75], id: \.self) { pct in
                         Text(formatDuration(duration * pct))
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(DesignSystem.monoFont(9))
                             .foregroundStyle(.quaternary)
                             .fixedSize()
                             .position(x: geo.size.width * pct, y: 8)
                     }
                 }
             }
-            .frame(height: 20)
+            .frame(height: DesignSystem.Spacing.xl)
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, DesignSystem.Spacing.xs)
         .font(.caption2)
         .foregroundStyle(.secondary)
     }
@@ -812,7 +812,7 @@ struct TelemetryPanel: View {
             if expandedTraceIds.contains(trace.id) {
                 VStack(alignment: .leading, spacing: 0) {
                     timelineHeader(trace)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, DesignSystem.Spacing.lg)
 
                     ForEach(trace.waterfallSpans) { span in
                         SpanRow(
@@ -824,7 +824,7 @@ struct TelemetryPanel: View {
                         )
                     }
 
-                    // Team members inline — anchored to the trace that spawned the team
+                    // Team members inline -- anchored to the trace that spawned the team
                     if trace.hasTeamCreate && !session.childSessions.isEmpty {
                         TeamMembersSection(
                             session: session,
@@ -835,11 +835,11 @@ struct TelemetryPanel: View {
                             autoExpandedTeamSections: $autoExpandedTeamSections,
                             isSessionLive: isSessionLive
                         )
-                        .padding(.horizontal, 16)
-                        .padding(.top, 6)
+                        .padding(.horizontal, DesignSystem.Spacing.lg)
+                        .padding(.top, DesignSystem.Spacing.sm - 2)
                     }
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, DesignSystem.Spacing.sm)
                 .background(isLive ? TC.success.opacity(0.02) : Color.primary.opacity(0.02))
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -853,11 +853,11 @@ struct TelemetryPanel: View {
 
     @ViewBuilder
     private func traceHeaderLabel(trace: Trace, index: Int, isLive: Bool) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: DesignSystem.Spacing.sm - 2) {
             Image(systemName: expandedTraceIds.contains(trace.id) ? "chevron.down" : "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
+                .font(DesignSystem.Typography.footnote)
                 .foregroundStyle(.tertiary)
-                .frame(width: 12)
+                .frame(width: DesignSystem.Spacing.md)
 
             if isLive {
                 Circle()
@@ -867,35 +867,35 @@ struct TelemetryPanel: View {
             }
 
             Text("Turn \(index + 1)")
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(DesignSystem.monoFont(11, weight: .semibold))
                 .fixedSize()
 
             if !isLive {
                 Text(trace.hasErrors ? "ERR" : "OK")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(13, weight: .medium))
                     .foregroundStyle(trace.hasErrors ? TC.error : TC.success)
                     .fixedSize()
             }
 
-            // Tool summary — truncates gracefully
+            // Tool summary -- truncates gracefully
             let tools = trace.waterfallSpans.compactMap { $0.toolName }
             let uniqueTools = Set(tools)
             if !tools.isEmpty {
                 Text("\(tools.count)fn")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(.secondary)
                     .fixedSize()
                 Text(uniqueTools.prefix(2).joined(separator: ", "))
-                    .font(.system(size: 10))
+                    .font(DesignSystem.font(10))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
 
-            Spacer(minLength: 4)
+            Spacer(minLength: DesignSystem.Spacing.xs)
 
-            // Right-aligned metrics — fixed size so they don't compress
-            HStack(spacing: 6) {
+            // Right-aligned metrics -- fixed size so they don't compress
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 if let cost = trace.formattedCost {
                     Text(cost)
                         .foregroundStyle(TC.warning)
@@ -911,11 +911,11 @@ struct TelemetryPanel: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            .font(.system(size: 10, design: .monospaced))
+            .font(DesignSystem.monoFont(10))
             .fixedSize()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, DesignSystem.Spacing.lg)
+        .padding(.vertical, DesignSystem.Spacing.sm + 2)
         .contentShape(Rectangle())
         .background(
             expandedTraceIds.contains(trace.id)
@@ -979,9 +979,9 @@ private struct DragDivider: View {
             // Grip indicator
             Capsule()
                 .fill(Color.primary.opacity(isHovering ? 0.3 : 0.15))
-                .frame(width: 36, height: 4)
+                .frame(width: 36, height: DesignSystem.Spacing.xs)
         }
-        .frame(height: 6)
+        .frame(height: DesignSystem.Spacing.sm - 2)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .gesture(

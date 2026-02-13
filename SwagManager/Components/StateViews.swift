@@ -32,7 +32,7 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: DesignSystem.Spacing.lg) {
             Image(systemName: icon)
-                .font(.system(size: 48, weight: .light))
+                .font(DesignSystem.font(48, weight: .light))
                 .foregroundStyle(.tertiary)
 
             VStack(spacing: DesignSystem.Spacing.xs) {
@@ -53,7 +53,7 @@ struct EmptyStateView: View {
                     HStack(spacing: DesignSystem.Spacing.xs) {
                         if let actionIcon = action.icon {
                             Image(systemName: actionIcon)
-                                .font(.system(size: DesignSystem.IconSize.small))
+                                .font(DesignSystem.font(DesignSystem.IconSize.small))
                         }
                         Text(action.label)
                             .font(DesignSystem.Typography.button)
@@ -127,7 +127,7 @@ struct ErrorStateView: View {
     var body: some View {
         VStack(spacing: DesignSystem.Spacing.lg) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48, weight: .light))
+                .font(DesignSystem.font(48, weight: .light))
                 .foregroundStyle(DesignSystem.Colors.warning)
 
             VStack(spacing: DesignSystem.Spacing.xs) {
@@ -146,7 +146,7 @@ struct ErrorStateView: View {
                 Button(action: retry) {
                     HStack(spacing: DesignSystem.Spacing.xs) {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: DesignSystem.IconSize.small))
+                            .font(DesignSystem.font(DesignSystem.IconSize.small))
                         Text("Try Again")
                             .font(DesignSystem.Typography.button)
                     }
@@ -173,7 +173,7 @@ struct NoSelectionView: View {
     var body: some View {
         VStack(spacing: DesignSystem.Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 48, weight: .ultraLight))
+                .font(DesignSystem.font(48, weight: .ultraLight))
                 .foregroundStyle(.quaternary)
 
             Text(message)

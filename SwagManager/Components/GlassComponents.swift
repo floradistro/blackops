@@ -115,13 +115,13 @@ struct GlassSection<Content: View>: View {
             HStack(spacing: DesignSystem.Spacing.sm) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: DesignSystem.IconSize.small))
+                        .font(DesignSystem.font(DesignSystem.IconSize.small))
                         .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(DesignSystem.font(14, weight: .semibold))
                         .foregroundStyle(.primary)
 
                     if let subtitle {
@@ -232,7 +232,7 @@ struct GlassPanel<Content: View, HeaderActions: View>: View {
             if showHeader {
                 HStack {
                     Text(title)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(DesignSystem.Typography.callout)
                         .foregroundStyle(.primary)
                     Spacer()
                     headerActions()
@@ -280,7 +280,7 @@ struct SearchField: View {
         HStack(spacing: DesignSystem.Spacing.sm) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-                .font(.system(size: DesignSystem.IconSize.small))
+                .font(DesignSystem.font(DesignSystem.IconSize.small))
 
             TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
@@ -293,7 +293,7 @@ struct SearchField: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
-                        .font(.system(size: 12))
+                        .font(DesignSystem.Typography.caption1)
                 }
                 .buttonStyle(.plain)
             }
@@ -365,7 +365,7 @@ struct LoadingCountBadge: View {
             }
             if count > 0 {
                 Text("\(count)")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(DesignSystem.font(10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
         }

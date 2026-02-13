@@ -126,7 +126,7 @@ struct IconButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: size.iconSize))
+            .font(DesignSystem.font(size.iconSize))
             .foregroundStyle(DesignSystem.Colors.textSecondary)
             .padding(size.padding)
             .background(

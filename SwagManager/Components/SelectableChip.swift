@@ -4,7 +4,7 @@ import SwiftUI
 // A simple flow layout that wraps content
 
 struct FlowLayout: Layout {
-    var spacing: CGFloat = 6
+    var spacing: CGFloat = DesignSystem.Spacing.xs + 2
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let result = computeLayout(proposal: proposal, subviews: subviews)
@@ -79,19 +79,19 @@ struct SelectableChip<T: Hashable>: View {
         Button {
             onToggle(item)
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(DesignSystem.font(8, weight: .bold))
                 }
                 Text(label)
-                    .font(.system(size: 11))
+                    .font(DesignSystem.font(11))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+            .padding(.vertical, DesignSystem.Spacing.xs + 2)
             .background(isSelected ? color.opacity(0.15) : Color.primary.opacity(0.05))
             .foregroundStyle(isSelected ? color : .primary)
-            .cornerRadius(6)
+            .cornerRadius(DesignSystem.Radius.sm)
         }
         .buttonStyle(.plain)
     }
@@ -160,7 +160,7 @@ struct ChipGroup<T: Hashable>: View {
     }
 
     var body: some View {
-        FlowLayout(spacing: 6) {
+        FlowLayout(spacing: DesignSystem.Spacing.xs + 2) {
             ForEach(items, id: \.self) { item in
                 SelectableChip(
                     item: item,
@@ -205,15 +205,15 @@ struct MonoOptionSelector<T: Hashable>: View {
     let labelProvider: (T) -> String
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DesignSystem.Spacing.xs) {
             ForEach(options, id: \.self) { option in
                 Button {
                     selection = option
                 } label: {
                     Text(labelProvider(option))
-                        .font(.system(size: 11, design: .monospaced))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
+                        .font(DesignSystem.monoFont(11))
+                        .padding(.horizontal, DesignSystem.Spacing.sm + 2)
+                        .padding(.vertical, DesignSystem.Spacing.xs + 1)
                         .background(selection == option ? Color.primary.opacity(0.12) : Color.primary.opacity(0.04))
                         .foregroundStyle(selection == option ? .primary : .secondary)
                 }
@@ -242,7 +242,7 @@ extension MonoOptionSelector where T == Int {
 // MARK: - Preview
 
 #Preview {
-    VStack(alignment: .leading, spacing: 20) {
+    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xl) {
         Text("String Chips")
             .font(.headline)
 
@@ -257,7 +257,7 @@ extension MonoOptionSelector where T == Int {
         Text("Day Chips")
             .font(.headline)
 
-        HStack(spacing: 4) {
+        HStack(spacing: DesignSystem.Spacing.xs) {
             ForEach(0..<7, id: \.self) { day in
                 SelectableChip(
                     dayIndex: day,

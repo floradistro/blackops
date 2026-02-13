@@ -6,10 +6,10 @@ struct AuthView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
+    @State private var isLoading = false
 
     var body: some View {
         ZStack {
-            // Invisible background that accepts clicks to make window key
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -19,62 +19,122 @@ struct AuthView: View {
                     }
                 }
 
-            VStack(spacing: 20) {
-                Text("Swag Manager Login")
-                    .font(.largeTitle)
-                    .padding(.bottom, 40)
+            VStack(spacing: 0) {
+                Spacer()
 
-                VStack(spacing: 15) {
-                    TextField("Email", text: $email)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(height: 30)
+                VStack(spacing: DesignSystem.Spacing.xxl) {
+                    // Logo
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        Image(systemName: "square.grid.3x3.topleft.filled")
+                            .font(DesignSystem.font(48, weight: .light))
+                            .foregroundStyle(DesignSystem.Colors.accent)
 
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(height: 30)
-                        .onSubmit { login() }
+                        Text("Swag Manager")
+                            .font(DesignSystem.Typography.title1)
+                            .foregroundStyle(DesignSystem.Colors.textPrimary)
 
+                        Text("Sign in to continue")
+                            .font(DesignSystem.Typography.subheadline)
+                            .foregroundStyle(DesignSystem.Colors.textSecondary)
+                    }
+
+                    // Form
+                    VStack(spacing: DesignSystem.Spacing.lg) {
+                        // Email
+                        HStack(spacing: DesignSystem.Spacing.md) {
+                            Image(systemName: "envelope")
+                                .font(DesignSystem.font(14))
+                                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                                .frame(width: 20)
+                            TextField("Email", text: $email)
+                                .textFieldStyle(.plain)
+                                .textContentType(.emailAddress)
+                        }
+                        .padding(.horizontal, DesignSystem.Spacing.lg)
+                        .padding(.vertical, DesignSystem.Spacing.md)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
+                                .strokeBorder(DesignSystem.Colors.border, lineWidth: 1)
+                        )
+
+                        // Password
+                        HStack(spacing: DesignSystem.Spacing.md) {
+                            Image(systemName: "lock")
+                                .font(DesignSystem.font(14))
+                                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                                .frame(width: 20)
+                            SecureField("Password", text: $password)
+                                .textFieldStyle(.plain)
+                                .textContentType(.password)
+                                .onSubmit { login() }
+                        }
+                        .padding(.horizontal, DesignSystem.Spacing.lg)
+                        .padding(.vertical, DesignSystem.Spacing.md)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
+                                .strokeBorder(DesignSystem.Colors.border, lineWidth: 1)
+                        )
+                    }
+                    .frame(maxWidth: 320)
+
+                    // Error
                     if !errorMessage.isEmpty {
                         Text(errorMessage)
-                            .foregroundColor(.red)
-                            .font(.caption)
+                            .font(DesignSystem.Typography.caption1)
+                            .foregroundStyle(DesignSystem.Colors.error)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 320)
                     }
 
-                    Button("Sign In") {
+                    // Sign In
+                    Button {
                         login()
+                    } label: {
+                        HStack(spacing: DesignSystem.Spacing.sm) {
+                            if isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                            Text("Sign In")
+                                .font(DesignSystem.Typography.button)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: 320)
+                        .padding(.vertical, DesignSystem.Spacing.md)
+                        .background(DesignSystem.Colors.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
                     }
-                    .keyboardShortcut(.return)
-                    .padding(.top, 10)
+                    .buttonStyle(.plain)
+                    .disabled(email.isEmpty || password.isEmpty || isLoading)
                 }
-                .frame(width: 350)
+                .padding(40) // Keep non-grid value as-is
+
+                Spacer()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(VisualEffectBackground(material: .underWindowBackground))
         .onAppear {
-            FreezeDebugger.onAppear("AuthView")
-            // FORCE the window to become key - multiple attempts
             for delay in [0.1, 0.3, 0.5] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                     NSApp.activate(ignoringOtherApps: true)
-
                     if let window = NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }) {
-                        // Try multiple methods to force it
                         window.makeKeyAndOrderFront(nil)
                         window.orderFrontRegardless()
                         window.makeMain()
                         NSApp.activate(ignoringOtherApps: true)
-
                     }
                 }
             }
         }
-        .onDisappear {
-            FreezeDebugger.onDisappear("AuthView")
-        }
     }
 
     private func login() {
+        guard !email.isEmpty, !password.isEmpty else { return }
         errorMessage = ""
+        isLoading = true
 
         Task {
             do {
@@ -82,6 +142,7 @@ struct AuthView: View {
             } catch {
                 errorMessage = error.localizedDescription
             }
+            isLoading = false
         }
     }
 }

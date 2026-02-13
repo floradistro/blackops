@@ -100,15 +100,15 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: DesignSystem.IconSize.small))
+                .font(DesignSystem.font(DesignSystem.IconSize.small))
                 .foregroundStyle(iconColor)
 
             Text(toast.message)
-                .font(.system(size: 12, weight: .medium))
+                .font(DesignSystem.font(12, weight: .medium))
                 .foregroundStyle(.primary)
         }
         .padding(.horizontal, DesignSystem.Spacing.lg)
-        .padding(.vertical, 10)
+        .padding(.vertical, DesignSystem.Spacing.sm + 2)
         .background(.ultraThinMaterial, in: Capsule())
         .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
         .padding(.top, DesignSystem.Spacing.sm)

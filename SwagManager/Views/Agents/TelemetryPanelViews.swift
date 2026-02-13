@@ -59,12 +59,12 @@ struct SessionRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: DesignSystem.Spacing.sm + 2) {
             // Compact avatar - same style for all, small badge for teams
             ZStack {
                 Circle()
                     .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.08))
-                    .frame(width: 32, height: 32)
+                    .frame(width: DesignSystem.Spacing.xxxl, height: DesignSystem.Spacing.xxxl)
 
                 if isLive {
                     Circle()
@@ -75,7 +75,7 @@ struct SessionRow: View {
                 }
 
                 Text(session.userInitials)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(DesignSystem.font(12, weight: .medium))
                     .foregroundStyle(isSelected ? Color.accentColor : .primary)
 
                 // Small team badge in corner
@@ -85,42 +85,42 @@ struct SessionRow: View {
                         .frame(width: 14, height: 14)
                         .overlay(
                             Text("\(session.childSessions.count)")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(DesignSystem.font(8, weight: .bold))
                                 .foregroundStyle(.secondary)
                         )
-                        .offset(x: 12, y: 10)
+                        .offset(x: DesignSystem.Spacing.md, y: DesignSystem.Spacing.sm + 2)
                 }
             }
 
             // Content - single line, compact
-            HStack(spacing: 6) {
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 // Source icon
                 Image(systemName: session.sourceIcon)
-                    .font(.system(size: 10))
+                    .font(DesignSystem.font(10))
                     .foregroundStyle(.secondary)
                     .frame(width: 14)
 
                 // Name + action
                 VStack(alignment: .leading, spacing: 1) {
                     Text(session.userName ?? session.userEmail ?? "User")
-                        .font(.system(size: 13))
+                        .font(DesignSystem.Typography.footnote)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
 
                     Text(actionSummary)
-                        .font(.system(size: 11))
+                        .font(DesignSystem.Typography.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
 
-                Spacer(minLength: 4)
+                Spacer(minLength: DesignSystem.Spacing.xs)
 
                 // Status + time + cost
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .trailing, spacing: DesignSystem.Spacing.xxs) {
                     HStack(spacing: 3) {
                         if session.hasErrors {
                             Image(systemName: "exclamationmark.circle.fill")
-                                .font(.system(size: 10))
+                                .font(DesignSystem.font(10))
                                 .foregroundStyle(TC.error)
                         } else if isLive {
                             Circle()
@@ -130,23 +130,23 @@ struct SessionRow: View {
 
                         if let cost = session.formattedCost {
                             Text(cost)
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .font(DesignSystem.monoFont(10, weight: .medium))
                                 .foregroundStyle(TC.warning)
                         } else {
                             Text(session.formattedDuration)
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(DesignSystem.monoFont(11))
                                 .foregroundStyle(.secondary)
                         }
                     }
 
                     Text(session.endTime ?? session.startTime, style: .relative)
-                        .font(.system(size: 10))
+                        .font(DesignSystem.font(10))
                         .foregroundStyle(.tertiary)
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.sm)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
         .contentShape(Rectangle())
         .background(
             isSelected
@@ -162,7 +162,7 @@ struct SessionRow: View {
                     Color.clear
                 )
                 .frame(width: 3)
-                .padding(.vertical, 4)
+                .padding(.vertical, DesignSystem.Spacing.xs)
         }
         .contextMenu {
             Button {
@@ -222,18 +222,18 @@ struct TeammateSessionRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignSystem.Spacing.sm) {
             // Subtle indent line
             Rectangle()
                 .fill(Color.primary.opacity(0.08))
-                .frame(width: 1, height: 24)
+                .frame(width: 1, height: DesignSystem.Spacing.xxl)
                 .padding(.leading, 28)
 
             // Small avatar
             ZStack {
                 Circle()
                     .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.06))
-                    .frame(width: 24, height: 24)
+                    .frame(width: DesignSystem.Spacing.xxl, height: DesignSystem.Spacing.xxl)
 
                 if isLive {
                     Circle()
@@ -244,44 +244,44 @@ struct TeammateSessionRow: View {
                 }
 
                 Text(String(teammateName.prefix(1)))
-                    .font(.system(size: 10, weight: .medium))
+                    .font(DesignSystem.font(10, weight: .medium))
                     .foregroundStyle(isSelected ? Color.accentColor : .secondary)
             }
 
             // Name + summary
             VStack(alignment: .leading, spacing: 1) {
                 Text(teammateName)
-                    .font(.system(size: 11))
+                    .font(DesignSystem.Typography.caption2)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
                 Text(summary)
-                    .font(.system(size: 10))
+                    .font(DesignSystem.font(10))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
 
-            Spacer(minLength: 4)
+            Spacer(minLength: DesignSystem.Spacing.xs)
 
             // Status
             HStack(spacing: 3) {
                 if session.hasErrors {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .font(.system(size: 8))
+                        .font(DesignSystem.font(8))
                         .foregroundStyle(TC.error)
                 } else if isLive {
                     Circle()
                         .fill(TC.success)
-                        .frame(width: 4, height: 4)
+                        .frame(width: DesignSystem.Spacing.xs, height: DesignSystem.Spacing.xs)
                 }
 
                 Text(session.formattedDuration)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
+        .padding(.horizontal, DesignSystem.Spacing.sm)
+        .padding(.vertical, DesignSystem.Spacing.xxs)
         .background(
             isSelected
                 ? Color.accentColor.opacity(0.1)
@@ -291,7 +291,7 @@ struct TeammateSessionRow: View {
             RoundedRectangle(cornerRadius: 1)
                 .fill(session.hasErrors ? TC.error : (isLive ? TC.success : TC.success.opacity(0.3)))
                 .frame(width: 3)
-                .padding(.vertical, 2)
+                .padding(.vertical, DesignSystem.Spacing.xxs)
         }
         .contentShape(Rectangle())
         .contextMenu {
@@ -415,11 +415,11 @@ struct SpanRow: View {
     }
 
     private var subagentColor: Color {
-        Color(hex: span.subagentColor) ?? .purple
+        Color(hex: span.subagentColor) ?? DesignSystem.Colors.purple
     }
 
     private var teamColor: Color {
-        Color(hex: span.teamColor) ?? .green
+        Color(hex: span.teamColor) ?? DesignSystem.Colors.green
     }
 
     private var isApiRequest: Bool {
@@ -428,7 +428,7 @@ struct SpanRow: View {
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                 // Main row: status + tool + waterfall + duration
                 HStack(spacing: 0) {
                     // Depth indicator for subagent spans (nested hierarchy)
@@ -438,7 +438,7 @@ struct SpanRow: View {
                                 Rectangle()
                                     .fill(Color.primary.opacity(0.1))
                                     .frame(width: 1)
-                                    .padding(.horizontal, 6)
+                                    .padding(.horizontal, DesignSystem.Spacing.sm - 2)
                             }
                         }
                     }
@@ -446,34 +446,34 @@ struct SpanRow: View {
                     // Status indicator - different for API requests, chat messages, teams, and subagents
                     if isTeam {
                         Image(systemName: span.teamIcon)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(DesignSystem.font(12, weight: .semibold))
                             .foregroundStyle(teamColor)
-                            .frame(width: 20)
+                            .frame(width: DesignSystem.Spacing.xl)
                     } else if isSubagent {
                         Image(systemName: span.subagentIcon)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(DesignSystem.font(12, weight: .semibold))
                             .foregroundStyle(subagentColor)
-                            .frame(width: 20)
+                            .frame(width: DesignSystem.Spacing.xl)
                     } else if isApiRequest {
                         Text("\u{25C6}")
-                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                            .font(DesignSystem.monoFont(14, weight: .medium))
                             .foregroundStyle(TC.sourceClaude)
-                            .frame(width: 20)
+                            .frame(width: DesignSystem.Spacing.xl)
                     } else if isUserMessage {
                         Image(systemName: "person.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.blue)
-                            .frame(width: 20)
+                            .font(DesignSystem.font(12))
+                            .foregroundStyle(DesignSystem.Colors.accent)
+                            .frame(width: DesignSystem.Spacing.xl)
                     } else if isAssistantMessage {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.purple)
-                            .frame(width: 20)
+                            .font(DesignSystem.font(12))
+                            .foregroundStyle(DesignSystem.Colors.purple)
+                            .frame(width: DesignSystem.Spacing.xl)
                     } else {
                         Text(span.isError ? "\u{00D7}" : "\u{2713}")
-                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                            .font(DesignSystem.monoFont(14, weight: .medium))
                             .foregroundStyle(span.isError ? TC.error : TC.success)
-                            .frame(width: 20)
+                            .frame(width: DesignSystem.Spacing.xl)
                     }
 
                     // Tool name - monospace, no decoration (wider for subagents/teams)
@@ -484,8 +484,8 @@ struct SpanRow: View {
                             isTeam ? teamColor :
                             isSubagent ? subagentColor :
                             isApiRequest ? TC.sourceClaude :
-                            isUserMessage ? .blue :
-                            isAssistantMessage ? .purple :
+                            isUserMessage ? DesignSystem.Colors.accent :
+                            isAssistantMessage ? DesignSystem.Colors.purple :
                             span.isError ? TC.error : .primary
                         )
                         .lineLimit(1)
@@ -496,17 +496,17 @@ struct SpanRow: View {
                         // Show teammates/tasks count for teams
                         if isTeamCoordinator {
                             if let teammates = span.teammateCount {
-                                HStack(spacing: 2) {
+                                HStack(spacing: DesignSystem.Spacing.xxs) {
                                     Image(systemName: "person.3")
-                                        .font(.system(size: 9))
+                                        .font(DesignSystem.font(9))
                                     Text("\(teammates)")
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(DesignSystem.monoFont(11))
                                 }
                                 .foregroundStyle(teamColor.opacity(0.8))
                                 .frame(width: 70, alignment: .trailing)
                             } else if let completed = span.teamTasksCompleted, let total = span.teamTasksTotal {
                                 Text("\(completed)/\(total)")
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(DesignSystem.monoFont(11))
                                     .foregroundStyle(teamColor.opacity(0.8))
                                     .frame(width: 70, alignment: .trailing)
                             } else {
@@ -514,8 +514,8 @@ struct SpanRow: View {
                             }
                         } else if isTeammate {
                             if let input = span.inputTokens, let output = span.outputTokens {
-                                Text("\(input)→\(output)")
-                                    .font(.system(size: 11, design: .monospaced))
+                                Text("\(input)\u{2192}\(output)")
+                                    .font(DesignSystem.monoFont(11))
                                     .foregroundStyle(teamColor.opacity(0.8))
                                     .frame(width: 70, alignment: .trailing)
                             } else {
@@ -527,11 +527,11 @@ struct SpanRow: View {
                     } else if isSubagent {
                         // Show tools count for subagents
                         if let toolCount = span.subagentToolCount, toolCount > 0 {
-                            HStack(spacing: 2) {
+                            HStack(spacing: DesignSystem.Spacing.xxs) {
                                 Image(systemName: "wrench.and.screwdriver")
-                                    .font(.system(size: 9))
+                                    .font(DesignSystem.font(9))
                                 Text("\(toolCount)")
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(DesignSystem.monoFont(11))
                             }
                             .foregroundStyle(subagentColor.opacity(0.8))
                             .frame(width: 70, alignment: .trailing)
@@ -540,7 +540,7 @@ struct SpanRow: View {
                         }
                     } else if isApiRequest, let tokens = span.formattedTokens {
                         Text(tokens)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(DesignSystem.Typography.footnote)
                             .foregroundStyle(.secondary)
                             .frame(width: 70, alignment: .trailing)
                     } else {
@@ -566,7 +566,7 @@ struct SpanRow: View {
                                 .offset(x: geo.size.width * startPercent)
                         }
                     }
-                    .frame(height: isSubagent || isTeam ? 20 : 16)
+                    .frame(height: isSubagent || isTeam ? DesignSystem.Spacing.xl : DesignSystem.Spacing.lg)
 
                     // Duration - right aligned
                     Text(span.formattedDuration)
@@ -577,18 +577,18 @@ struct SpanRow: View {
 
                 // Activity description (inline preview)
                 if let activity = span.activityDescription {
-                    HStack(alignment: .top, spacing: 4) {
+                    HStack(alignment: .top, spacing: DesignSystem.Spacing.xs) {
                         if isAssistantMessage {
                             Image(systemName: "text.bubble.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.purple.opacity(0.5))
+                                .font(DesignSystem.font(9))
+                                .foregroundStyle(DesignSystem.Colors.purple.opacity(0.5))
                         } else {
-                            Text("└─")
-                                .font(.system(size: 11, design: .monospaced))
+                            Text("\u{2514}\u{2500}")
+                                .font(DesignSystem.monoFont(11))
                                 .foregroundStyle(.quaternary)
                         }
                         Text(activity)
-                            .font(.system(size: isChatMessage ? 12 : 11))
+                            .font(DesignSystem.font(isChatMessage ? 12 : 11))
                             .foregroundStyle(
                                 span.isError ? TC.error :
                                 isChatMessage ? .primary :
@@ -599,19 +599,19 @@ struct SpanRow: View {
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.leading, 20)
-                    .padding(.trailing, 12)
-                    .padding(.vertical, isChatMessage ? 4 : 0)
+                    .padding(.leading, DesignSystem.Spacing.xl)
+                    .padding(.trailing, DesignSystem.Spacing.md)
+                    .padding(.vertical, isChatMessage ? DesignSystem.Spacing.xs : 0)
                     .background(
-                        isAssistantMessage ? Color.purple.opacity(0.03) :
-                        isUserMessage ? Color.blue.opacity(0.03) :
+                        isAssistantMessage ? DesignSystem.Colors.purple.opacity(0.03) :
+                        isUserMessage ? DesignSystem.Colors.accent.opacity(0.03) :
                         Color.clear
                     )
-                    .cornerRadius(6)
+                    .cornerRadius(DesignSystem.Radius.sm)
                 }
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 12)
+            .padding(.vertical, DesignSystem.Spacing.xs)
+            .padding(.horizontal, DesignSystem.Spacing.md)
             .background(
                 isSelected ? Color.primary.opacity(0.06)
                 : isNew ? TC.success.opacity(0.08)
@@ -628,7 +628,7 @@ struct ExpandableJSON: View {
     let details: [String: AnyCodable]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
             ForEach(Array(details.keys.sorted()), id: \.self) { key in
                 JSONRow(key: key, value: details[key]?.value, depth: 0)
             }
@@ -748,7 +748,7 @@ struct TeamMembersSection: View {
         VStack(alignment: .leading, spacing: 0) {
             teamHeader
             if isTeamExpanded {
-                Divider().padding(.leading, 12)
+                Divider().padding(.leading, DesignSystem.Spacing.md)
                 if showTimeline {
                     TeamTimelineView(
                         session: session,
@@ -762,11 +762,11 @@ struct TeamMembersSection: View {
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: DesignSystem.Radius.sm + 4)
                 .fill(TC.success.opacity(0.03))
         )
         .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: DesignSystem.Spacing.xxs)
                 .fill(
                     LinearGradient(
                         colors: [TC.success.opacity(0.8), TC.success.opacity(0.3)],
@@ -775,11 +775,11 @@ struct TeamMembersSection: View {
                     )
                 )
                 .frame(width: 3)
-                .padding(.vertical, 4)
+                .padding(.vertical, DesignSystem.Spacing.xs)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm + 4))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: DesignSystem.Radius.sm + 4)
                 .stroke(TC.success.opacity(0.12), lineWidth: 1)
         )
         .onAppear {
@@ -800,35 +800,35 @@ struct TeamMembersSection: View {
                 }
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 Image(systemName: isTeamExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(DesignSystem.font(9, weight: .semibold))
                     .foregroundStyle(.tertiary)
-                    .frame(width: 12)
+                    .frame(width: DesignSystem.Spacing.md)
 
                 Image(systemName: "person.3.fill")
-                    .font(.system(size: 11))
+                    .font(DesignSystem.font(11))
                     .foregroundStyle(TC.success)
 
                 Text("TEAM")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .bold))
                     .foregroundStyle(TC.success)
 
                 Text("\(session.childSessions.count)")
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(.secondary)
 
                 if session.childrenCompletedCount > 0 {
                     Text("\(session.childrenCompletedCount)/\(session.childSessions.count)")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(TC.success.opacity(0.8))
                 }
 
                 if session.childrenErrorCount > 0 {
                     Text("\(session.childrenErrorCount)err")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .font(DesignSystem.monoFont(10, weight: .medium))
                         .foregroundStyle(TC.error)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, DesignSystem.Spacing.xs)
                         .padding(.vertical, 1)
                         .background(TC.error.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 3))
@@ -836,7 +836,7 @@ struct TeamMembersSection: View {
 
                 Spacer()
 
-                // View mode toggle — only show when expanded
+                // View mode toggle -- only show when expanded
                 if isTeamExpanded {
                     HStack(spacing: 0) {
                         viewModeButton(label: "Members", icon: "person.2", active: !showTimeline) {
@@ -846,21 +846,21 @@ struct TeamMembersSection: View {
                             showTimeline = true
                         }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.xs))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: DesignSystem.Radius.xs)
                             .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                     )
                 }
 
                 if session.childrenTotalCost > 0 {
                     Text(String(format: "$%.4f", session.childrenTotalCost))
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(TC.warning)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .padding(.vertical, DesignSystem.Spacing.sm + 2)
             .contentShape(Rectangle())
             .background(TC.success.opacity(isTeamExpanded ? 0.04 : 0))
         }
@@ -871,13 +871,13 @@ struct TeamMembersSection: View {
         Button(action: action) {
             HStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 8))
+                    .font(DesignSystem.font(8))
                 Text(label)
-                    .font(.system(size: 9, weight: active ? .semibold : .regular, design: .monospaced))
+                    .font(DesignSystem.monoFont(9, weight: active ? .semibold : .regular))
             }
             .foregroundStyle(active ? TC.success : Color.primary.opacity(0.3))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, DesignSystem.Spacing.sm - 2)
+            .padding(.vertical, DesignSystem.Spacing.xxs + 1)
             .background(active ? TC.success.opacity(0.1) : Color.clear)
         }
         .buttonStyle(.plain)
@@ -913,15 +913,15 @@ struct TeamMembersSection: View {
 
             if isSessionLive(session) && !session.allSpans.contains(where: { $0.action == "team.complete" }) {
                 Divider().padding(.leading, 36)
-                HStack(spacing: 6) {
+                HStack(spacing: DesignSystem.Spacing.sm - 2) {
                     ProgressView()
                         .controlSize(.small)
                     Text("Team in progress...")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, DesignSystem.Spacing.md)
+                .padding(.vertical, DesignSystem.Spacing.sm)
             }
         }
     }
@@ -947,7 +947,7 @@ struct TeamTimelineView: View {
 
     /// Stable agent color palette
     private static let agentColors: [Color] = [
-        .blue, .purple, .orange, .cyan, .pink, .mint, .indigo, .teal
+        DesignSystem.Colors.accent, DesignSystem.Colors.purple, DesignSystem.Colors.orange, .cyan, .pink, .mint, .indigo, .teal
     ]
 
     private func agentColor(for index: Int) -> Color {
@@ -985,42 +985,42 @@ struct TeamTimelineView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Agent legend bar
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: DesignSystem.Spacing.sm + 2) {
                     ForEach(agentLegend, id: \.index) { agent in
-                        HStack(spacing: 4) {
+                        HStack(spacing: DesignSystem.Spacing.xs) {
                             Circle()
                                 .fill(agentColor(for: agent.index))
                                 .frame(width: 6, height: 6)
                             Text(agent.name)
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .font(DesignSystem.monoFont(10, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 2)
-                        .padding(.horizontal, 6)
+                        .padding(.vertical, DesignSystem.Spacing.xxs)
+                        .padding(.horizontal, DesignSystem.Spacing.sm - 2)
                         .background(agentColor(for: agent.index).opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.xs))
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, DesignSystem.Spacing.md)
+                .padding(.vertical, DesignSystem.Spacing.sm - 2)
             }
 
-            Divider().padding(.leading, 12)
+            Divider().padding(.leading, DesignSystem.Spacing.md)
 
             // Timeline entries
             let entries = timelineEntries
             if entries.isEmpty {
                 HStack {
                     Spacer()
-                    VStack(spacing: 4) {
+                    VStack(spacing: DesignSystem.Spacing.xs) {
                         Image(systemName: "clock")
-                            .font(.system(size: 16))
+                            .font(DesignSystem.Typography.callout)
                             .foregroundStyle(.quaternary)
                         Text("No activity yet")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                             .foregroundStyle(.tertiary)
                     }
-                    .padding(.vertical, 16)
+                    .padding(.vertical, DesignSystem.Spacing.lg)
                     Spacer()
                 }
             } else {
@@ -1030,15 +1030,15 @@ struct TeamTimelineView: View {
             }
 
             if isSessionLive(session) {
-                HStack(spacing: 6) {
+                HStack(spacing: DesignSystem.Spacing.sm - 2) {
                     ProgressView()
                         .controlSize(.small)
                     Text("Live...")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, DesignSystem.Spacing.md)
+                .padding(.vertical, DesignSystem.Spacing.sm - 2)
             }
         }
     }
@@ -1058,71 +1058,71 @@ struct TeamTimelineView: View {
                     .frame(width: 3)
                     .padding(.vertical, 1)
 
-                HStack(spacing: 6) {
+                HStack(spacing: DesignSystem.Spacing.sm - 2) {
                     // Timestamp
                     Text(span.createdAt, format: .dateTime.hour().minute().second())
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(DesignSystem.monoFont(9))
                         .foregroundStyle(.quaternary)
                         .frame(width: 56, alignment: .trailing)
 
                     // Agent badge
                     Text(String(entry.agentName.prefix(3)).uppercased())
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .font(DesignSystem.monoFont(8, weight: .bold))
                         .foregroundStyle(color)
                         .frame(width: 28)
 
                     // Status icon
                     if span.isApiRequest {
                         Text("\u{25C6}")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                             .foregroundStyle(TC.sourceClaude)
                             .frame(width: 14)
                     } else if span.isToolSpan {
                         Text("\u{2713}")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                             .foregroundStyle(span.isError ? TC.error : TC.success)
                             .frame(width: 14)
                     } else if span.isTeam {
                         Image(systemName: span.teamIcon)
-                            .font(.system(size: 9))
+                            .font(DesignSystem.font(9))
                             .foregroundStyle(TC.success)
                             .frame(width: 14)
                     } else if span.action == "chat.user_message" {
                         Image(systemName: "person.circle.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.blue)
+                            .font(DesignSystem.font(9))
+                            .foregroundStyle(DesignSystem.Colors.accent)
                             .frame(width: 14)
                     } else {
                         Text("\u{2022}")
-                            .font(.system(size: 10))
+                            .font(DesignSystem.font(10))
                             .foregroundStyle(.tertiary)
                             .frame(width: 14)
                     }
 
                     // Action name
                     Text(span.toolName ?? span.shortModelName ?? span.action)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
                         .foregroundStyle(span.isError ? TC.error : .primary)
                         .lineLimit(1)
 
-                    Spacer(minLength: 4)
+                    Spacer(minLength: DesignSystem.Spacing.xs)
 
                     // Tokens for API requests
                     if span.isApiRequest, let tokens = span.formattedTokens {
                         Text(tokens)
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(DesignSystem.monoFont(9))
                             .foregroundStyle(.tertiary)
                     }
 
                     // Duration
                     if let ms = span.durationMs, ms > 0 {
                         Text(span.formattedDuration)
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(DesignSystem.monoFont(9))
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
+                .padding(.horizontal, DesignSystem.Spacing.sm)
+                .padding(.vertical, DesignSystem.Spacing.xxs + 1)
             }
             .contentShape(Rectangle())
             .background(
@@ -1154,7 +1154,7 @@ struct TeamMemberRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Main row — tap to expand/collapse inline traces
+            // Main row -- tap to expand/collapse inline traces
             rowContent
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -1174,15 +1174,15 @@ struct TeamMemberRow: View {
                 }
             } label: {
                 Image(systemName: "arrow.forward.circle.fill")
-                    .font(.system(size: 13))
+                    .font(DesignSystem.Typography.footnote)
                     .foregroundStyle(isHovering ? TC.success : Color.primary.opacity(0.2))
-                    .frame(width: 32, height: 32)
+                    .frame(width: DesignSystem.Spacing.xxxl, height: DesignSystem.Spacing.xxxl)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help("Open full session")
             .onHover { isHovering = $0 }
-            .padding(.trailing, 4)
+            .padding(.trailing, DesignSystem.Spacing.xs)
         }
         .background(
             child.hasErrors ? TC.error.opacity(0.03) :
@@ -1192,12 +1192,12 @@ struct TeamMemberRow: View {
     }
 
     private var rowContent: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignSystem.Spacing.sm) {
             // Expand chevron
             Image(systemName: expandedChildAgentIds.contains(child.id) ? "chevron.down" : "chevron.right")
-                .font(.system(size: 9, weight: .semibold))
+                .font(DesignSystem.font(9, weight: .semibold))
                 .foregroundStyle(.tertiary)
-                .frame(width: 12)
+                .frame(width: DesignSystem.Spacing.md)
 
             // Avatar with status ring
             ZStack {
@@ -1219,36 +1219,36 @@ struct TeamMemberRow: View {
             // Name + summary
             VStack(alignment: .leading, spacing: 1) {
                 Text(child.teammateName ?? "Agent")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(DesignSystem.font(12, weight: .medium))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
-                HStack(spacing: 4) {
+                HStack(spacing: DesignSystem.Spacing.xs) {
                     Text("\(child.turnCount) turn\(child.turnCount == 1 ? "" : "s")")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(DesignSystem.monoFont(10))
 
                     let tools = child.allSpans.compactMap { $0.toolName }
                     let uniqueTools = Set(tools)
                     if !uniqueTools.isEmpty {
                         Text("\u{00B7}")
                         Text(uniqueTools.prefix(2).joined(separator: ", "))
-                            .font(.system(size: 10))
+                            .font(DesignSystem.font(10))
                             .lineLimit(1)
                     }
                 }
                 .foregroundStyle(.tertiary)
             }
 
-            Spacer(minLength: 4)
+            Spacer(minLength: DesignSystem.Spacing.xs)
 
             // Status + duration cluster
-            HStack(spacing: 6) {
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 if child.hasErrors {
-                    HStack(spacing: 2) {
+                    HStack(spacing: DesignSystem.Spacing.xxs) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 9))
+                            .font(DesignSystem.font(9))
                         Text("\(child.errorCount)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                     }
                     .foregroundStyle(TC.error)
                 } else if isSessionLive(child) {
@@ -1258,17 +1258,17 @@ struct TeamMemberRow: View {
                         .modifier(PulseModifier())
                 } else if child.endTime != nil {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10))
+                        .font(DesignSystem.font(10))
                         .foregroundStyle(TC.success.opacity(0.6))
                 }
 
                 Text(child.formattedDuration)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(DesignSystem.monoFont(10))
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
     }
 }
 
@@ -1299,16 +1299,16 @@ struct ChildTraceView: View {
                     autoExpandedTeamSections: $autoExpandedTeamSections,
                     isSessionLive: isSessionLive
                 )
-                .padding(.leading, 16)
-                .padding(.top, 4)
+                .padding(.leading, DesignSystem.Spacing.lg)
+                .padding(.top, DesignSystem.Spacing.xs)
             }
         }
-        .padding(.leading, 24)
+        .padding(.leading, DesignSystem.Spacing.xxl)
         .overlay(alignment: .leading) {
             Rectangle()
                 .fill(TC.success.opacity(0.15))
                 .frame(width: 2)
-                .padding(.leading, 12)
+                .padding(.leading, DesignSystem.Spacing.md)
         }
     }
 
@@ -1323,25 +1323,25 @@ struct ChildTraceView: View {
                 }
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: DesignSystem.Spacing.sm - 2) {
                 Image(systemName: expandedChildTraceIds.contains(trace.id) ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 9, weight: .medium))
+                    .font(DesignSystem.font(9, weight: .medium))
                     .foregroundStyle(.quaternary)
-                    .frame(width: 10)
+                    .frame(width: DesignSystem.Spacing.sm + 2)
 
                 Text("Turn \(index + 1)")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .medium))
                     .foregroundStyle(.secondary)
 
                 Text(trace.hasErrors ? "ERR" : "OK")
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(9, weight: .medium))
                     .foregroundStyle(trace.hasErrors ? TC.error : TC.success)
 
                 let tools = trace.waterfallSpans.compactMap { $0.toolName }
                 let uniqueTools = Set(tools)
                 if !tools.isEmpty {
                     Text("\u{00B7} \(tools.count) calls (\(uniqueTools.prefix(2).joined(separator: ", ")))")
-                        .font(.system(size: 9))
+                        .font(DesignSystem.font(9))
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
@@ -1350,18 +1350,18 @@ struct ChildTraceView: View {
 
                 if let cost = trace.formattedCost {
                     Text(cost)
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(DesignSystem.monoFont(9))
                         .foregroundStyle(TC.warning)
                 }
 
                 if let duration = trace.duration, duration > 0.001 {
                     Text(trace.formattedDuration)
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(DesignSystem.monoFont(9))
                         .foregroundStyle(.tertiary)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .padding(.vertical, DesignSystem.Spacing.sm)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1378,7 +1378,7 @@ struct ChildTraceView: View {
                     )
                 }
             }
-            .padding(.leading, 16)
+            .padding(.leading, DesignSystem.Spacing.lg)
         }
     }
 }
@@ -1389,7 +1389,7 @@ struct SpanDetailContentView: View {
     let span: TelemetrySpan
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.md) {
             coreMetadata
             aiTelemetrySection
             toolContextSection
@@ -1403,7 +1403,7 @@ struct SpanDetailContentView: View {
     }
 
     private var coreMetadata: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
             detailRow("span_id", span.id.uuidString)
             if let parentId = span.parentId {
                 detailRow("parent_id", parentId.uuidString)
@@ -1432,9 +1432,9 @@ struct SpanDetailContentView: View {
     private var aiTelemetrySection: some View {
         if span.isApiRequest {
             Divider()
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                 Text("AI TELEMETRY")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
 
                 if let model = span.model { detailRow("model", model) }
@@ -1466,9 +1466,9 @@ struct SpanDetailContentView: View {
     private var compactionSection: some View {
         if span.isContextCompaction {
             Divider()
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                 Text("COMPACTION")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 if let before = span.compactionMessagesBefore { detailRow("messages_before", "\(before)") }
                 if let after = span.compactionMessagesAfter { detailRow("messages_after", "\(after)") }
@@ -1481,9 +1481,9 @@ struct SpanDetailContentView: View {
     private var retrySection: some View {
         if span.isApiRetry {
             Divider()
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                 Text("RETRY")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 if let attempt = span.details?["attempt"]?.value as? Int { detailRow("attempt", "\(attempt)") }
                 if let errType = span.errorType { detailRow("error_type", errType) }
@@ -1495,15 +1495,15 @@ struct SpanDetailContentView: View {
     private var toolInputSection: some View {
         if span.isToolSpan, let input = span.toolInput, !input.isEmpty {
             Divider()
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                 HStack {
                     Text("TOOL INPUT")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .font(DesignSystem.monoFont(10, weight: .semibold))
                         .foregroundStyle(.tertiary)
                     Spacer()
                     if let bytes = span.inputBytes {
                         Text("\(bytes)B")
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(DesignSystem.Typography.footnote)
                             .foregroundStyle(.quaternary)
                     }
                     Button {
@@ -1513,13 +1513,13 @@ struct SpanDetailContentView: View {
                         NSPasteboard.general.setString(json, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .font(.system(size: 9))
+                            .font(DesignSystem.font(9))
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                 }
                 ForEach(Array(input.keys.sorted()), id: \.self) { key in
-                    HStack(alignment: .top, spacing: 8) {
+                    HStack(alignment: .top, spacing: DesignSystem.Spacing.sm) {
                         Text(key)
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(TC.jsonKey)
@@ -1537,9 +1537,9 @@ struct SpanDetailContentView: View {
         if span.isToolSpan {
             if let error = span.toolError {
                 Divider()
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                     Text("TOOL OUTPUT")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .font(DesignSystem.monoFont(10, weight: .semibold))
                         .foregroundStyle(.tertiary)
                     Text(error)
                         .font(.system(.caption, design: .monospaced))
@@ -1548,15 +1548,15 @@ struct SpanDetailContentView: View {
                 }
             } else if let result = span.toolResult {
                 Divider()
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm - 2) {
                     HStack {
                         Text("TOOL OUTPUT")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(DesignSystem.monoFont(10, weight: .semibold))
                             .foregroundStyle(.tertiary)
                         Spacer()
                         if let bytes = span.outputBytes {
                             Text("\(bytes)B")
-                                .font(.system(size: 13, design: .monospaced))
+                                .font(DesignSystem.Typography.footnote)
                                 .foregroundStyle(.quaternary)
                         }
                         Button {
@@ -1569,14 +1569,14 @@ struct SpanDetailContentView: View {
                             NSPasteboard.general.setString(str, forType: .string)
                         } label: {
                             Image(systemName: "doc.on.doc")
-                                .font(.system(size: 9))
+                                .font(DesignSystem.font(9))
                                 .foregroundStyle(.tertiary)
                         }
                         .buttonStyle(.plain)
                     }
                     if let dict = result as? [String: Any] {
                         ForEach(Array(dict.keys.sorted().prefix(20)), id: \.self) { key in
-                            HStack(alignment: .top, spacing: 8) {
+                            HStack(alignment: .top, spacing: DesignSystem.Spacing.sm) {
                                 Text(key)
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(TC.jsonKey)
@@ -1603,9 +1603,9 @@ struct SpanDetailContentView: View {
     private var errorSection: some View {
         if let error = span.errorMessage {
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                 Text("ERROR")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(TC.error)
                 Text(error)
                     .font(.system(.caption, design: .monospaced))
@@ -1619,9 +1619,9 @@ struct SpanDetailContentView: View {
     private var attributesSection: some View {
         if let details = span.details, !details.isEmpty {
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                 Text("ATTRIBUTES")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 ExpandableJSON(details: details)
             }
@@ -1629,7 +1629,7 @@ struct SpanDetailContentView: View {
     }
 
     private func detailRow(_ key: String, _ value: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: DesignSystem.Spacing.sm) {
             Text(key)
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.tertiary)
@@ -1711,7 +1711,7 @@ struct PinnedSpanPanel: View {
             Divider()
             ScrollView {
                 SpanDetailContentView(span: span)
-                    .padding(16)
+                    .padding(DesignSystem.Spacing.lg)
             }
         }
         .background(VibrancyBackground())
@@ -1723,12 +1723,12 @@ struct PinnedSpanPanel: View {
     }
 
     private var panelHeader: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignSystem.Spacing.sm) {
             Text(span.isError ? "ERR" : "OK")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(DesignSystem.monoFont(9, weight: .bold))
                 .foregroundStyle(span.isError ? TC.error : TC.success)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
+                .padding(.horizontal, DesignSystem.Spacing.xs + 1)
+                .padding(.vertical, DesignSystem.Spacing.xxs)
                 .background((span.isError ? TC.error : TC.success).opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 3))
 
@@ -1745,13 +1745,13 @@ struct PinnedSpanPanel: View {
                 pinnedSpan = nil
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(DesignSystem.font(10, weight: .medium))
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
     }
 }
 
@@ -1762,53 +1762,53 @@ struct SpanComparisonBar: View {
     let comparison: SpanComparison
 
     var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 4) {
+        HStack(spacing: DesignSystem.Spacing.md) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Image(systemName: comparison.isSlow ? "exclamationmark.triangle.fill" : "gauge.with.dots.needle.33percent")
-                    .font(.system(size: 10))
+                    .font(DesignSystem.font(10))
                     .foregroundStyle(comparison.isSlow ? TC.error : TC.success)
                 Text("P\(Int(comparison.percentileRank))")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .bold))
                     .foregroundStyle(comparison.isSlow ? TC.error : .primary)
             }
 
             Divider().frame(height: 14)
 
-            HStack(spacing: 4) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Text("avg")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(DesignSystem.Typography.footnote)
                     .foregroundStyle(.tertiary)
                 Text(formatMs(comparison.avgMs))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 4) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Text("p95")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(DesignSystem.Typography.footnote)
                     .foregroundStyle(.tertiary)
                 Text(formatMs(comparison.p95Ms))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
 
             Divider().frame(height: 14)
 
-            HStack(spacing: 4) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Text("err")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(DesignSystem.Typography.footnote)
                     .foregroundStyle(.tertiary)
                 Text(String(format: "%.1f%%", comparison.errorRate))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .medium))
                     .foregroundStyle(comparison.errorRate > 5 ? TC.error : .secondary)
             }
 
-            HStack(spacing: 4) {
+            HStack(spacing: DesignSystem.Spacing.xs) {
                 Text("24h")
-                    .font(.system(size: 13, design: .monospaced))
+                    .font(DesignSystem.Typography.footnote)
                     .foregroundStyle(.tertiary)
                 Text("\(comparison.totalCalls24h)")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
 
@@ -1816,16 +1816,16 @@ struct SpanComparisonBar: View {
 
             if comparison.isSlow {
                 Text("SLOW")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(DesignSystem.monoFont(13, weight: .bold))
                     .foregroundStyle(TC.error)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, DesignSystem.Spacing.sm - 2)
+                    .padding(.vertical, DesignSystem.Spacing.xxs)
                     .background(TC.error.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 3))
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, DesignSystem.Spacing.lg)
+        .padding(.vertical, DesignSystem.Spacing.sm - 2)
         .background(comparison.isSlow ? TC.error.opacity(0.04) : Color.primary.opacity(0.02))
     }
 

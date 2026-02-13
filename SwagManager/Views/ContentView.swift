@@ -26,7 +26,7 @@ struct ContentView: View {
             Text("Loading...")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .padding(.top, 8)
+                .padding(.top, DesignSystem.Spacing.sm)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.95))

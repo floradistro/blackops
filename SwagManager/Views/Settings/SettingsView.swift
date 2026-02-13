@@ -108,15 +108,15 @@ struct AISettingsView: View {
                     if apiKey.isEmpty {
                         Label("No API key configured", systemImage: "exclamationmark.triangle")
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(DesignSystem.Colors.warning)
                     } else if apiKey.hasPrefix("sk-ant-") {
                         Label("API key configured", systemImage: "checkmark.circle")
                             .font(.caption)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(DesignSystem.Colors.success)
                     } else {
                         Label("Invalid format (should start with sk-ant-)", systemImage: "xmark.circle")
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(DesignSystem.Colors.error)
                     }
 
                     Spacer()
@@ -161,10 +161,10 @@ struct AISettingsView: View {
                             .scaleEffect(0.7)
                     case .success:
                         Label("Connected", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(DesignSystem.Colors.success)
                     case .failed(let error):
                         Label(error, systemImage: "xmark.circle.fill")
-                            .foregroundStyle(.red)
+                            .foregroundStyle(DesignSystem.Colors.error)
                             .font(.caption)
                     }
                 }
@@ -204,11 +204,11 @@ struct AISettingsView: View {
 
 struct AboutView: View {
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: DesignSystem.Spacing.xxl) {
             Spacer()
 
             Image(systemName: "cpu")
-                .font(.system(size: 64))
+                .font(DesignSystem.font(64))
                 .foregroundStyle(Color.accentColor)
 
             Text("Agent Manager")

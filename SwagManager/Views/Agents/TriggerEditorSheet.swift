@@ -42,42 +42,42 @@ struct TriggerEditorSheet: View {
             // Header - Anthropic style
             HStack {
                 Text(trigger == nil ? "NEW" : "EDIT")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(DesignSystem.monoFont(10, weight: .semibold))
                     .foregroundStyle(.tertiary)
                 Text("Trigger")
                     .font(.system(.subheadline, design: .monospaced, weight: .medium))
                 Spacer()
                 Button("Close") { dismiss() }
-                    .font(.system(size: 11))
+                    .font(DesignSystem.font(11))
                     .foregroundStyle(.secondary)
                     .buttonStyle(.plain)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.horizontal, DesignSystem.Spacing.xl)
+            .padding(.vertical, DesignSystem.Spacing.md + 2)
 
             Divider()
 
             // Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xl) {
                     // Basic Info Section
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
                         Text("BASIC INFO")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(DesignSystem.monoFont(10, weight: .semibold))
                             .foregroundStyle(.tertiary)
 
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
                             TextField("Trigger name", text: $name)
                                 .textFieldStyle(.plain)
                                 .font(.system(.body, weight: .medium))
-                                .padding(8)
+                                .padding(DesignSystem.Spacing.sm)
                                 .background(Color.primary.opacity(0.03))
 
                             TextField("Description (optional)", text: $description, axis: .vertical)
                                 .textFieldStyle(.plain)
                                 .font(.system(.caption))
                                 .lineLimit(2...4)
-                                .padding(8)
+                                .padding(DesignSystem.Spacing.sm)
                                 .background(Color.primary.opacity(0.03))
                         }
                     }
@@ -85,14 +85,14 @@ struct TriggerEditorSheet: View {
                     Divider()
 
                     // Tool Selection Section
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
                         Text("TOOL")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(DesignSystem.monoFont(10, weight: .semibold))
                             .foregroundStyle(.tertiary)
 
                         if store.userTools.isEmpty {
                             Text("Create a tool first")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(DesignSystem.monoFont(11))
                                 .foregroundStyle(.tertiary)
                         } else {
                             Picker("Tool", selection: $selectedToolId) {
@@ -109,27 +109,27 @@ struct TriggerEditorSheet: View {
                     Divider()
 
                     // Trigger Type Section
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
                         Text("TYPE")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(DesignSystem.monoFont(10, weight: .semibold))
                             .foregroundStyle(.tertiary)
 
                         // Trigger type buttons - minimal
-                        HStack(spacing: 6) {
+                        HStack(spacing: DesignSystem.Spacing.xs + 2) {
                             ForEach(UserTrigger.TriggerType.allCases, id: \.self) { type in
                                 Button {
                                     triggerType = type
                                 } label: {
-                                    VStack(spacing: 3) {
+                                    VStack(spacing: DesignSystem.Spacing.xxs + 1) {
                                         Image(systemName: type.icon)
                                             .font(.caption)
                                             .foregroundStyle(triggerType == type ? .primary : .secondary)
                                         Text(type.displayName.uppercased())
-                                            .font(.system(size: 9, design: .monospaced))
+                                            .font(DesignSystem.monoFont(9))
                                             .foregroundStyle(triggerType == type ? .primary : .tertiary)
                                     }
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, DesignSystem.Spacing.sm)
                                     .background(triggerType == type ? Color.primary.opacity(0.08) : Color.primary.opacity(0.02))
                                 }
                                 .buttonStyle(.plain)
@@ -138,10 +138,10 @@ struct TriggerEditorSheet: View {
 
                         // Trigger-specific configuration
                         if triggerType == .event {
-                            VStack(alignment: .leading, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                                     Text("table")
-                                        .font(.system(size: 9, design: .monospaced))
+                                        .font(DesignSystem.monoFont(9))
                                         .foregroundStyle(.tertiary)
 
                                     Picker("Table", selection: $eventTable) {
@@ -153,21 +153,21 @@ struct TriggerEditorSheet: View {
                                     .labelsHidden()
                                 }
 
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                                     Text("operation")
-                                        .font(.system(size: 9, design: .monospaced))
+                                        .font(DesignSystem.monoFont(9))
                                         .foregroundStyle(.tertiary)
 
-                                    HStack(spacing: 4) {
+                                    HStack(spacing: DesignSystem.Spacing.xs) {
                                         ForEach(UserTrigger.EventOperation.allCases, id: \.self) { op in
                                             Button {
                                                 eventOperation = op
                                             } label: {
                                                 Text(op.displayName.uppercased())
-                                                    .font(.system(size: 10, design: .monospaced))
+                                                    .font(DesignSystem.monoFont(10))
                                                     .foregroundStyle(eventOperation == op ? .primary : .tertiary)
                                                     .frame(maxWidth: .infinity)
-                                                    .padding(.vertical, 6)
+                                                    .padding(.vertical, DesignSystem.Spacing.xs + 2)
                                                     .background(eventOperation == op ? Color.primary.opacity(0.08) : Color.primary.opacity(0.02))
                                             }
                                             .buttonStyle(.plain)
@@ -176,64 +176,64 @@ struct TriggerEditorSheet: View {
                                 }
 
                                 Text("Fires on row changes. Tool receives row data.")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(DesignSystem.monoFont(10))
                                     .foregroundStyle(.tertiary)
                             }
-                            .padding(.top, 6)
+                            .padding(.top, DesignSystem.Spacing.xs + 2)
                         } else if triggerType == .schedule {
-                            VStack(alignment: .leading, spacing: 8) {
-                                VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                                     Text("cron expression")
-                                        .font(.system(size: 9, design: .monospaced))
+                                        .font(DesignSystem.monoFont(9))
                                         .foregroundStyle(.tertiary)
 
                                     TextField("0 9 * * *", text: $cronExpression)
                                         .textFieldStyle(.plain)
                                         .font(.system(.body, design: .monospaced))
-                                        .padding(8)
+                                        .padding(DesignSystem.Spacing.sm)
                                         .background(Color.primary.opacity(0.03))
                                 }
 
                                 Text("Example: '0 9 * * *' = daily at 9am")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(DesignSystem.monoFont(10))
                                     .foregroundStyle(.tertiary)
                             }
-                            .padding(.top, 6)
+                            .padding(.top, DesignSystem.Spacing.xs + 2)
                         } else if triggerType == .condition {
-                            VStack(alignment: .leading, spacing: 8) {
-                                VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm) {
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                                     Text("condition sql")
-                                        .font(.system(size: 9, design: .monospaced))
+                                        .font(DesignSystem.monoFont(9))
                                         .foregroundStyle(.tertiary)
 
                                     TextField("SELECT COUNT(*) > 10 FROM ...", text: $conditionSql, axis: .vertical)
                                         .textFieldStyle(.plain)
                                         .lineLimit(3...6)
                                         .font(.system(.caption, design: .monospaced))
-                                        .padding(8)
+                                        .padding(DesignSystem.Spacing.sm)
                                         .background(Color.primary.opacity(0.03))
                                 }
 
                                 Text("Fires when SQL returns true. Checked periodically.")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(DesignSystem.monoFont(10))
                                     .foregroundStyle(.tertiary)
                             }
-                            .padding(.top, 6)
+                            .padding(.top, DesignSystem.Spacing.xs + 2)
                         }
                     }
 
                     Divider()
 
                     // Retry Section
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
                         Text("RETRY")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(DesignSystem.monoFont(10, weight: .semibold))
                             .foregroundStyle(.tertiary)
 
-                        HStack(spacing: 20) {
-                            VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: DesignSystem.Spacing.xl) {
+                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs + 1) {
                                 Text("max retries")
-                                    .font(.system(size: 9, design: .monospaced))
+                                    .font(DesignSystem.monoFont(9))
                                     .foregroundStyle(.tertiary)
                                 Stepper("\(maxRetries)", value: $maxRetries, in: 0...10)
                                     .frame(width: 90)
@@ -241,7 +241,7 @@ struct TriggerEditorSheet: View {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("delay (s)")
-                                    .font(.system(size: 9, design: .monospaced))
+                                    .font(DesignSystem.monoFont(9))
                                     .foregroundStyle(.tertiary)
                                 Stepper("\(retryDelaySeconds)", value: $retryDelaySeconds, in: 10...3600, step: 10)
                                     .frame(width: 90)
@@ -249,17 +249,17 @@ struct TriggerEditorSheet: View {
                         }
 
                         Text("Exponential backoff applied")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                             .foregroundStyle(.tertiary)
                     }
 
                     Divider()
 
                     // Status Section
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.sm + 2) {
                         HStack {
                             Text("STATUS")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .font(DesignSystem.monoFont(10, weight: .semibold))
                                 .foregroundStyle(.tertiary)
                             Spacer()
                             Toggle("", isOn: $isActive)
@@ -269,11 +269,11 @@ struct TriggerEditorSheet: View {
                         }
 
                         Text(isActive ? "Active - will fire on events" : "Inactive - configuration preserved")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(DesignSystem.monoFont(10))
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .padding(20)
+                .padding(DesignSystem.Spacing.xl)
             }
 
             Divider()
@@ -282,7 +282,7 @@ struct TriggerEditorSheet: View {
             HStack {
                 if isSaving {
                     Text("saving...")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(DesignSystem.monoFont(11))
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
@@ -293,8 +293,8 @@ struct TriggerEditorSheet: View {
                 .controlSize(.small)
                 .disabled(!isValid || isSaving)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignSystem.Spacing.xl)
+            .padding(.vertical, DesignSystem.Spacing.md)
         }
         .frame(width: 500, height: 600)
         .onAppear { loadTrigger() }
