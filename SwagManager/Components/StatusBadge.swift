@@ -13,7 +13,7 @@ struct StatusBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .medium))
+            .font(DesignSystem.font(10, weight: .medium))
             .foregroundStyle(color)
             .padding(.horizontal, DesignSystem.Spacing.xs + 2)
             .padding(.vertical, DesignSystem.Spacing.xxs)
