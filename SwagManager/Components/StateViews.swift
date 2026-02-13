@@ -1,8 +1,10 @@
 import SwiftUI
 
-// MARK: - Reusable State Views (Apple HIG Compliant)
+// MARK: - State Views
+// Unified empty, loading, error, and placeholder states
 
-/// Empty state view with icon, title, subtitle, and optional action
+// MARK: - Empty State
+
 struct EmptyStateView: View {
     let icon: String
     let title: String
@@ -31,22 +33,22 @@ struct EmptyStateView: View {
         VStack(spacing: DesignSystem.Spacing.lg) {
             Image(systemName: icon)
                 .font(.system(size: 48, weight: .light))
-                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                .foregroundStyle(.tertiary)
 
             VStack(spacing: DesignSystem.Spacing.xs) {
                 Text(title)
                     .font(DesignSystem.Typography.headline)
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
+                    .foregroundStyle(.secondary)
 
-                if let subtitle = subtitle {
+                if let subtitle {
                     Text(subtitle)
                         .font(DesignSystem.Typography.caption1)
-                        .foregroundStyle(DesignSystem.Colors.textTertiary)
+                        .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
                 }
             }
 
-            if let action = action {
+            if let action {
                 Button(action: action.handler) {
                     HStack(spacing: DesignSystem.Spacing.xs) {
                         if let actionIcon = action.icon {
@@ -56,13 +58,8 @@ struct EmptyStateView: View {
                         Text(action.label)
                             .font(DesignSystem.Typography.button)
                     }
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
-                    .padding(.horizontal, DesignSystem.Spacing.lg)
-                    .padding(.vertical, DesignSystem.Spacing.sm)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,7 +67,8 @@ struct EmptyStateView: View {
     }
 }
 
-/// Loading state view with progress indicator and optional message
+// MARK: - Loading State
+
 struct LoadingStateView: View {
     let message: String?
     let size: Size
@@ -87,7 +85,7 @@ struct LoadingStateView: View {
         }
     }
 
-    init(message: String? = nil, size: Size = .medium) {
+    init(_ message: String? = nil, size: Size = .medium) {
         self.message = message
         self.size = size
     }
@@ -98,10 +96,10 @@ struct LoadingStateView: View {
                 .scaleEffect(size.scale)
                 .controlSize(.large)
 
-            if let message = message {
+            if let message {
                 Text(message)
                     .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -109,7 +107,8 @@ struct LoadingStateView: View {
     }
 }
 
-/// Error state view with icon, title, error message, and retry action
+// MARK: - Error State
+
 struct ErrorStateView: View {
     let title: String
     let error: String
@@ -134,11 +133,11 @@ struct ErrorStateView: View {
             VStack(spacing: DesignSystem.Spacing.xs) {
                 Text(title)
                     .font(DesignSystem.Typography.headline)
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
+                    .foregroundStyle(.primary)
 
                 Text(error)
                     .font(DesignSystem.Typography.caption1)
-                    .foregroundStyle(DesignSystem.Colors.textSecondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
             }
@@ -151,13 +150,8 @@ struct ErrorStateView: View {
                         Text("Try Again")
                             .font(DesignSystem.Typography.button)
                     }
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
-                    .padding(.horizontal, DesignSystem.Spacing.lg)
-                    .padding(.vertical, DesignSystem.Spacing.sm)
-                    .background(DesignSystem.Colors.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -165,7 +159,8 @@ struct ErrorStateView: View {
     }
 }
 
-/// No selection placeholder (for master-detail interfaces)
+// MARK: - No Selection
+
 struct NoSelectionView: View {
     let icon: String
     let message: String
@@ -179,23 +174,22 @@ struct NoSelectionView: View {
         VStack(spacing: DesignSystem.Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 48, weight: .ultraLight))
-                .foregroundStyle(DesignSystem.Colors.textQuaternary)
+                .foregroundStyle(.quaternary)
 
             Text(message)
                 .font(DesignSystem.Typography.subheadline)
-                .foregroundStyle(DesignSystem.Colors.textTertiary)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-// MARK: - Inline Loading Indicator
+// MARK: - Inline Loading
 
-/// Small inline loading indicator for use in lists or rows
 struct InlineLoadingView: View {
     let message: String?
 
-    init(message: String? = nil) {
+    init(_ message: String? = nil) {
         self.message = message
     }
 
@@ -205,46 +199,12 @@ struct InlineLoadingView: View {
                 .scaleEffect(0.6)
                 .controlSize(.small)
 
-            if let message = message {
+            if let message {
                 Text(message)
                     .font(DesignSystem.Typography.caption2)
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(.vertical, DesignSystem.Spacing.sm)
     }
-}
-
-// MARK: - Previews
-
-#Preview("Empty State") {
-    EmptyStateView(
-        icon: "tray",
-        title: "No items",
-        subtitle: "Get started by creating your first item",
-        action: EmptyStateView.ActionButton(
-            label: "Create Item",
-            icon: "plus",
-            handler: {}
-        )
-    )
-    .background(DesignSystem.Materials.thin)
-}
-
-#Preview("Loading State") {
-    LoadingStateView(message: "Loading items...")
-        .background(DesignSystem.Materials.thin)
-}
-
-#Preview("Error State") {
-    ErrorStateView(
-        error: "Failed to load items. Please check your connection and try again.",
-        retryAction: {}
-    )
-    .background(DesignSystem.Materials.thin)
-}
-
-#Preview("No Selection") {
-    NoSelectionView()
-        .background(DesignSystem.Materials.thin)
 }

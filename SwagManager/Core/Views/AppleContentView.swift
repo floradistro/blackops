@@ -22,53 +22,6 @@ struct VibrancyBackground: NSViewRepresentable {
     }
 }
 
-// MARK: - Window Vibrancy Configurator
-// Wraps the hosting view inside an NSVisualEffectView so vibrancy
-// covers the entire window including the title bar area.
-
-struct WindowVibrancy: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let v = _WiringView()
-        // Delay one runloop so the window + hosting view exist
-        DispatchQueue.main.async { v.wireWindow() }
-        return v
-    }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    class _WiringView: NSView {
-        private static var configured = Set<ObjectIdentifier>()
-
-        func wireWindow() {
-            guard let window = self.window else { return }
-            let key = ObjectIdentifier(window)
-            guard !Self.configured.contains(key) else { return }
-            Self.configured.insert(key)
-
-            window.titlebarAppearsTransparent = true
-
-            // Replace contentView with an NSVisualEffectView that wraps it
-            guard let hostingView = window.contentView,
-                  !(hostingView is NSVisualEffectView) else { return }
-
-            let effectView = NSVisualEffectView()
-            effectView.material = .sidebar
-            effectView.blendingMode = .behindWindow
-            effectView.state = .active
-
-            // Reparent: effectView becomes contentView, hosting view goes inside
-            window.contentView = effectView
-            effectView.addSubview(hostingView)
-            hostingView.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                hostingView.topAnchor.constraint(equalTo: effectView.topAnchor),
-                hostingView.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
-                hostingView.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
-                hostingView.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
-            ])
-        }
-    }
-}
-
 // MARK: - Apple-Style Content View
 // .hiddenTitleBar gives transparent title bar with traffic lights
 // Agent selection via macOS menu bar; inspector toggled via Cmd+I

@@ -1,40 +1,70 @@
 import SwiftUI
 
-// MARK: - Standardized Button Styles (Apple HIG Compliant)
+// MARK: - Button Styles
+// Unified button styles · Apple HIG compliant with spring press feedback
 
-/// Primary action button (accent color, prominent)
+// MARK: - Primary
+
 struct PrimaryButtonStyle: ButtonStyle {
+    let color: Color
+
+    init(_ color: Color = DesignSystem.Colors.accent) {
+        self.color = color
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(DesignSystem.Typography.button)
             .foregroundStyle(.white)
             .padding(.horizontal, DesignSystem.Spacing.lg)
             .padding(.vertical, DesignSystem.Spacing.sm)
-            .background(DesignSystem.Colors.accent)
+            .background(color.opacity(configuration.isPressed ? 0.8 : 1.0))
             .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
     }
 }
 
-/// Secondary action button (subtle, glass effect)
+// MARK: - Secondary
+
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(DesignSystem.Typography.button)
-            .foregroundStyle(DesignSystem.Colors.textPrimary)
+            .foregroundStyle(.primary)
             .padding(.horizontal, DesignSystem.Spacing.lg)
             .padding(.vertical, DesignSystem.Spacing.sm)
-            .background(DesignSystem.Colors.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
-            .opacity(configuration.isPressed ? 0.6 : 1.0)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignSystem.Radius.md)
+                    .strokeBorder(.quaternary, lineWidth: 0.5)
+            }
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
             .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
     }
 }
 
-/// Destructive action button (red, for delete/remove actions)
+// MARK: - Tertiary
+
+struct TertiaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(DesignSystem.Typography.buttonSmall)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .padding(.vertical, DesignSystem.Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: DesignSystem.Radius.sm)
+                    .fill(.primary.opacity(configuration.isPressed ? 0.1 : 0.05))
+            )
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
+    }
+}
+
+// MARK: - Destructive
+
 struct DestructiveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -42,15 +72,31 @@ struct DestructiveButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(.horizontal, DesignSystem.Spacing.lg)
             .padding(.vertical, DesignSystem.Spacing.sm)
-            .background(DesignSystem.Colors.error)
+            .background(DesignSystem.Colors.error.opacity(configuration.isPressed ? 0.8 : 1.0))
             .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.md))
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
     }
 }
 
-/// Icon button (compact, icon-only or icon+text)
+// MARK: - Toolbar
+
+struct ToolbarButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(DesignSystem.Typography.buttonSmall)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .padding(.vertical, DesignSystem.Spacing.xs + 2)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
+    }
+}
+
+// MARK: - Icon
+
 struct IconButtonStyle: ButtonStyle {
     let size: Size
 
@@ -93,36 +139,8 @@ struct IconButtonStyle: ButtonStyle {
     }
 }
 
-/// Scale button (simple scale effect on press)
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
-            .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
-    }
-}
+// MARK: - Pill
 
-/// Hover button (shows background on hover, common for lists)
-struct HoverButtonStyle: ButtonStyle {
-    @State private var isHovering = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(
-                isHovering || configuration.isPressed
-                    ? DesignSystem.Colors.surfaceHover
-                    : Color.clear
-            )
-            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
-            .onHover { hovering in
-                isHovering = hovering
-            }
-            .animation(DesignSystem.Animation.fast, value: isHovering)
-    }
-}
-
-/// Pill button (rounded capsule shape, used for tags/chips)
 struct PillButtonStyle: ButtonStyle {
     let color: Color
 
@@ -144,7 +162,37 @@ struct PillButtonStyle: ButtonStyle {
     }
 }
 
-/// Minimal button (text only, no background)
+// MARK: - Scale
+
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .animation(DesignSystem.Animation.fast, value: configuration.isPressed)
+    }
+}
+
+// MARK: - Hover
+
+struct HoverButtonStyle: ButtonStyle {
+    @State private var isHovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                isHovering || configuration.isPressed
+                    ? DesignSystem.Colors.surfaceHover
+                    : Color.clear
+            )
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.Radius.sm))
+            .onHover { hovering in isHovering = hovering }
+            .animation(DesignSystem.Animation.fast, value: isHovering)
+    }
+}
+
+// MARK: - Minimal
+
 struct MinimalButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -155,7 +203,7 @@ struct MinimalButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Convenience Extensions
+// MARK: - Static Convenience
 
 extension ButtonStyle where Self == PrimaryButtonStyle {
     static var primary: PrimaryButtonStyle { PrimaryButtonStyle() }
@@ -177,45 +225,34 @@ extension ButtonStyle where Self == MinimalButtonStyle {
     static var minimal: MinimalButtonStyle { MinimalButtonStyle() }
 }
 
-// MARK: - Previews
+// MARK: - Instance Convenience
 
-#Preview("Button Styles") {
-    VStack(spacing: DesignSystem.Spacing.lg) {
-        Button("Primary Action") {}
-            .buttonStyle(.primary)
-
-        Button("Secondary Action") {}
-            .buttonStyle(.secondary)
-
-        Button("Delete") {}
-            .buttonStyle(.destructive)
-
-        HStack {
-            Button {
-            } label: {
-                Image(systemName: "plus")
-            }
-            .buttonStyle(IconButtonStyle(size: .small))
-
-            Button {
-            } label: {
-                Image(systemName: "star.fill")
-            }
-            .buttonStyle(IconButtonStyle(size: .medium))
-
-            Button {
-            } label: {
-                Image(systemName: "heart.fill")
-            }
-            .buttonStyle(IconButtonStyle(size: .large))
-        }
-
-        Button("Pill Button") {}
-            .buttonStyle(PillButtonStyle())
-
-        Button("Minimal Link") {}
-            .buttonStyle(.minimal)
+extension Button {
+    func primaryStyle(_ color: Color = DesignSystem.Colors.accent) -> some View {
+        self.buttonStyle(PrimaryButtonStyle(color))
     }
-    .padding()
-    .background(DesignSystem.Materials.thin)
+
+    func secondaryStyle() -> some View {
+        self.buttonStyle(SecondaryButtonStyle())
+    }
+
+    func tertiaryStyle() -> some View {
+        self.buttonStyle(TertiaryButtonStyle())
+    }
+
+    func destructiveStyle() -> some View {
+        self.buttonStyle(DestructiveButtonStyle())
+    }
+
+    func toolbarStyle() -> some View {
+        self.buttonStyle(ToolbarButtonStyle())
+    }
+
+    func iconStyle(size: IconButtonStyle.Size = .medium) -> some View {
+        self.buttonStyle(IconButtonStyle(size: size))
+    }
+
+    func pillStyle(color: Color = DesignSystem.Colors.accent) -> some View {
+        self.buttonStyle(PillButtonStyle(color: color))
+    }
 }
