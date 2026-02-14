@@ -1,0 +1,319 @@
+@import '@xyflow/react/dist/style.css';
+
+/* ════════════════════════════════════════════
+   Tokens
+   ════════════════════════════════════════════ */
+:root {
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-tertiary: rgba(255, 255, 255, 0.35);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --accent: #3B82F6;
+  --success: #10B981;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --font-mono: 'SF Mono', 'Menlo', monospace;
+  --font-sys: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+}
+* { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* ════════════════════════════════════════════
+   React Flow Base
+   ════════════════════════════════════════════ */
+.react-flow { background: transparent !important; }
+.react-flow__background { background: transparent !important; }
+.react-flow__background pattern circle { fill: rgba(255, 255, 255, 0.07) !important; }
+.react-flow__node { overflow: visible !important; z-index: 1 !important; }
+.react-flow__node.selected { z-index: 10 !important; }
+.react-flow__controls { display: none !important; }
+.react-flow__attribution { display: none !important; }
+
+/* ════════════════════════════════════════════
+   Edges
+   ════════════════════════════════════════════ */
+.react-flow__edge-path { stroke: rgba(255,255,255,0.12) !important; stroke-width: 1.5 !important; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent) !important; stroke-width: 2 !important; }
+.react-flow__connection-line { stroke: var(--accent) !important; stroke-width: 1.5 !important; stroke-dasharray: 5 3; }
+
+/* ════════════════════════════════════════════
+   Handles — tiny dots, hidden until hover
+   ════════════════════════════════════════════ */
+.react-flow__handle {
+  width: 7px !important; height: 7px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(255,255,255,0.2) !important;
+  background: #1c1c20 !important;
+  z-index: 20 !important;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s, background 0.15s;
+}
+.react-flow__node:hover .react-flow__handle,
+.react-flow__handle.connectingto,
+.react-flow__handle-connecting {
+  opacity: 1;
+}
+.react-flow__handle:hover {
+  opacity: 1;
+  transform: scale(1.4);
+  border-color: var(--accent) !important;
+  background: rgba(59,130,246,0.4) !important;
+}
+.handle--success { border-color: rgba(16,185,129,0.4) !important; }
+.handle--success:hover { border-color: var(--success) !important; background: rgba(16,185,129,0.4) !important; }
+.handle--failure { border-color: rgba(239,68,68,0.4) !important; }
+.handle--failure:hover { border-color: var(--error) !important; background: rgba(239,68,68,0.4) !important; }
+
+/* ════════════════════════════════════════════
+   Minimap
+   ════════════════════════════════════════════ */
+.react-flow__minimap {
+  background: rgba(20,20,24,0.8) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid rgba(255,255,255,0.06) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+.react-flow__minimap-mask { fill: rgba(59,130,246,0.05) !important; stroke: rgba(59,130,246,0.2) !important; }
+.react-flow__minimap-node { fill: rgba(255,255,255,0.2) !important; stroke: none !important; rx: 3; }
+
+/* Selection box */
+.react-flow__selection {
+  background: rgba(59,130,246,0.04) !important;
+  border: 1px solid rgba(59,130,246,0.25) !important;
+  border-radius: 4px;
+}
+
+/* Edge label */
+.edge-label {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--text-tertiary);
+  background: rgba(24,24,28,0.9);
+  padding: 1px 5px; border-radius: 3px;
+  border: 0.5px solid var(--border-subtle);
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   NODE — App icon style: icon circle → name → type label
+   ════════════════════════════════════════════════════════════════ */
+
+.sn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  width: 96px;
+  padding-bottom: 4px;
+}
+.sn:active { cursor: grabbing; }
+
+/* ── Icon circle ── */
+.sn__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #1e1f25;
+  border: 1.5px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  filter: saturate(1.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  transition: border-color 0.3s, box-shadow 0.4s, transform 0.15s;
+}
+
+/* Hover */
+.sn:hover .sn__icon {
+  border-color: color-mix(in srgb, var(--c) 60%, transparent);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 12px color-mix(in srgb, var(--c) 15%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Selected */
+.sn--sel .sn__icon {
+  border-color: var(--c);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent),
+    0 0 16px color-mix(in srgb, var(--c) 20%, transparent);
+}
+
+/* ── Name ── */
+.sn__name {
+  margin-top: 6px;
+  font-family: var(--font-sys);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96px;
+  line-height: 1.3;
+  letter-spacing: -0.1px;
+}
+
+/* ── Type label ── */
+.sn__type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: color-mix(in srgb, var(--c) 70%, white);
+  letter-spacing: -0.2px;
+  text-transform: uppercase;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ── Duration ── */
+.sn__dur {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-top: 1px;
+}
+
+/* ── Status badge — top-right of icon ── */
+.sn__badge {
+  position: absolute;
+  top: -3px; right: 16px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #1e1f25;
+  z-index: 30;
+  pointer-events: none;
+}
+.sn__badge--success, .sn__badge--completed { background: var(--success); }
+.sn__badge--failed, .sn__badge--error { background: var(--error); }
+.sn__badge--running {
+  background: var(--warning);
+  animation: badge-spin 1s linear infinite;
+}
+.sn__badge--running::after {
+  content: ''; width: 10px; height: 10px;
+  border: 1.5px solid transparent;
+  border-top-color: white; border-right-color: white;
+  border-radius: 50%;
+}
+@keyframes badge-spin { to { transform: rotate(360deg); } }
+
+/* ── Entry point indicator — top-left of icon ── */
+.sn__entry {
+  position: absolute;
+  top: -3px; left: 16px;
+  width: 18px; height: 18px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  background: #2B2414;
+  border: 1.5px solid rgba(251,191,36,0.5);
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* ── Token stream ── */
+.sn__tokens {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-secondary);
+  max-width: 96px;
+  max-height: 18px;
+  overflow: hidden;
+  text-align: center;
+  background: rgba(20,20,24,0.85);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 0.5px solid var(--border-subtle);
+}
+
+/* ═══════════════════════════════════════════
+   Status states — glow on icon
+   ═══════════════════════════════════════════ */
+.sn--running .sn__icon {
+  border-color: rgba(245,158,11,0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 6px rgba(245,158,11,0.12); }
+  50% { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 20px rgba(245,158,11,0.25); }
+}
+.sn--failed .sn__icon, .sn--error .sn__icon {
+  border-color: rgba(239,68,68,0.6);
+  box-shadow: 0 0 10px rgba(239,68,68,0.15), 0 2px 8px rgba(0,0,0,0.4);
+  animation: failShake 0.4s ease-out;
+}
+.sn--success .sn__icon, .sn--completed .sn__icon {
+  border-color: rgba(16,185,129,0.5);
+  animation: successFlash 0.5s ease-out;
+}
+
+@keyframes successFlash {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(16,185,129,0); }
+  30% { transform: scale(1.05); box-shadow: 0 0 20px rgba(16,185,129,0.35); }
+  100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+}
+
+@keyframes failShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-3px); }
+  30% { transform: translateX(3px); }
+  45% { transform: translateX(-2px); }
+  60% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
+}
+
+/* ── Progress bar for running nodes ── */
+.sn__progress {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 1px;
+}
+.sn__progress::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--warning), transparent);
+  animation: progressSlide 1.2s ease-in-out infinite;
+}
+@keyframes progressSlide {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+/* ═══════════════════════════════════════════
+   Edge Animations
+   ═══════════════════════════════════════════ */
+.edge-active path {
+  stroke: rgba(59,130,246,0.7) !important;
+  stroke-width: 2 !important;
+  stroke-dasharray: 6 3 !important;
+  animation: edgeFlow 0.6s linear infinite !important;
+}
+.edge-completed path {
+  stroke: rgba(16,185,129,0.6) !important;
+  stroke-width: 2 !important;
+  animation: edgeFade 1s ease-out forwards !important;
+}
+@keyframes edgeFlow {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes edgeFade {
+  0% { stroke: rgba(16,185,129,0.8); stroke-width: 2.5; }
+  100% { stroke: rgba(255,255,255,0.1); stroke-width: 1.2; }
+}

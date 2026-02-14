@@ -1,149 +1,104 @@
 import SwiftUI
 
-// MARK: - Canvas Toolbar
-// Top bar for the workflow canvas with zoom, run, publish, layout controls
+// MARK: - Canvas Floating Overlays
+// Totally minimal — floats on top of the canvas, no chrome
+// Title pill top-left, fit button top-right, play dock bottom-center
 
-struct CanvasToolbar: View {
+struct CanvasOverlay: View {
     let workflow: Workflow
-    let storeId: UUID?
-
-    @Binding var zoom: CGFloat
-    @Binding var showPalette: Bool
 
     let onRun: () -> Void
-    let onPublish: () -> Void
-    let onAutoLayout: () -> Void
     let onFitToView: () -> Void
 
-    @State private var isRunning = false
+    @State private var runHovered = false
 
     var body: some View {
-        HStack(spacing: DS.Spacing.md) {
-            // Workflow name
-            HStack(spacing: DS.Spacing.xs) {
-                Image(systemName: workflow.icon ?? workflow.triggerIcon)
-                    .font(DesignSystem.font(12))
-                    .foregroundStyle(DS.Colors.accent)
-
-                Text(workflow.name)
-                    .font(DS.Typography.monoCaption)
-                    .foregroundStyle(DS.Colors.textPrimary)
-
-                // Status badge
-                Text(workflow.status.uppercased())
-                    .font(DS.Typography.monoSmall)
-                    .padding(.horizontal, DS.Spacing.xs)
-                    .padding(.vertical, DS.Spacing.xxs)
-                    .background(
-                        statusColor.opacity(0.15),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.xs)
-                    )
-                    .foregroundStyle(statusColor)
+        ZStack {
+            // Top: title pill left, fit button right
+            VStack {
+                HStack {
+                    titlePill
+                    Spacer()
+                    fitButton
+                }
+                .padding(.horizontal, DS.Spacing.md)
+                .padding(.top, DS.Spacing.sm)
+                Spacer()
             }
 
-            Spacer()
-
-            // Layout controls
-            HStack(spacing: DS.Spacing.xs) {
-                Button { onAutoLayout() } label: {
-                    Image(systemName: "rectangle.3.group")
-                        .font(DesignSystem.font(11))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(DS.Colors.textSecondary)
-                .help("Auto-layout nodes")
-
-                Button { onFitToView() } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(DesignSystem.font(11))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(DS.Colors.textSecondary)
-                .help("Fit to view")
+            // Bottom-center: floating play dock (Apple Music style)
+            VStack {
+                Spacer()
+                playDock
+                    .padding(.bottom, DS.Spacing.lg)
             }
-
-            // Zoom controls
-            HStack(spacing: DS.Spacing.xs) {
-                Button {
-                    withAnimation(DS.Animation.fast) { zoom = max(0.25, zoom - 0.25) }
-                } label: {
-                    Image(systemName: "minus.magnifyingglass")
-                        .font(DesignSystem.font(11))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(DS.Colors.textSecondary)
-
-                Text("\(Int(zoom * 100))%")
-                    .font(DS.Typography.monoSmall)
-                    .foregroundStyle(DS.Colors.textTertiary)
-                    .frame(width: 36)
-
-                Button {
-                    withAnimation(DS.Animation.fast) { zoom = min(3.0, zoom + 0.25) }
-                } label: {
-                    Image(systemName: "plus.magnifyingglass")
-                        .font(DesignSystem.font(11))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(DS.Colors.textSecondary)
-            }
-
-            Divider()
-                .frame(height: 16)
-                .opacity(0.3)
-
-            // Palette toggle
-            Button {
-                withAnimation(DS.Animation.fast) { showPalette.toggle() }
-            } label: {
-                Image(systemName: showPalette ? "tray.fill" : "tray")
-                    .font(DesignSystem.font(11))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(showPalette ? DS.Colors.accent : DS.Colors.textSecondary)
-            .help("Toggle step palette")
-
-            Divider()
-                .frame(height: 16)
-                .opacity(0.3)
-
-            // Publish
-            Button { onPublish() } label: {
-                HStack(spacing: DS.Spacing.xxs) {
-                    Image(systemName: "arrow.up.circle")
-                        .font(DesignSystem.font(11))
-                    Text("Publish")
-                        .font(DS.Typography.monoLabel)
-                }
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(DS.Colors.textSecondary)
-            .help("Publish version snapshot")
-
-            // Run
-            Button { onRun() } label: {
-                HStack(spacing: DS.Spacing.xxs) {
-                    Image(systemName: "play.fill")
-                        .font(DesignSystem.font(10))
-                    Text("Run")
-                        .font(DS.Typography.monoLabel)
-                }
-                .padding(.horizontal, DS.Spacing.sm)
-                .padding(.vertical, DS.Spacing.xs)
-                .background(DS.Colors.success.opacity(0.2), in: RoundedRectangle(cornerRadius: DS.Radius.sm))
-                .foregroundStyle(DS.Colors.success)
-            }
-            .buttonStyle(.plain)
-            .help("Start workflow run")
         }
-        .padding(.horizontal, DS.Spacing.md)
+        .allowsHitTesting(true)
+    }
+
+    // MARK: - Title Pill (top-left)
+
+    private var titlePill: some View {
+        HStack(spacing: DS.Spacing.xs) {
+            Image(systemName: workflow.icon ?? workflow.triggerIcon)
+                .font(DesignSystem.font(11))
+                .foregroundStyle(DS.Colors.accent)
+
+            Text(workflow.name)
+                .font(DS.Typography.monoCaption)
+                .foregroundStyle(DS.Colors.textPrimary)
+
+            Text(workflow.status.uppercased())
+                .font(DS.Typography.monoSmall)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(
+                    statusColor.opacity(0.2),
+                    in: RoundedRectangle(cornerRadius: DS.Radius.xs)
+                )
+                .foregroundStyle(statusColor)
+        }
+        .padding(.horizontal, DS.Spacing.sm)
         .padding(.vertical, DS.Spacing.xs)
-        .background {
-            DS.Colors.surfaceTertiary
-                .overlay(alignment: .bottom) {
-                    Divider().opacity(0.3)
-                }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: DS.Radius.md))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+    }
+
+    // MARK: - Fit Button (top-right)
+
+    private var fitButton: some View {
+        Button { onFitToView() } label: {
+            Image(systemName: "viewfinder")
+                .font(DesignSystem.font(11))
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(DS.Colors.textSecondary)
+        .padding(.horizontal, DS.Spacing.sm)
+        .padding(.vertical, DS.Spacing.xs)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: DS.Radius.md))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+        .help("Fit to view")
+    }
+
+    // MARK: - Play Dock (bottom-center, Apple Music style)
+
+    private var playDock: some View {
+        Button { onRun() } label: {
+            Image(systemName: "play.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 52, height: 52)
+                .background(
+                    Circle()
+                        .fill(DS.Colors.success.gradient)
+                        .shadow(color: DS.Colors.success.opacity(runHovered ? 0.5 : 0.3), radius: runHovered ? 20 : 10, y: 4)
+                )
+                .scaleEffect(runHovered ? 1.08 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .onHover { runHovered = $0 }
+        .animation(DS.Animation.fast, value: runHovered)
+        .help("Run workflow")
     }
 
     private var statusColor: Color {

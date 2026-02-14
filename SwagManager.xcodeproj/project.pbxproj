@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		016B1ADA701486EC2B715B92 /* GlassComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C641288A47B71AED2B5B2A /* GlassComponents.swift */; };
-		1AB7818AFD6D8215FE6BC2F7 /* BuildFile in Sources */ = {isa = PBXBuildFile; };
-		21A51D2DA2CCB6420E0D3B44 /* BuildFile in Sources */ = {isa = PBXBuildFile; };
+		1AB7818AFD6D8215FE6BC2F7 /* (null) in Sources */ = {isa = PBXBuildFile; };
+		21A51D2DA2CCB6420E0D3B44 /* (null) in Sources */ = {isa = PBXBuildFile; };
 		269EB254E66760BB28551DE0 /* WorkflowDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAE7B485EA8E0CE60610D6E9 /* WorkflowDashboard.swift */; };
 		497A9901E4A22ACFC1FCDF84 /* WorkflowNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BE87C6315EB33508D9F0F /* WorkflowNode.swift */; };
 		565DCC344F94FB487BC4D708 /* StepEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A496C008D215F46452AA09C /* StepEditorSheet.swift */; };
@@ -18,9 +18,11 @@
 		6FF658B918CE4253A4309A96 /* AppleContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA20C4960DD4A76BE9704B6 /* AppleContentView.swift */; };
 		7EF4187BDD33F49A1DE4FF12 /* StepPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C610E097D495DAEC7DA47A /* StepPalette.swift */; };
 		875C25FAC29F46FF9DD3CFBC /* SelectableChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0A3267247E48979D99C75F /* SelectableChip.swift */; };
-		888B5B2FF9EDB79C5BA116C6 /* NewStoreSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F09114B64EC1881FD6A75D /* NewStoreSheet.swift */; };
+		888B5B2FF9EDB79C5BA116C6 /* Sheets/NewStoreSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F09114B64EC1881FD6A75D /* Sheets/NewStoreSheet.swift */; };
+		A3F2E1D0C9B8A7F6E5D4C3B2 /* ToastSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* ToastSystem.swift */; };
 		A9B00CECB7493C41B3E28A41 /* WorkflowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 314B87C1E840A468928DA350 /* WorkflowService.swift */; };
 		AA1B2C3D4E5F678901234001 /* AIAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F678901234002 /* AIAgent.swift */; };
+		WFTELEMETRY002 /* WorkflowTelemetryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFTELEMETRY001 /* WorkflowTelemetryService.swift */; };
 		AC3D7C32F1AADE94ECBA9C7C /* WorkflowModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CA5439CE11DCC7ED00253C4 /* WorkflowModels.swift */; };
 		AF2D8E1DC811452D34D4BFC6 /* WorkflowRunPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BAF2138E9B1C547B328FD3F /* WorkflowRunPanel.swift */; };
 		AGENT002 /* AgentConfigPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AGENT001 /* AgentConfigPanel.swift */; };
@@ -41,10 +43,20 @@
 		BF915 /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF915 /* StateViews.swift */; };
 		BF917 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF917 /* ButtonStyles.swift */; };
 		BFB68F9CE43C11A18522A01C /* SupabaseDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847EF2E6EF2603E411B2BF5B /* SupabaseDecoder.swift */; };
+		CANVASEXP002 /* CanvasExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CANVASEXP001 /* CanvasExporter.swift */; };
+		CANVASGRID002 /* CanvasGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = CANVASGRID001 /* CanvasGrid.swift */; };
+		CANVASSRCH001 /* CanvasSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = CANVASSRCH002 /* CanvasSearch.swift */; };
+		CMDPALETTE002 /* CommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = CMDPALETTE001 /* CommandPalette.swift */; };
 		D017E131684C0759D1D1C35B /* StoreModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCADD87914F0AB0C5B180C63 /* StoreModels.swift */; };
 		E8ED93F8D2208226D2584EC8 /* ConnectionLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A841B736DE29EA6ED20627C7 /* ConnectionLayer.swift */; };
+		EDGECONN001 /* EdgeConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDGECONN002 /* EdgeConnector.swift */; };
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* StatusBadge.swift */; };
 		FC981FC159C053DD9E6576D6 /* WorkflowCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D26F36F8686899E5AE336A /* WorkflowCanvas.swift */; };
 		KEYCHAIN002 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KEYCHAIN001 /* KeychainService.swift */; };
+		NODETOKENBUB001 /* NodeTokenBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = NODETOKENBUB002 /* NodeTokenBubble.swift */; };
+		STEPHIST001 /* StepExecutionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = STEPHIST002 /* StepExecutionHistory.swift */; };
+		STEPSUG001 /* StepSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = STEPSUG002 /* StepSuggestions.swift */; };
+		STICKYNOTE002 /* StickyNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = STICKYNOTE001 /* StickyNote.swift */; };
 		TELEMMODEL002 /* TelemetryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMMODEL001 /* TelemetryModels.swift */; };
 		TELEMPANEL002 /* TelemetryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMPANEL001 /* TelemetryPanel.swift */; };
 		TELEMPVIEW002 /* TelemetryPanelViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = TELEMPVIEW001 /* TelemetryPanelViews.swift */; };
@@ -54,8 +66,20 @@
 		USERTOOL001 /* UserTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = USERTOOL002 /* UserTool.swift */; };
 		USERTOOLED002 /* UserToolEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = USERTOOLED001 /* UserToolEditorSheet.swift */; };
 		USERTOOLS002 /* EditorStore+UserTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = USERTOOLS001 /* EditorStore+UserTools.swift */; };
-		F2E1D0C9B8A7F6E5D4C3B2A1 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* StatusBadge.swift */; };
-		A3F2E1D0C9B8A7F6E5D4C3B2 /* ToastSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* ToastSystem.swift */; };
+		WFDEPMAP001 /* WorkflowDependencyMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFDEPMAP002 /* WorkflowDependencyMap.swift */; };
+		WFDLQ002 /* WorkflowDLQPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFDLQ001 /* WorkflowDLQPanel.swift */; };
+		WFESTIM001 /* WorkflowEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFESTIM002 /* WorkflowEstimator.swift */; };
+		WFMETRICS002 /* WorkflowMetricsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFMETRICS001 /* WorkflowMetricsPanel.swift */; };
+		WFMINIMAP002 /* WorkflowMinimap.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFMINIMAP001 /* WorkflowMinimap.swift */; };
+		WFOUTLINE002 /* WorkflowOutlinePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFOUTLINE001 /* WorkflowOutlinePanel.swift */; };
+		WFSETTINGS002 /* WorkflowSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFSETTINGS001 /* WorkflowSettingsSheet.swift */; };
+		WFSTEPTEST002 /* StepTestPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFSTEPTEST001 /* StepTestPanel.swift */; };
+		WFTEMPLGAL001 /* WorkflowTemplateGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFTEMPLGAL002 /* WorkflowTemplateGallery.swift */; };
+		WFTRACE002 /* WorkflowTraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFTRACE001 /* WorkflowTraceView.swift */; };
+		WFVERSION002 /* WorkflowVersionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFVERSION001 /* WorkflowVersionPanel.swift */; };
+		WFWEBHOOK002 /* WorkflowWebhookPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFWEBHOOK001 /* WorkflowWebhookPanel.swift */; };
+		WFCANVASWV002 /* WorkflowCanvasWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFCANVASWV001 /* WorkflowCanvasWebView.swift */; };
+		REACTHTML002 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = REACTHTML001 /* index.html */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,13 +87,15 @@
 		2CA5439CE11DCC7ED00253C4 /* WorkflowModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkflowModels.swift; sourceTree = "<group>"; };
 		2EA20C4960DD4A76BE9704B6 /* AppleContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleContentView.swift; path = SwagManager/Core/Views/AppleContentView.swift; sourceTree = "<group>"; };
 		314B87C1E840A468928DA350 /* WorkflowService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkflowService.swift; sourceTree = "<group>"; };
+		WFTELEMETRY001 /* WorkflowTelemetryService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkflowTelemetryService.swift; sourceTree = "<group>"; };
 		48C610E097D495DAEC7DA47A /* StepPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepPalette.swift; sourceTree = "<group>"; };
 		4D0A3267247E48979D99C75F /* SelectableChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectableChip.swift; path = SwagManager/Components/SelectableChip.swift; sourceTree = "<group>"; };
 		6A496C008D215F46452AA09C /* StepEditorSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepEditorSheet.swift; sourceTree = "<group>"; };
 		6E8463B5F1AA8E386A4FDA6C /* CanvasToolbar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CanvasToolbar.swift; sourceTree = "<group>"; };
-		76F09114B64EC1881FD6A75D /* NewStoreSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sheets/NewStoreSheet.swift; sourceTree = "<group>"; };
+		76F09114B64EC1881FD6A75D /* Sheets/NewStoreSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sheets/NewStoreSheet.swift; sourceTree = "<group>"; };
 		847EF2E6EF2603E411B2BF5B /* SupabaseDecoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SupabaseDecoder.swift; sourceTree = "<group>"; };
 		9784A1FFCD36C824D3876DED /* FreezeDebugger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeDebugger.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		A841B736DE29EA6ED20627C7 /* ConnectionLayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionLayer.swift; sourceTree = "<group>"; };
 		AA1B2C3D4E5F678901234002 /* AIAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAgent.swift; sourceTree = "<group>"; };
 		AE532C0107D5B6F73F8FB4C9 /* EditorStore+StoreManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EditorStore+StoreManagement.swift"; sourceTree = "<group>"; };
@@ -77,12 +103,19 @@
 		AGENTMODELS001 /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentModels.swift; sourceTree = "<group>"; };
 		AGENTSEC001 /* AgentConfigSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentConfigSections.swift; sourceTree = "<group>"; };
 		AIAGENT001 /* EditorStore+AIAgents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EditorStore+AIAgents.swift"; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* ToastSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastSystem.swift; sourceTree = "<group>"; };
 		B9D26F36F8686899E5AE336A /* WorkflowCanvas.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkflowCanvas.swift; sourceTree = "<group>"; };
 		BCADD87914F0AB0C5B180C63 /* StoreModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoreModels.swift; sourceTree = "<group>"; };
 		C4C641288A47B71AED2B5B2A /* GlassComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlassComponents.swift; sourceTree = "<group>"; };
+		CANVASEXP001 /* CanvasExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasExporter.swift; sourceTree = "<group>"; };
+		CANVASGRID001 /* CanvasGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasGrid.swift; sourceTree = "<group>"; };
+		CANVASSRCH002 /* CanvasSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasSearch.swift; sourceTree = "<group>"; };
+		CMDPALETTE001 /* CommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPalette.swift; sourceTree = "<group>"; };
 		EAE7B485EA8E0CE60610D6E9 /* WorkflowDashboard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkflowDashboard.swift; sourceTree = "<group>"; };
+		EDGECONN002 /* EdgeConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeConnector.swift; sourceTree = "<group>"; };
 		EE8BE87C6315EB33508D9F0F /* WorkflowNode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkflowNode.swift; sourceTree = "<group>"; };
-		KEYCHAIN001 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainService.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		KEYCHAIN001 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		NODETOKENBUB002 /* NodeTokenBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NodeTokenBubble.swift; sourceTree = "<group>"; };
 		PR001 /* SwagManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwagManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		SF001 /* SwagManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwagManagerApp.swift; sourceTree = "<group>"; };
 		SF002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -95,6 +128,9 @@
 		SF910 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		SF915 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
 		SF917 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
+		STEPHIST002 /* StepExecutionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepExecutionHistory.swift; sourceTree = "<group>"; };
+		STEPSUG002 /* StepSuggestions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepSuggestions.swift; sourceTree = "<group>"; };
+		STICKYNOTE001 /* StickyNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyNote.swift; sourceTree = "<group>"; };
 		TELEMMODEL001 /* TelemetryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryModels.swift; sourceTree = "<group>"; };
 		TELEMPANEL001 /* TelemetryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryPanel.swift; sourceTree = "<group>"; };
 		TELEMPVIEW001 /* TelemetryPanelViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryPanelViews.swift; sourceTree = "<group>"; };
@@ -104,8 +140,20 @@
 		USERTOOL002 /* UserTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserTool.swift; sourceTree = "<group>"; };
 		USERTOOLED001 /* UserToolEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserToolEditorSheet.swift; sourceTree = "<group>"; };
 		USERTOOLS001 /* EditorStore+UserTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EditorStore+UserTools.swift"; sourceTree = "<group>"; };
-		A1B2C3D4E5F6A7B8C9D0E1F2 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
-		B2C3D4E5F6A7B8C9D0E1F2A3 /* ToastSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastSystem.swift; sourceTree = "<group>"; };
+		WFDEPMAP002 /* WorkflowDependencyMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowDependencyMap.swift; sourceTree = "<group>"; };
+		WFDLQ001 /* WorkflowDLQPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowDLQPanel.swift; sourceTree = "<group>"; };
+		WFESTIM002 /* WorkflowEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowEstimator.swift; sourceTree = "<group>"; };
+		WFMETRICS001 /* WorkflowMetricsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowMetricsPanel.swift; sourceTree = "<group>"; };
+		WFMINIMAP001 /* WorkflowMinimap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowMinimap.swift; sourceTree = "<group>"; };
+		WFOUTLINE001 /* WorkflowOutlinePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowOutlinePanel.swift; sourceTree = "<group>"; };
+		WFSETTINGS001 /* WorkflowSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowSettingsSheet.swift; sourceTree = "<group>"; };
+		WFSTEPTEST001 /* StepTestPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepTestPanel.swift; sourceTree = "<group>"; };
+		WFTEMPLGAL002 /* WorkflowTemplateGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowTemplateGallery.swift; sourceTree = "<group>"; };
+		WFTRACE001 /* WorkflowTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowTraceView.swift; sourceTree = "<group>"; };
+		WFVERSION001 /* WorkflowVersionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowVersionPanel.swift; sourceTree = "<group>"; };
+		WFWEBHOOK001 /* WorkflowWebhookPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowWebhookPanel.swift; sourceTree = "<group>"; };
+		WFCANVASWV001 /* WorkflowCanvasWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowCanvasWebView.swift; sourceTree = "<group>"; };
+		REACTHTML001 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +179,8 @@
 		33B302DF2F20A9A600364A85 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
+				4D0A3267247E48979D99C75F /* SelectableChip.swift */,
+				2EA20C4960DD4A76BE9704B6 /* AppleContentView.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -154,14 +204,13 @@
 			children = (
 				CC21345C972A5D523B1121F0 /* Views */,
 			);
-			name = Core;
 			path = Core;
 			sourceTree = "<group>";
 		};
 		6C7502AD33F7BE5CA6A083C1 /* Sheets */ = {
 			isa = PBXGroup;
 			children = (
-				76F09114B64EC1881FD6A75D /* NewStoreSheet.swift */,
+				76F09114B64EC1881FD6A75D /* Sheets/NewStoreSheet.swift */,
 			);
 			name = Sheets;
 			sourceTree = "<group>";
@@ -184,8 +233,29 @@
 				A841B736DE29EA6ED20627C7 /* ConnectionLayer.swift */,
 				6A496C008D215F46452AA09C /* StepEditorSheet.swift */,
 				48C610E097D495DAEC7DA47A /* StepPalette.swift */,
+				CMDPALETTE001 /* CommandPalette.swift */,
+				WFSETTINGS001 /* WorkflowSettingsSheet.swift */,
+				WFVERSION001 /* WorkflowVersionPanel.swift */,
+				WFWEBHOOK001 /* WorkflowWebhookPanel.swift */,
+				WFDLQ001 /* WorkflowDLQPanel.swift */,
+				WFMETRICS001 /* WorkflowMetricsPanel.swift */,
+				WFDEPMAP002 /* WorkflowDependencyMap.swift */,
+				WFTRACE001 /* WorkflowTraceView.swift */,
+				WFSTEPTEST001 /* StepTestPanel.swift */,
+				WFOUTLINE001 /* WorkflowOutlinePanel.swift */,
+				STICKYNOTE001 /* StickyNote.swift */,
+				CANVASGRID001 /* CanvasGrid.swift */,
+				WFMINIMAP001 /* WorkflowMinimap.swift */,
+				CANVASEXP001 /* CanvasExporter.swift */,
+				NODETOKENBUB002 /* NodeTokenBubble.swift */,
+				STEPSUG002 /* StepSuggestions.swift */,
+				WFESTIM002 /* WorkflowEstimator.swift */,
+				WFTEMPLGAL002 /* WorkflowTemplateGallery.swift */,
+				STEPHIST002 /* StepExecutionHistory.swift */,
+				EDGECONN002 /* EdgeConnector.swift */,
+				CANVASSRCH002 /* CanvasSearch.swift */,
+				WFCANVASWV001 /* WorkflowCanvasWebView.swift */,
 			);
-			name = Workflows;
 			path = Workflows;
 			sourceTree = "<group>";
 		};
@@ -227,7 +297,6 @@
 			isa = PBXGroup;
 			children = (
 			);
-			name = Views;
 			path = Views;
 			sourceTree = "<group>";
 		};
@@ -251,6 +320,7 @@
 				GR006 /* Services */,
 				GR007 /* Models */,
 				GR008 /* Utilities */,
+				GR_RES /* Resources */,
 				SF012 /* SwagManager.entitlements */,
 				5CFE8109C1832CEDD827208D /* Utils */,
 				64CC328DD7ECFF2D922FDA7C /* Core */,
@@ -299,6 +369,7 @@
 				SF006 /* SupabaseService.swift */,
 				9784A1FFCD36C824D3876DED /* FreezeDebugger.swift */,
 				314B87C1E840A468928DA350 /* WorkflowService.swift */,
+				WFTELEMETRY001 /* WorkflowTelemetryService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -399,7 +470,26 @@
 			path = Editor;
 			sourceTree = "<group>";
 		};
+		GR_RES /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				REACTHTML001 /* index.html */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+/* Begin PBXResourcesBuildPhase section */
+		PH003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				REACTHTML002 /* index.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		TG001 /* SwagManager */ = {
@@ -408,6 +498,7 @@
 			buildPhases = (
 				PH002 /* Sources */,
 				PH001 /* Frameworks */,
+				PH003 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -489,18 +580,19 @@
 				BF006 /* SupabaseService.swift in Sources */,
 				BF010 /* AnyCodable.swift in Sources */,
 				BF011 /* SettingsView.swift in Sources */,
-				888B5B2FF9EDB79C5BA116C6 /* NewStoreSheet.swift in Sources */,
+				888B5B2FF9EDB79C5BA116C6 /* Sheets/NewStoreSheet.swift in Sources */,
 				BFB68F9CE43C11A18522A01C /* SupabaseDecoder.swift in Sources */,
 				69E8F88CF5E738D72FDE2C5A /* EditorStore+StoreManagement.swift in Sources */,
-				1AB7818AFD6D8215FE6BC2F7 /* BuildFile in Sources */,
+				1AB7818AFD6D8215FE6BC2F7 /* (null) in Sources */,
 				016B1ADA701486EC2B715B92 /* GlassComponents.swift in Sources */,
-				21A51D2DA2CCB6420E0D3B44 /* BuildFile in Sources */,
+				21A51D2DA2CCB6420E0D3B44 /* (null) in Sources */,
 				D017E131684C0759D1D1C35B /* StoreModels.swift in Sources */,
 				TOOLBARST002 /* ToolbarState.swift in Sources */,
 				B25D681FC4B50617B90180BD /* FreezeDebugger.swift in Sources */,
 				KEYCHAIN002 /* KeychainService.swift in Sources */,
 				AC3D7C32F1AADE94ECBA9C7C /* WorkflowModels.swift in Sources */,
 				A9B00CECB7493C41B3E28A41 /* WorkflowService.swift in Sources */,
+				WFTELEMETRY002 /* WorkflowTelemetryService.swift in Sources */,
 				269EB254E66760BB28551DE0 /* WorkflowDashboard.swift in Sources */,
 				FC981FC159C053DD9E6576D6 /* WorkflowCanvas.swift in Sources */,
 				497A9901E4A22ACFC1FCDF84 /* WorkflowNode.swift in Sources */,
@@ -509,8 +601,30 @@
 				E8ED93F8D2208226D2584EC8 /* ConnectionLayer.swift in Sources */,
 				565DCC344F94FB487BC4D708 /* StepEditorSheet.swift in Sources */,
 				7EF4187BDD33F49A1DE4FF12 /* StepPalette.swift in Sources */,
+				CMDPALETTE002 /* CommandPalette.swift in Sources */,
 				F2E1D0C9B8A7F6E5D4C3B2A1 /* StatusBadge.swift in Sources */,
 				A3F2E1D0C9B8A7F6E5D4C3B2 /* ToastSystem.swift in Sources */,
+				WFSETTINGS002 /* WorkflowSettingsSheet.swift in Sources */,
+				WFVERSION002 /* WorkflowVersionPanel.swift in Sources */,
+				WFWEBHOOK002 /* WorkflowWebhookPanel.swift in Sources */,
+				WFDLQ002 /* WorkflowDLQPanel.swift in Sources */,
+				WFMETRICS002 /* WorkflowMetricsPanel.swift in Sources */,
+				WFDEPMAP001 /* WorkflowDependencyMap.swift in Sources */,
+				WFTRACE002 /* WorkflowTraceView.swift in Sources */,
+				WFSTEPTEST002 /* StepTestPanel.swift in Sources */,
+				WFOUTLINE002 /* WorkflowOutlinePanel.swift in Sources */,
+				STICKYNOTE002 /* StickyNote.swift in Sources */,
+				CANVASGRID002 /* CanvasGrid.swift in Sources */,
+				WFMINIMAP002 /* WorkflowMinimap.swift in Sources */,
+				CANVASEXP002 /* CanvasExporter.swift in Sources */,
+				NODETOKENBUB001 /* NodeTokenBubble.swift in Sources */,
+				STEPSUG001 /* StepSuggestions.swift in Sources */,
+				WFESTIM001 /* WorkflowEstimator.swift in Sources */,
+				WFTEMPLGAL001 /* WorkflowTemplateGallery.swift in Sources */,
+				STEPHIST001 /* StepExecutionHistory.swift in Sources */,
+				EDGECONN001 /* EdgeConnector.swift in Sources */,
+				CANVASSRCH001 /* CanvasSearch.swift in Sources */,
+				WFCANVASWV002 /* WorkflowCanvasWebView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

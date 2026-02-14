@@ -14,6 +14,9 @@ enum SupabaseConfig {
     // Service role key - for local agent server only (bypasses RLS)
     // NOTE: This runs locally, not exposed to network
     static let serviceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWRud3B4dXJza25td2RlZWpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk5NzIzMywiZXhwIjoyMDc2NTczMjMzfQ.l0NvBbS2JQWPObtWeVD2M2LD866A2tgLmModARYNnbI"
+
+    /// Unified agent server on Fly.io — handles SSE chat + direct tool execution
+    static let agentServerURL = URL(string: "https://whale-agent.fly.dev")!
 }
 
 // MARK: - UserDefaults Auth Storage (avoids Keychain prompts during development)

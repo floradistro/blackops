@@ -6,8 +6,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.74.0";
 
-// CORS: use ALLOWED_ORIGINS env var (comma-separated) or fall back to wildcard for local dev
-const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "*").split(",").map(s => s.trim());
+// H3 FIX: Default to restrictive CORS, not wildcard
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "http://localhost:3000,http://127.0.0.1:3000").split(",").map(s => s.trim());
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
@@ -71,7 +71,7 @@ serve(async (req: Request) => {
 
       // Rate limiting (skip for service-role)
       const { data: rl } = await supabase.rpc("check_rate_limit", {
-        p_user_id: user.id, p_window_seconds: 60, p_max_requests: 20
+        p_user_id: user.id, p_window_seconds: 60, p_max_requests: 100
       });
       if (rl?.[0] && !rl[0].allowed) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -131,7 +131,14 @@ serve(async (req: Request) => {
         apiParams.system = system; // Already formatted (array with cache_control)
       }
     }
-    if (tools?.length) apiParams.tools = tools;
+    // H8 FIX: Sanitize tool definitions — only pass name, description, input_schema
+    if (tools?.length) {
+      apiParams.tools = (tools as Array<Record<string, unknown>>).map((t: Record<string, unknown>) => ({
+        name: t.name,
+        description: typeof t.description === "string" ? t.description.slice(0, 4096) : "",
+        input_schema: t.input_schema,
+      }));
+    }
     if (temperature !== undefined) apiParams.temperature = temperature;
     if (betas?.length) apiParams.betas = betas;
     if (context_management) apiParams.context_management = context_management;

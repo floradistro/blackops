@@ -24,6 +24,7 @@ struct VibrancyBackground: NSViewRepresentable {
 
 // MARK: - Apple-Style Content View
 // .hiddenTitleBar gives transparent title bar with traffic lights
+// View switcher sits in the title bar region; ignoresSafeArea fills from y=0
 // Agent selection via macOS menu bar; inspector toggled via Cmd+I
 
 struct AppleContentView: View {
@@ -38,15 +39,8 @@ struct AppleContentView: View {
 
         var icon: String {
             switch self {
-            case .telemetry: return "waveform.path.ecg"
-            case .workflows: return "arrow.triangle.branch"
-            }
-        }
-
-        var shortcut: KeyEquivalent {
-            switch self {
-            case .telemetry: return "1"
-            case .workflows: return "2"
+            case .telemetry: return "chart.line.flattrend.xyaxis"
+            case .workflows: return "point.3.filled.connected.trianglepath.dotted"
             }
         }
     }
@@ -56,6 +50,9 @@ struct AppleContentView: View {
     }
 
     var body: some View {
+        // HSplitView (AppKit NSSplitView) must be the root content — no VStack,
+        // padding, or safeAreaInset wrappers. View switcher floats via overlay
+        // in the sidebar/title-bar area; each panel's sidebar adds top padding.
         Group {
             switch activeView {
             case .telemetry:
@@ -64,9 +61,11 @@ struct AppleContentView: View {
                 WorkflowDashboard(storeId: store.selectedStore?.id)
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topLeading) {
             viewSwitcher
         }
+        .ignoresSafeArea(.container, edges: .top)
         .background(WindowVibrancy())
         .inspector(isPresented: bindableToolbar.showConfig) {
             inspectorContent
@@ -95,10 +94,12 @@ struct AppleContentView: View {
         .freezeDebugLifecycle("AppleContentView")
     }
 
-    // MARK: - View Switcher
+    // MARK: - View Switcher (Title Bar Region)
+    // Sits at y=0 with left padding to clear traffic light buttons (close/min/zoom)
+    // Traffic lights on macOS: close ~x12, minimize ~x32, zoom ~x52, each ~12pt wide
 
     private var viewSwitcher: some View {
-        HStack(spacing: DS.Spacing.xxs) {
+        HStack(spacing: DS.Spacing.xs) {
             ForEach(ActiveView.allCases, id: \.self) { view in
                 Button {
                     withAnimation(DS.Animation.fast) {
@@ -122,17 +123,10 @@ struct AppleContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            Spacer()
         }
-        .padding(.horizontal, DS.Spacing.md)
-        .padding(.vertical, 3)
-        .background {
-            DS.Colors.surfaceTertiary
-                .overlay(alignment: .bottom) {
-                    Divider().opacity(0.3)
-                }
-        }
+        .padding(.leading, 76)
+        .padding(.trailing, DS.Spacing.sm)
+        .frame(height: 28, alignment: .center)
     }
 
     // MARK: - Inspector Content
@@ -144,7 +138,7 @@ struct AppleContentView: View {
             AgentConfigPanel(agent: agent)
         } else {
             ContentUnavailableView {
-                Label("No Agent Selected", systemImage: "cpu")
+                Label("No Agent Selected", systemImage: "brain")
             } description: {
                 Text("Select an agent from the Agent menu.")
             }

@@ -20,6 +20,9 @@ struct Workflow: Codable, Identifiable, Hashable {
     var storeId: String?
     var createdAt: String
     var updatedAt: String?
+    var errorWebhookUrl: String?
+    var errorEmail: String?
+    var circuitBreakerThreshold: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, icon, status
@@ -34,6 +37,9 @@ struct Workflow: Codable, Identifiable, Hashable {
         case storeId = "store_id"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case errorWebhookUrl = "error_webhook_url"
+        case errorEmail = "error_email"
+        case circuitBreakerThreshold = "circuit_breaker_threshold"
     }
 
     var displayName: String { name }
@@ -49,11 +55,11 @@ struct Workflow: Codable, Identifiable, Hashable {
 
     var triggerIcon: String {
         switch triggerType {
-        case "manual": return "hand.tap"
-        case "webhook": return "arrow.down.forward.square"
-        case "schedule", "cron": return "clock"
-        case "event": return "bolt"
-        default: return "play.circle"
+        case "manual": return "hand.point.up.fill"
+        case "webhook": return "antenna.radiowaves.left.and.right"
+        case "schedule", "cron": return "calendar.badge.clock"
+        case "event": return "bolt.horizontal.fill"
+        default: return "play.circle.fill"
         }
     }
 }
@@ -143,20 +149,20 @@ struct WorkflowStep: Codable, Identifiable, Hashable {
 
 enum WorkflowStepType {
     static let allTypes: [(key: String, label: String, icon: String, category: String)] = [
-        ("tool", "Tool", "wrench.and.screwdriver", "Execution"),
-        ("code", "Code", "chevron.left.forwardslash.chevron.right", "Execution"),
-        ("agent", "Agent", "cpu", "Execution"),
-        ("sub_workflow", "Sub-Workflow", "arrow.rectanglepath", "Execution"),
-        ("condition", "Condition", "arrow.triangle.branch", "Flow"),
-        ("parallel", "Parallel", "square.stack.3d.up", "Flow"),
-        ("for_each", "For Each", "repeat", "Flow"),
-        ("delay", "Delay", "clock", "Flow"),
-        ("noop", "No-Op", "circle.dashed", "Flow"),
-        ("webhook_out", "Webhook", "arrow.up.forward.square", "Integration"),
-        ("custom", "Custom", "puzzlepiece", "Integration"),
-        ("approval", "Approval", "hand.raised", "Human"),
-        ("waitpoint", "Waitpoint", "pause.circle", "Human"),
-        ("transform", "Transform", "arrow.triangle.2.circlepath", "Data"),
+        ("tool", "Tool", "hammer.fill", "Execution"),
+        ("code", "Code", "terminal.fill", "Execution"),
+        ("agent", "Agent", "brain.fill", "Execution"),
+        ("sub_workflow", "Sub-Workflow", "arrow.triangle.capsulepath", "Execution"),
+        ("condition", "Condition", "point.3.filled.connected.trianglepath.dotted", "Flow"),
+        ("parallel", "Parallel", "arrow.triangle.branch", "Flow"),
+        ("for_each", "For Each", "arrow.3.trianglepath", "Flow"),
+        ("delay", "Delay", "hourglass", "Flow"),
+        ("noop", "No-Op", "circle.dotted", "Flow"),
+        ("webhook_out", "Webhook", "paperplane.fill", "Integration"),
+        ("custom", "Custom", "puzzlepiece.extension.fill", "Integration"),
+        ("approval", "Approval", "checkmark.seal.fill", "Human"),
+        ("waitpoint", "Waitpoint", "pause.circle.fill", "Human"),
+        ("transform", "Transform", "wand.and.rays", "Data"),
     ]
 
     static let categories = ["Execution", "Flow", "Integration", "Human", "Data"]
@@ -180,26 +186,92 @@ struct WorkflowGraph: Codable {
     let nodes: [GraphNode]
     let edges: [GraphEdge]
     let nodeStatus: [String: NodeStatus]?
+    /// The workflow's owning store_id (from get response, used for step operations)
+    var ownerStoreId: String?
 
     enum CodingKeys: String, CodingKey {
         case nodes, edges
         case nodeStatus = "node_status"
+        case ownerStoreId = "owner_store_id"
     }
 }
 
-struct GraphNode: Codable, Identifiable {
-    let id: String
+struct GraphNode: Codable, Identifiable, Hashable {
+    static func == (lhs: GraphNode, rhs: GraphNode) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    let id: String          // step_key (used for display + graph identity)
+    let stepId: String?     // database UUID (used for update_step/delete_step)
     let type: String
     let label: String
     let isEntryPoint: Bool
     let position: GraphPosition?
     let configSummary: GraphConfigSummary?
 
+    // Full step data for editing
+    let onSuccess: String?
+    let onFailure: String?
+    let stepConfig: [String: AnyCodable]?
+    let maxRetries: Int?
+    let timeoutSeconds: Int?
+
     enum CodingKeys: String, CodingKey {
         case id, type, label
+        case stepId = "step_id"
         case isEntryPoint = "is_entry_point"
         case position
         case configSummary = "config_summary"
+        case onSuccess = "on_success"
+        case onFailure = "on_failure"
+        case stepConfig = "step_config"
+        case maxRetries = "max_retries"
+        case timeoutSeconds = "timeout_seconds"
+    }
+
+    /// Friendly display name derived from step type + config
+    var displayName: String {
+        // If label was explicitly set (not auto-generated), use it
+        let looksAutoGenerated = label.range(of: #"^[a-z_]+_\d{1,}$"#, options: .regularExpression) != nil
+        if !looksAutoGenerated && label != id {
+            return label
+        }
+
+        switch type {
+        case "tool":
+            let tool = configSummary?.toolName ?? stepConfig?["tool_name"]?.stringValue
+            let action = configSummary?.action ?? stepConfig?["action"]?.stringValue
+            if let tool, !tool.isEmpty {
+                let name = tool.replacingOccurrences(of: "_", with: " ").capitalized
+                if let action, !action.isEmpty { return "\(name) \u{2022} \(action)" }
+                return name
+            }
+            return "Tool Step"
+        case "condition":
+            return "Condition"
+        case "code":
+            let lang = stepConfig?["language"]?.stringValue ?? "js"
+            return "Code (\(lang))"
+        case "agent":
+            if let name = stepConfig?["agent_name"]?.stringValue, !name.isEmpty {
+                return name.replacingOccurrences(of: "_", with: " ").capitalized
+            }
+            return "Agent"
+        case "delay":
+            if let secs = stepConfig?["seconds"]?.intValue { return "Delay \(secs)s" }
+            return "Delay"
+        case "webhook_out": return "Webhook"
+        case "approval":
+            if let title = stepConfig?["title"]?.stringValue, !title.isEmpty { return title }
+            return "Approval"
+        case "parallel": return "Parallel"
+        case "for_each": return "For Each"
+        case "sub_workflow": return "Sub-Workflow"
+        case "transform": return "Transform"
+        case "waitpoint":
+            if let l = stepConfig?["label"]?.stringValue, !l.isEmpty { return l }
+            return "Waitpoint"
+        default:
+            return WorkflowStepType.label(for: type)
+        }
     }
 }
 
@@ -224,9 +296,17 @@ struct GraphEdge: Codable, Identifiable {
     let from: String
     let to: String
     let type: String
+    let label: String?
 
     enum CodingKeys: String, CodingKey {
-        case from, to, type
+        case from, to, type, label
+    }
+
+    init(from: String, to: String, type: String, label: String? = nil) {
+        self.from = from
+        self.to = to
+        self.type = type
+        self.label = label
     }
 }
 
@@ -236,11 +316,18 @@ struct NodeStatus: Codable {
     let error: String?
     let startedAt: String?
 
+    // Telemetry enrichment (not decoded from server — set locally)
+    var activeTool: String?
+    var totalTokens: Int?
+    var totalCost: Double?
+    var spanCount: Int?
+
     enum CodingKeys: String, CodingKey {
         case status
         case durationMs = "duration_ms"
         case error
         case startedAt = "started_at"
+        // Telemetry fields excluded from Codable — local only
     }
 }
 
@@ -281,13 +368,13 @@ struct WorkflowRun: Codable, Identifiable {
 
     var statusIcon: String {
         switch status {
-        case "success", "completed": return "checkmark.circle.fill"
-        case "running": return "arrow.triangle.2.circlepath"
-        case "pending": return "clock"
-        case "failed", "error": return "xmark.circle.fill"
-        case "cancelled": return "stop.circle.fill"
+        case "success", "completed": return "checkmark.diamond.fill"
+        case "running": return "rays"
+        case "pending": return "circle.dotted.circle"
+        case "failed", "error": return "exclamationmark.octagon.fill"
+        case "cancelled": return "xmark.seal.fill"
         case "paused": return "pause.circle.fill"
-        default: return "questionmark.circle"
+        default: return "questionmark.diamond"
         }
     }
 }
@@ -483,19 +570,107 @@ extension WorkflowRun {
 extension StepRun {
     static func fromDict(_ d: [String: Any]) -> StepRun? {
         guard let id = d["id"] as? String else { return nil }
+        var inputMap: [String: AnyCodable]?
+        if let input = d["input"] as? [String: Any] {
+            inputMap = input.mapValues { AnyCodable($0) }
+        }
+        var outputMap: [String: AnyCodable]?
+        if let output = d["output"] as? [String: Any] {
+            outputMap = output.mapValues { AnyCodable($0) }
+        }
         return StepRun(
             id: id,
             runId: d["run_id"] as? String ?? "",
             stepKey: d["step_key"] as? String ?? "",
             stepType: d["step_type"] as? String ?? "",
             status: d["status"] as? String ?? "",
-            input: nil,
-            output: nil,
+            input: inputMap,
+            output: outputMap,
             error: d["error"] as? String,
             durationMs: d["duration_ms"] as? Int,
             startedAt: d["started_at"] as? String,
             completedAt: d["completed_at"] as? String,
             retryCount: d["retry_count"] as? Int
         )
+    }
+}
+
+// MARK: - Webhook Endpoint
+
+struct WebhookEndpoint: Codable, Identifiable {
+    let id: String
+    let workflowId: String
+    let name: String
+    let slug: String
+    let url: String?
+    let isActive: Bool
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case workflowId = "workflow_id"
+        case name, slug, url
+        case isActive = "is_active"
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - Checkpoint
+
+struct WorkflowCheckpoint: Codable, Identifiable {
+    let id: String
+    let runId: String
+    let stepKey: String
+    let state: [String: AnyCodable]?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case runId = "run_id"
+        case stepKey = "step_key"
+        case state
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - Workflow Event
+
+struct WorkflowEvent: Codable, Identifiable {
+    let id: String
+    let runId: String
+    let eventType: String
+    let stepKey: String?
+    let data: [String: AnyCodable]?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case runId = "run_id"
+        case eventType = "event_type"
+        case stepKey = "step_key"
+        case data
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - Waitpoint
+
+struct WorkflowWaitpoint: Codable, Identifiable {
+    let id: String
+    let runId: String
+    let stepKey: String
+    let label: String?
+    let status: String
+    let data: [String: AnyCodable]?
+    let expiresAt: String?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case runId = "run_id"
+        case stepKey = "step_key"
+        case label, status, data
+        case expiresAt = "expires_at"
+        case createdAt = "created_at"
     }
 }

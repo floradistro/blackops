@@ -89,7 +89,9 @@ struct AIAgent: Codable, Identifiable, Hashable {
         verbosity: String? = "moderate",
         canQuery: Bool? = true,
         canSend: Bool? = false,
-        canModify: Bool? = false
+        canModify: Bool? = false,
+        apiKey: String? = nil,
+        contextConfig: AgentContextConfig? = nil
     ) {
         self.id = id
         self.storeId = storeId
@@ -115,6 +117,8 @@ struct AIAgent: Codable, Identifiable, Hashable {
         self.canQuery = canQuery
         self.canSend = canSend
         self.canModify = canModify
+        self.apiKey = apiKey
+        self.contextConfig = contextConfig
     }
 
     // Computed properties for status

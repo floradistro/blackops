@@ -1,10 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://uaednwpxursknmwdeejn.supabase.co";
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+// H3 FIX: Default to restrictive CORS
+const ALLOWED_ORIGINS_STR = Deno.env.get("ALLOWED_ORIGINS") || "http://localhost:3000,http://127.0.0.1:3000";
+const GMAIL_SYNC_ORIGINS = ALLOWED_ORIGINS_STR.split(",").map((s: string) => s.trim());
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": GMAIL_SYNC_ORIGINS.includes("*") ? "*" : GMAIL_SYNC_ORIGINS[0],
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -29,6 +33,15 @@ interface GmailMessage {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Auth: only service_role can trigger sync
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ") || authHeader.slice(7) !== SUPABASE_SERVICE_KEY) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);

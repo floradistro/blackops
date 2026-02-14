@@ -14,13 +14,13 @@ struct WorkflowNode: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header: icon + step_key
+            // Header: icon + display name
             HStack(spacing: DS.Spacing.sm) {
                 Image(systemName: WorkflowStepType.icon(for: node.type))
                     .font(DesignSystem.font(12, weight: .semibold))
                     .foregroundStyle(iconColor)
 
-                Text(node.label)
+                Text(node.displayName)
                     .font(DS.Typography.monoCaption)
                     .foregroundStyle(DS.Colors.textPrimary)
                     .lineLimit(1)
@@ -50,17 +50,13 @@ struct WorkflowNode: View {
                 .padding(.horizontal, DS.Spacing.sm)
                 .padding(.vertical, DS.Spacing.xs)
 
-            // Config summary + status
+            // Config detail + status
             HStack(spacing: DS.Spacing.xs) {
-                if let summary = node.configSummary {
-                    let text = [summary.toolName, summary.action].compactMap { $0 }.joined(separator: " \u{2022} ")
-                    if !text.isEmpty {
-                        Text(text)
-                            .font(DS.Typography.monoSmall)
-                            .foregroundStyle(DS.Colors.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
+                // Show step key as monospaced detail
+                Text(node.id)
+                    .font(DS.Typography.monoSmall)
+                    .foregroundStyle(DS.Colors.textQuaternary)
+                    .lineLimit(1)
 
                 Spacer(minLength: 0)
 

@@ -38,6 +38,16 @@ struct TokenUsage {
     let inputTokens: Int
     let outputTokens: Int
     let totalCost: Double
+    let cacheCreationTokens: Int
+    let cacheReadTokens: Int
+
+    init(inputTokens: Int, outputTokens: Int, totalCost: Double, cacheCreationTokens: Int = 0, cacheReadTokens: Int = 0) {
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.totalCost = totalCost
+        self.cacheCreationTokens = cacheCreationTokens
+        self.cacheReadTokens = cacheReadTokens
+    }
 
     var formattedCost: String {
         String(format: "$%.4f", totalCost)
@@ -46,6 +56,16 @@ struct TokenUsage {
     var totalTokens: Int {
         inputTokens + outputTokens
     }
+}
+
+struct ConversationMeta: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let agentId: String?
+    let agentName: String?
+    let messageCount: Int
+    let createdAt: String
+    let updatedAt: String
 }
 
 struct ToolMetadata: Identifiable, Equatable {

@@ -1,9 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID") || "1031461619514-83g7ko256vhkcvsq3eil3lpkh8g5vt63.apps.googleusercontent.com";
-const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") || "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";
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://uaednwpxursknmwdeejn.supabase.co";
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
+const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Gmail API scopes
 const SCOPES = [
@@ -13,8 +13,10 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
+// H3 FIX: Default to restrictive CORS
+const GMAIL_ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "http://localhost:3000,http://127.0.0.1:3000").split(",").map(s => s.trim());
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": GMAIL_ALLOWED_ORIGINS.includes("*") ? "*" : GMAIL_ALLOWED_ORIGINS[0],
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
@@ -29,10 +31,16 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   try {
-    // Route based on path
-    const path = url.pathname.split("/").pop();
-
     if (req.method === "POST") {
+      // Auth: only service_role can start OAuth or refresh tokens
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ") || authHeader.slice(7) !== SUPABASE_SERVICE_KEY) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const body = await req.json();
 
       // Start OAuth flow - generate auth URL
@@ -219,7 +227,10 @@ Deno.serve(async (req) => {
 
       // Redirect back to app
       const redirectUri = stateData.redirect_uri || "swagmanager://oauth/callback";
-      const successUrl = `${redirectUri}?success=true&email=${encodeURIComponent(userInfo.email)}`;
+      // M6 FIX: Sanitize redirect URI to prevent XSS — only allow known schemes
+      const allowedSchemes = ["swagmanager://", "http://localhost", "http://127.0.0.1"];
+      const safeRedirect = allowedSchemes.some(s => redirectUri.startsWith(s)) ? redirectUri : "swagmanager://oauth/callback";
+      const successUrl = `${safeRedirect}?success=true&email=${encodeURIComponent(userInfo.email)}`;
 
       // Return HTML that redirects (works better for desktop apps)
       return new Response(
@@ -259,8 +270,10 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error("Gmail OAuth error:", error);
+    // M5 FIX: Sanitize error to avoid leaking internal details
+    const safeMsg = error instanceof Error ? error.message.replace(/at\s+.*$/gm, "").trim() : "Internal error";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: safeMsg.slice(0, 200) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

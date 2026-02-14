@@ -1,14 +1,16 @@
 import SwiftUI
 
 // MARK: - Workflow Run Panel
-// Right inspector panel showing live execution progress via SSE
+// Right inspector panel showing live execution progress via polling
 // Displays step timeline, streaming agent tokens, approval cards
+// Now with full telemetry waterfall (spans, tokens, cost) via WorkflowTelemetryService
 
 struct WorkflowRunPanel: View {
     let runId: String
     let workflowId: String?
     let storeId: UUID?
     let onDismiss: () -> Void
+    var telemetry: WorkflowTelemetryService?
 
     @Environment(\.workflowService) private var service
 
@@ -17,10 +19,21 @@ struct WorkflowRunPanel: View {
     @State private var agentTokens: [String: String] = [:]
     @State private var stepProgress: [String: (Double, String?)] = [:]
     @State private var pendingApprovals: [ApprovalRequest] = []
+    @State private var waitpoints: [WorkflowWaitpoint] = []
+    @State private var checkpoints: [WorkflowCheckpoint] = []
     @State private var isConnected = false
     @State private var streamTask: Task<Void, Never>?
     @State private var selectedStepKey: String?
     @State private var showStepOutput = false
+
+    // Telemetry view state
+    @State private var viewMode: ViewMode = .steps
+    @State private var expandedStepSpans: Set<String> = []
+
+    enum ViewMode: String, CaseIterable {
+        case steps = "Steps"
+        case trace = "Trace"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +41,12 @@ struct WorkflowRunPanel: View {
             header
 
             Divider().opacity(0.3)
+
+            // Stats bar (when telemetry is available)
+            if let tel = telemetry, tel.spanCount > 0 {
+                telemetryStatsBar(tel)
+                Divider().opacity(0.3)
+            }
 
             // Content
             ScrollView {
@@ -37,28 +56,30 @@ struct WorkflowRunPanel: View {
                         approvalCard(approval)
                     }
 
-                    // Step timeline
-                    ForEach(sortedStepRuns, id: \.id) { step in
-                        stepTimelineRow(step)
+                    // Waitpoint cards
+                    ForEach(waitpoints.filter { $0.status == "pending" }) { wp in
+                        waitpointCard(wp)
                     }
 
-                    // Loading state
-                    if stepRuns.isEmpty && isConnected {
-                        HStack(spacing: DS.Spacing.sm) {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                            Text("Waiting for steps...")
-                                .font(DS.Typography.caption1)
-                                .foregroundStyle(DS.Colors.textTertiary)
-                        }
-                        .padding(DS.Spacing.lg)
+                    // View mode content
+                    switch viewMode {
+                    case .steps:
+                        stepsContent
+                    case .trace:
+                        traceContent
                     }
                 }
                 .padding(DS.Spacing.md)
             }
 
+            // Span inspector (when a span is selected)
+            if let tel = telemetry, let span = tel.selectedSpan {
+                Divider().opacity(0.3)
+                spanInspectorPanel(span, telemetry: tel)
+            }
+
             // Agent token stream (if any step has streaming tokens)
-            if let activeStep = activeAgentStep, let tokens = agentTokens[activeStep] {
+            if tel?.selectedSpan == nil, let activeStep = activeAgentStep, let tokens = agentTokens[activeStep] {
                 Divider().opacity(0.3)
                 agentStreamView(stepKey: activeStep, tokens: tokens)
             }
@@ -72,86 +93,345 @@ struct WorkflowRunPanel: View {
         }
     }
 
-    // MARK: - Header
+    private var tel: WorkflowTelemetryService? { telemetry }
+
+    // MARK: - Steps Content (original + expandable spans)
+
+    @ViewBuilder
+    private var stepsContent: some View {
+        ForEach(sortedStepRuns, id: \.id) { step in
+            stepTimelineRow(step)
+        }
+
+        // Loading state
+        if stepRuns.isEmpty && isConnected {
+            HStack(spacing: DS.Spacing.sm) {
+                ProgressView()
+                    .scaleEffect(0.6)
+                Text("Waiting for steps...")
+                    .font(DS.Typography.caption1)
+                    .foregroundStyle(DS.Colors.textTertiary)
+            }
+            .padding(DS.Spacing.lg)
+        }
+    }
+
+    // MARK: - Trace Content (waterfall view)
+
+    @ViewBuilder
+    private var traceContent: some View {
+        if let tel = telemetry, !tel.allSpans.isEmpty {
+            // Group spans by step, then render waterfall
+            let stepKeys = orderedStepKeys(tel)
+
+            ForEach(stepKeys, id: \.self) { stepKey in
+                let spans = tel.spans(for: stepKey)
+                if !spans.isEmpty {
+                    stepSpanGroup(stepKey: stepKey, spans: spans, telemetry: tel)
+                }
+            }
+
+            // Unassigned spans
+            let unassigned = tel.spans(for: "_unassigned")
+            if !unassigned.isEmpty {
+                stepSpanGroup(stepKey: "_unassigned", spans: unassigned, telemetry: tel)
+            }
+        } else {
+            HStack(spacing: DS.Spacing.sm) {
+                Image(systemName: "waveform.path.ecg")
+                    .font(DesignSystem.font(14))
+                    .foregroundStyle(DS.Colors.textQuaternary)
+                Text("No telemetry spans yet")
+                    .font(DS.Typography.caption1)
+                    .foregroundStyle(DS.Colors.textTertiary)
+            }
+            .padding(DS.Spacing.lg)
+        }
+    }
+
+    // MARK: - Step Span Group (collapsible)
+
+    private func stepSpanGroup(stepKey: String, spans: [TelemetrySpan], telemetry tel: WorkflowTelemetryService) -> some View {
+        VStack(spacing: 0) {
+            // Step header
+            Button {
+                withAnimation(DS.Animation.fast) {
+                    if expandedStepSpans.contains(stepKey) {
+                        expandedStepSpans.remove(stepKey)
+                    } else {
+                        expandedStepSpans.insert(stepKey)
+                    }
+                }
+            } label: {
+                HStack(spacing: DS.Spacing.sm) {
+                    Image(systemName: expandedStepSpans.contains(stepKey) ? "chevron.down" : "chevron.right")
+                        .font(DesignSystem.font(8, weight: .bold))
+                        .foregroundStyle(DS.Colors.textQuaternary)
+                        .frame(width: 10)
+
+                    if let step = stepRuns.first(where: { $0.stepKey == stepKey }) {
+                        Image(systemName: WorkflowStepType.icon(for: step.stepType))
+                            .font(DesignSystem.font(10))
+                            .foregroundStyle(DS.Colors.textSecondary)
+                    }
+
+                    Text(stepKey == "_unassigned" ? "Other Spans" : stepKey)
+                        .font(DS.Typography.monoCaption)
+                        .foregroundStyle(DS.Colors.textPrimary)
+
+                    Spacer()
+
+                    // Span count badge
+                    Text("\(spans.count)")
+                        .font(DS.Typography.monoSmall)
+                        .foregroundStyle(DS.Colors.textQuaternary)
+                        .padding(.horizontal, DS.Spacing.xs)
+                        .padding(.vertical, 1)
+                        .background(DS.Colors.surfaceElevated, in: RoundedRectangle(cornerRadius: DS.Radius.xs))
+
+                    // Token count
+                    let tokens = tel.tokenCount(for: stepKey)
+                    if tokens > 0 {
+                        Text(formatTokens(tokens))
+                            .font(DS.Typography.monoSmall)
+                            .foregroundStyle(DS.Colors.cyan)
+                    }
+
+                    // Cost
+                    let cost = tel.cost(for: stepKey)
+                    if cost > 0 {
+                        Text(String(format: "$%.4f", cost))
+                            .font(DS.Typography.monoSmall)
+                            .foregroundStyle(DS.Colors.success)
+                    }
+                }
+                .padding(.vertical, DS.Spacing.xs)
+                .padding(.horizontal, DS.Spacing.sm)
+                .background(DS.Colors.surfaceElevated.opacity(0.5), in: RoundedRectangle(cornerRadius: DS.Radius.sm))
+            }
+            .buttonStyle(.plain)
+
+            // Expanded spans waterfall
+            if expandedStepSpans.contains(stepKey) {
+                VStack(spacing: 1) {
+                    ForEach(spans) { span in
+                        SpanRow(
+                            span: span,
+                            traceStart: tel.waterfallStart,
+                            traceDuration: tel.waterfallDuration,
+                            isSelected: tel.selectedSpan?.id == span.id,
+                            onSelect: { tel.selectedSpan = span }
+                        )
+                    }
+                }
+                .padding(.leading, DS.Spacing.md)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    // MARK: - Telemetry Stats Bar
+
+    private func telemetryStatsBar(_ tel: WorkflowTelemetryService) -> some View {
+        HStack(spacing: DS.Spacing.md) {
+            // Span count
+            statItem(icon: "waveform.path.ecg", value: "\(tel.spanCount)", label: "spans")
+
+            // Total tokens
+            if tel.totalTokens > 0 {
+                statItem(icon: "text.word.spacing", value: formatTokens(tel.totalTokens), label: "tokens")
+            }
+
+            // Total cost
+            if tel.totalCost > 0 {
+                statItem(icon: "dollarsign.circle", value: String(format: "$%.4f", tel.totalCost), label: "cost")
+            }
+
+            // Error count
+            if tel.errorCount > 0 {
+                statItem(icon: "exclamationmark.triangle", value: "\(tel.errorCount)", label: "errors", color: DS.Colors.error)
+            }
+
+            Spacer()
+
+            // Realtime indicator
+            Circle()
+                .fill(tel.isLive ? DS.Colors.success : DS.Colors.textQuaternary)
+                .frame(width: 5, height: 5)
+        }
+        .padding(.horizontal, DS.Spacing.md)
+        .padding(.vertical, DS.Spacing.xs)
+    }
+
+    private func statItem(icon: String, value: String, label: String, color: Color = DS.Colors.textSecondary) -> some View {
+        HStack(spacing: DS.Spacing.xxs) {
+            Image(systemName: icon)
+                .font(DesignSystem.font(9))
+                .foregroundStyle(color.opacity(0.7))
+            Text(value)
+                .font(DS.Typography.monoSmall)
+                .foregroundStyle(color)
+        }
+        .help(label)
+    }
+
+    // MARK: - Span Inspector Panel
+
+    private func spanInspectorPanel(_ span: TelemetrySpan, telemetry tel: WorkflowTelemetryService) -> some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack(spacing: DS.Spacing.sm) {
+                Text(span.isError ? "ERR" : "OK")
+                    .font(DS.Typography.monoSmall)
+                    .foregroundStyle(span.isError ? DS.Colors.error : DS.Colors.success)
+                    .padding(.horizontal, DS.Spacing.xs)
+                    .padding(.vertical, 1)
+                    .background((span.isError ? DS.Colors.error : DS.Colors.success).opacity(0.12), in: RoundedRectangle(cornerRadius: 3))
+
+                Text(span.toolName ?? span.action)
+                    .font(.system(.caption, design: .monospaced, weight: .medium))
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text(span.formattedDuration)
+                    .font(DS.Typography.monoSmall)
+                    .foregroundStyle(DS.Colors.textTertiary)
+
+                Button { tel.selectedSpan = nil } label: {
+                    Image(systemName: "xmark")
+                        .font(DesignSystem.font(9, weight: .medium))
+                        .foregroundStyle(DS.Colors.textQuaternary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, DS.Spacing.md)
+            .padding(.vertical, DS.Spacing.xs)
+
+            // Comparison bar
+            if let comparison = tel.spanComparison {
+                SpanComparisonBar(span: span, comparison: comparison)
+            }
+
+            Divider().opacity(0.3)
+
+            // Span detail content (reused from TelemetryPanelViews)
+            ScrollView {
+                SpanDetailContentView(span: span)
+                    .padding(DS.Spacing.md)
+            }
+            .frame(maxHeight: 250)
+        }
+        .background(DS.Colors.surfaceElevated.opacity(0.3))
+        .task(id: span.id) {
+            if span.isToolSpan {
+                await tel.fetchSpanComparison(spanId: span.id)
+            }
+        }
+    }
+
+    // MARK: - Header (compact inline bar)
 
     private var header: some View {
         VStack(spacing: DS.Spacing.xs) {
-            HStack {
-                // Status icon
+            HStack(spacing: DS.Spacing.sm) {
+                // Status + step count
                 if let run {
                     Image(systemName: run.statusIcon)
-                        .font(DesignSystem.font(14))
+                        .font(DesignSystem.font(11))
+                        .foregroundStyle(runStatusColor)
+
+                    Text(run.status.uppercased())
+                        .font(DS.Typography.monoSmall)
                         .foregroundStyle(runStatusColor)
                 }
 
-                VStack(alignment: .leading, spacing: DS.Spacing.xxs) {
-                    Text("RUN")
-                        .font(DS.Typography.monoHeader)
-                        .foregroundStyle(DS.Colors.textTertiary)
-                    if let run {
-                        Text(run.status.uppercased())
-                            .font(DS.Typography.monoLabel)
-                            .foregroundStyle(runStatusColor)
-                    }
+                let completed = stepRuns.filter { $0.status == "success" || $0.status == "completed" }.count
+                let failed = stepRuns.filter { $0.status == "failed" || $0.status == "error" }.count
+                Text("\(completed)/\(stepRuns.count)")
+                    .font(DS.Typography.monoSmall)
+                    .foregroundStyle(DS.Colors.textTertiary)
+                if failed > 0 {
+                    Text("\(failed) err")
+                        .font(DS.Typography.monoSmall)
+                        .foregroundStyle(DS.Colors.error)
                 }
 
                 Spacer()
 
-                // SSE indicator
-                HStack(spacing: DS.Spacing.xxs) {
-                    Circle()
-                        .fill(isConnected ? DS.Colors.success : DS.Colors.textQuaternary)
-                        .frame(width: 6, height: 6)
-                    Text(isConnected ? "LIVE" : "OFFLINE")
-                        .font(DS.Typography.monoSmall)
-                        .foregroundStyle(isConnected ? DS.Colors.success : DS.Colors.textQuaternary)
+                // View mode toggle (only when telemetry available)
+                if telemetry != nil {
+                    Picker("", selection: $viewMode) {
+                        ForEach(ViewMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 110)
                 }
+
+                // SSE indicator
+                Circle()
+                    .fill(isConnected ? DS.Colors.success : DS.Colors.textQuaternary)
+                    .frame(width: 5, height: 5)
 
                 Button { onDismiss() } label: {
                     Image(systemName: "xmark")
-                        .font(DesignSystem.font(10, weight: .medium))
-                        .foregroundStyle(DS.Colors.textTertiary)
+                        .font(DesignSystem.font(9, weight: .medium))
+                        .foregroundStyle(DS.Colors.textQuaternary)
                 }
                 .buttonStyle(.plain)
             }
 
-            // Duration + step count
-            if let run {
-                HStack(spacing: DS.Spacing.md) {
-                    if let started = run.startedAt {
-                        Label(started.prefix(19).description, systemImage: "clock")
-                            .font(DS.Typography.monoSmall)
-                            .foregroundStyle(DS.Colors.textTertiary)
+            // Run controls (only when active)
+            if let run, run.status == "running" || run.status == "paused" {
+                HStack(spacing: DS.Spacing.sm) {
+                    if run.status == "running" {
+                        Button { pauseRun() } label: {
+                            Image(systemName: "pause.fill")
+                                .font(DesignSystem.font(9))
+                                .foregroundStyle(DS.Colors.warning)
+                                .frame(width: 24, height: 22)
+                                .background(DS.Colors.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.Radius.xs))
+                        }
+                        .buttonStyle(.plain)
                     }
 
-                    Text("\(stepRuns.count) steps")
-                        .font(DS.Typography.monoSmall)
-                        .foregroundStyle(DS.Colors.textTertiary)
-
-                    let completed = stepRuns.filter { $0.status == "success" || $0.status == "completed" }.count
-                    let failed = stepRuns.filter { $0.status == "failed" || $0.status == "error" }.count
-                    if completed > 0 {
-                        Text("\(completed) done")
-                            .font(DS.Typography.monoSmall)
-                            .foregroundStyle(DS.Colors.success)
+                    if run.status == "paused" {
+                        Button { resumeRun() } label: {
+                            Image(systemName: "play.fill")
+                                .font(DesignSystem.font(9))
+                                .foregroundStyle(DS.Colors.success)
+                                .frame(width: 24, height: 22)
+                                .background(DS.Colors.success.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.Radius.xs))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    if failed > 0 {
-                        Text("\(failed) failed")
-                            .font(DS.Typography.monoSmall)
+
+                    Button { cancelRun() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(DesignSystem.font(9))
                             .foregroundStyle(DS.Colors.error)
+                            .frame(width: 24, height: 22)
+                            .background(DS.Colors.error.opacity(0.12), in: RoundedRectangle(cornerRadius: DS.Radius.xs))
                     }
+                    .buttonStyle(.plain)
+
+                    Spacer()
                 }
             }
         }
-        .padding(DS.Spacing.md)
+        .padding(.horizontal, DS.Spacing.md)
+        .padding(.vertical, DS.Spacing.sm)
     }
 
     // MARK: - Step Timeline Row
 
     private func stepTimelineRow(_ step: StepRun) -> some View {
+        VStack(spacing: 0) {
         Button {
             withAnimation(DS.Animation.fast) {
-                selectedStepKey = step.stepKey
+                selectedStepKey = selectedStepKey == step.stepKey ? nil : step.stepKey
             }
         } label: {
             HStack(spacing: DS.Spacing.sm) {
@@ -175,6 +455,16 @@ struct WorkflowRunPanel: View {
 
                         Spacer()
 
+                        // Telemetry badges (inline)
+                        if let tel = telemetry {
+                            let tokens = tel.tokenCount(for: step.stepKey)
+                            if tokens > 0 {
+                                Text(formatTokens(tokens))
+                                    .font(DS.Typography.monoSmall)
+                                    .foregroundStyle(DS.Colors.cyan)
+                            }
+                        }
+
                         if let ms = step.durationMs {
                             Text(formatDuration(ms))
                                 .font(DS.Typography.monoSmall)
@@ -183,9 +473,30 @@ struct WorkflowRunPanel: View {
                     }
 
                     // Status text
-                    Text(step.status.uppercased())
-                        .font(DS.Typography.monoSmall)
-                        .foregroundStyle(stepStatusColor(step.status))
+                    HStack(spacing: DS.Spacing.xs) {
+                        Text(step.status.uppercased())
+                            .font(DS.Typography.monoSmall)
+                            .foregroundStyle(stepStatusColor(step.status))
+
+                        // Active tool name (from telemetry)
+                        if let tel = telemetry, let tool = tel.activeTool(for: step.stepKey) {
+                            Text(tool)
+                                .font(DS.Typography.monoSmall)
+                                .foregroundStyle(DS.Colors.accent)
+                        }
+                    }
+
+                    // Duration bar (proportional to max)
+                    if let ms = step.durationMs {
+                        let maxMs = stepRuns.compactMap(\.durationMs).max() ?? 1
+                        let fraction = CGFloat(ms) / CGFloat(max(maxMs, 1))
+                        GeometryReader { geo in
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(stepStatusColor(step.status).opacity(0.3))
+                                .frame(width: geo.size.width * min(fraction, 1.0))
+                        }
+                        .frame(height: 4)
+                    }
 
                     // Progress bar (if available)
                     if let (progress, message) = stepProgress[step.stepKey] {
@@ -232,6 +543,54 @@ struct WorkflowRunPanel: View {
             )
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if let checkpoint = checkpoints.first(where: { $0.stepKey == step.stepKey }) {
+                Button {
+                    Task {
+                        if let newRun = await service.replayFromCheckpoint(checkpointId: checkpoint.id, storeId: storeId) {
+                            run = newRun
+                        }
+                    }
+                } label: {
+                    Label("Replay from Checkpoint", systemImage: "arrow.counterclockwise.circle.fill")
+                }
+            }
+        }
+
+        // Expandable content when selected
+        if selectedStepKey == step.stepKey {
+            VStack(spacing: DS.Spacing.sm) {
+                // I/O inspector
+                stepInspector(step)
+
+                // Telemetry spans for this step (mini waterfall)
+                if let tel = telemetry {
+                    let spans = tel.spans(for: step.stepKey)
+                    if !spans.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+                            Text("SPANS (\(spans.count))")
+                                .font(DS.Typography.monoHeader)
+                                .foregroundStyle(DS.Colors.textTertiary)
+
+                            VStack(spacing: 1) {
+                                ForEach(spans) { span in
+                                    SpanRow(
+                                        span: span,
+                                        traceStart: tel.waterfallStart,
+                                        traceDuration: tel.waterfallDuration,
+                                        isSelected: tel.selectedSpan?.id == span.id,
+                                        onSelect: { tel.selectedSpan = span }
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.leading, DS.Spacing.xl)
+                        .padding(.bottom, DS.Spacing.sm)
+                    }
+                }
+            }
+        }
+        } // end VStack
     }
 
     // MARK: - Approval Card
@@ -239,7 +598,7 @@ struct WorkflowRunPanel: View {
     private func approvalCard(_ approval: ApprovalRequest) -> some View {
         VStack(alignment: .leading, spacing: DS.Spacing.sm) {
             HStack {
-                Image(systemName: "hand.raised.fill")
+                Image(systemName: "checkmark.seal.fill")
                     .foregroundStyle(DS.Colors.warning)
                 Text(approval.title ?? "Approval Required")
                     .font(DS.Typography.footnote)
@@ -289,12 +648,53 @@ struct WorkflowRunPanel: View {
         .cardStyle(padding: 0, cornerRadius: DS.Radius.md)
     }
 
+    // MARK: - Waitpoint Card
+
+    private func waitpointCard(_ wp: WorkflowWaitpoint) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            HStack {
+                Image(systemName: "hourglass.circle.fill")
+                    .foregroundStyle(DS.Colors.cyan)
+                Text(wp.label ?? "Waiting: \(wp.stepKey)")
+                    .font(DS.Typography.footnote)
+                    .foregroundStyle(DS.Colors.textPrimary)
+
+                Spacer()
+
+                if let expires = wp.expiresAt {
+                    Text("Expires \(expires.prefix(10))")
+                        .font(DS.Typography.monoSmall)
+                        .foregroundStyle(DS.Colors.textQuaternary)
+                }
+            }
+
+            Button {
+                Task {
+                    if await service.completeWaitpoint(waitpointId: wp.id, data: nil, storeId: storeId) {
+                        waitpoints.removeAll { $0.id == wp.id }
+                    }
+                }
+            } label: {
+                Text("Complete")
+                    .font(DS.Typography.buttonSmall)
+                    .padding(.horizontal, DS.Spacing.md)
+                    .padding(.vertical, DS.Spacing.xs)
+                    .background(DS.Colors.cyan.opacity(0.2), in: RoundedRectangle(cornerRadius: DS.Radius.sm))
+                    .foregroundStyle(DS.Colors.cyan)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(DS.Spacing.md)
+        .background(DS.Colors.cyan.opacity(0.05))
+        .cardStyle(padding: 0, cornerRadius: DS.Radius.md)
+    }
+
     // MARK: - Agent Token Stream
 
     private func agentStreamView(stepKey: String, tokens: String) -> some View {
         VStack(alignment: .leading, spacing: DS.Spacing.xs) {
             HStack {
-                Image(systemName: "cpu")
+                Image(systemName: "brain")
                     .font(DesignSystem.font(10))
                     .foregroundStyle(DS.Colors.cyan)
                 Text("AGENT: \(stepKey)")
@@ -314,24 +714,56 @@ struct WorkflowRunPanel: View {
         .padding(DS.Spacing.md)
     }
 
-    // MARK: - Streaming
+    // MARK: - Data Loading (Polling)
 
     private func startStreaming() async {
-        // Load initial step runs
-        stepRuns = await service.getStepRuns(runId: runId, storeId: storeId)
-
-        // Connect SSE
+        // Initial load
+        await refreshRunData()
         isConnected = true
-        streamTask = Task {
-            for await event in service.streamRun(runId: runId) {
-                await MainActor.run {
-                    handleEvent(event)
-                }
-            }
-            await MainActor.run {
-                isConnected = false
+
+        // Start telemetry tracking if traceId available
+        if let traceId = run?.traceId, let tel = telemetry {
+            tel.startTracking(traceId: traceId, stepRuns: stepRuns)
+            // Auto-expand all step groups in trace view
+            for step in stepRuns {
+                expandedStepSpans.insert(step.stepKey)
             }
         }
+
+        // Poll every 2s until run completes
+        streamTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { break }
+                await refreshRunData()
+
+                // Update telemetry with latest step runs
+                telemetry?.updateStepRuns(stepRuns)
+
+                // Start tracking if we just got a traceId
+                if let traceId = run?.traceId, let tel = telemetry, tel.spanCount == 0 {
+                    tel.startTracking(traceId: traceId, stepRuns: stepRuns)
+                }
+
+                // Stop polling if run is terminal
+                if let r = run, ["success", "completed", "failed", "error", "cancelled"].contains(r.status) {
+                    break
+                }
+            }
+            await MainActor.run { isConnected = false }
+        }
+    }
+
+    private func refreshRunData() async {
+        // Fetch run info
+        let runs = await service.getRuns(workflowId: workflowId, storeId: storeId)
+        if let match = runs.first(where: { $0.id == runId }) {
+            await MainActor.run { run = match }
+        }
+
+        // Fetch step runs
+        let steps = await service.getStepRuns(runId: runId, storeId: storeId)
+        await MainActor.run { stepRuns = steps }
     }
 
     private func handleEvent(_ event: WorkflowSSEEvent) {
@@ -342,23 +774,22 @@ struct WorkflowRunPanel: View {
 
         case .stepUpdate(let stepKey, let status, let durationMs, let error):
             if let idx = stepRuns.firstIndex(where: { $0.stepKey == stepKey }) {
-                // Update existing
+                let existing = stepRuns[idx]
                 stepRuns[idx] = StepRun(
-                    id: stepRuns[idx].id,
+                    id: existing.id,
                     runId: runId,
                     stepKey: stepKey,
-                    stepType: stepRuns[idx].stepType,
+                    stepType: existing.stepType,
                     status: status,
-                    input: nil,
-                    output: nil,
+                    input: existing.input,
+                    output: existing.output,
                     error: error,
                     durationMs: durationMs,
-                    startedAt: stepRuns[idx].startedAt,
+                    startedAt: existing.startedAt,
                     completedAt: nil,
-                    retryCount: stepRuns[idx].retryCount
+                    retryCount: existing.retryCount
                 )
             } else {
-                // New step
                 stepRuns.append(StepRun(
                     id: UUID().uuidString,
                     runId: runId,
@@ -398,7 +829,6 @@ struct WorkflowRunPanel: View {
 
         case .event(let eventType, _):
             if eventType == "approval_requested" {
-                // Refresh approvals
                 Task {
                     pendingApprovals = await service.listApprovals(status: "pending", storeId: storeId)
                 }
@@ -409,11 +839,100 @@ struct WorkflowRunPanel: View {
         }
     }
 
+    // MARK: - Step I/O Inspector
+
+    private func stepInspector(_ step: StepRun) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            // Input section
+            if let input = step.input {
+                inspectorSection("INPUT", json: input)
+            }
+
+            // Output section
+            if let output = step.output {
+                inspectorSection("OUTPUT", json: output)
+            }
+
+            // If no I/O data available
+            if step.input == nil && step.output == nil {
+                HStack(spacing: DS.Spacing.xs) {
+                    Image(systemName: "info.circle")
+                        .font(DesignSystem.font(10))
+                    Text("I/O data not available for this step")
+                        .font(DS.Typography.caption2)
+                }
+                .foregroundStyle(DS.Colors.textTertiary)
+                .padding(DS.Spacing.sm)
+            }
+        }
+        .padding(.leading, DS.Spacing.xl)
+        .padding(.bottom, DS.Spacing.sm)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func inspectorSection(_ title: String, json: [String: AnyCodable]) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.xs) {
+            HStack {
+                Text(title)
+                    .font(DS.Typography.monoHeader)
+                    .foregroundStyle(DS.Colors.textTertiary)
+
+                Spacer()
+
+                Button {
+                    if let data = try? JSONSerialization.data(withJSONObject: json.mapValues(\.value), options: .prettyPrinted),
+                       let str = String(data: data, encoding: .utf8) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(str, forType: .string)
+                    }
+                } label: {
+                    Image(systemName: "doc.on.doc.fill")
+                        .font(DesignSystem.font(10))
+                        .foregroundStyle(DS.Colors.textTertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Copy JSON")
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                Text(prettyJSON(json))
+                    .font(DS.Typography.monoSmall)
+                    .foregroundStyle(DS.Colors.textSecondary)
+                    .textSelection(.enabled)
+            }
+            .frame(maxHeight: 200)
+            .padding(DS.Spacing.sm)
+            .glassBackground(cornerRadius: DS.Radius.sm)
+        }
+    }
+
+    private func prettyJSON(_ value: [String: AnyCodable]) -> String {
+        let raw = value.mapValues(\.value)
+        guard let data = try? JSONSerialization.data(withJSONObject: raw, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: data, encoding: .utf8) else {
+            return String(describing: raw)
+        }
+        return str
+    }
+
+    // MARK: - Run Control Actions
+
+    private func pauseRun() {
+        Task { _ = await service.pauseRun(runId: runId, storeId: storeId) }
+    }
+
+    private func resumeRun() {
+        Task { _ = await service.resumeRun(runId: runId, storeId: storeId) }
+    }
+
+    private func cancelRun() {
+        Task { _ = await service.cancelRun(runId: runId, storeId: storeId) }
+    }
+
     // MARK: - Helpers
 
     private var sortedStepRuns: [StepRun] {
         stepRuns.sorted { a, b in
-            // Running first, then by start time
             if a.status == "running" && b.status != "running" { return true }
             if a.status != "running" && b.status == "running" { return false }
             return (a.startedAt ?? "") < (b.startedAt ?? "")
@@ -452,5 +971,24 @@ struct WorkflowRunPanel: View {
         let minutes = Int(seconds / 60)
         let secs = Int(seconds) % 60
         return "\(minutes)m\(secs)s"
+    }
+
+    private func formatTokens(_ count: Int) -> String {
+        if count < 1000 { return "\(count)" }
+        if count < 100_000 { return String(format: "%.1fk", Double(count) / 1000.0) }
+        return String(format: "%.0fk", Double(count) / 1000.0)
+    }
+
+    /// Get step keys in execution order for waterfall display
+    private func orderedStepKeys(_ tel: WorkflowTelemetryService) -> [String] {
+        // Use step run order if available
+        if !stepRuns.isEmpty {
+            let ordered = sortedStepRuns.map(\.stepKey)
+            // Add any step keys from telemetry not in step runs
+            let extra = tel.spansByStep.keys.filter { !ordered.contains($0) && $0 != "_unassigned" }.sorted()
+            return ordered + extra
+        }
+        // Fall back to alphabetical
+        return tel.spansByStep.keys.filter { $0 != "_unassigned" }.sorted()
     }
 }

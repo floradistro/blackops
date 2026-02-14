@@ -23,6 +23,20 @@ class ToolbarState {
     var telemetryIsLive: Bool = false
     var telemetryStoreId: UUID?
 
+    // Workflow state (populated by WorkflowCanvas, consumed by WorkflowMenuCommands)
+    var activeWorkflowName: String?
+    var workflowRunAction: (() -> Void)?
+    var workflowPublishAction: (() -> Void)?
+    var workflowFitViewAction: (() -> Void)?
+    var workflowSettingsAction: (() -> Void)?
+    var workflowVersionsAction: (() -> Void)?
+    var workflowWebhooksAction: (() -> Void)?
+    var workflowDLQAction: (() -> Void)?
+    var workflowMetricsAction: (() -> Void)?
+    var workflowRunHistoryAction: (() -> Void)?
+    var workflowExportAction: (() -> Void)?
+    var workflowAddStepAction: ((String) -> Void)?
+
     func reset() {
         // Keep selectedAgentId and showConfig — persistent UI state
         agentHasChanges = false
@@ -31,6 +45,22 @@ class ToolbarState {
         discardAction = nil
         telemetryRefreshAction = nil
         telemetryIsLive = false
+        resetWorkflow()
+    }
+
+    func resetWorkflow() {
+        activeWorkflowName = nil
+        workflowRunAction = nil
+        workflowPublishAction = nil
+        workflowFitViewAction = nil
+        workflowSettingsAction = nil
+        workflowVersionsAction = nil
+        workflowWebhooksAction = nil
+        workflowDLQAction = nil
+        workflowMetricsAction = nil
+        workflowRunHistoryAction = nil
+        workflowExportAction = nil
+        workflowAddStepAction = nil
     }
 }
 

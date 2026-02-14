@@ -16,6 +16,7 @@ struct SwagManagerApp: App {
     @State private var authManager = AuthManager.shared
     @State private var editorStore = EditorStore()
     @State private var toolbarState = ToolbarState()
+    @State private var workflowService = WorkflowService.shared
 
     var body: some Scene {
         WindowGroup {
@@ -24,6 +25,7 @@ struct SwagManagerApp: App {
                 .environment(\.editorStore, editorStore)
                 .environment(\.toolbarState, toolbarState)
                 .environment(\.telemetryService, TelemetryService.shared)
+                .environment(\.workflowService, workflowService)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .windowStyle(.hiddenTitleBar)
@@ -31,6 +33,7 @@ struct SwagManagerApp: App {
             FileMenuCommands(toolbarState: toolbarState)
             StoreMenuCommands(store: editorStore)
             AgentMenuCommands(store: editorStore, toolbarState: toolbarState)
+            WorkflowMenuCommands(toolbarState: toolbarState)
         }
 
         Settings {
@@ -118,6 +121,109 @@ struct AgentMenuCommands: Commands {
                 }
             }
             .keyboardShortcut("i", modifiers: .command)
+        }
+    }
+}
+
+// MARK: - Workflow Menu (macOS Menu Bar)
+// Appears when a workflow canvas is active — actions grayed out otherwise
+
+struct WorkflowMenuCommands: Commands {
+    let toolbarState: ToolbarState
+
+    var body: some Commands {
+        CommandMenu("Workflow") {
+            Button("Run") {
+                toolbarState.workflowRunAction?()
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(toolbarState.workflowRunAction == nil)
+
+            Button("Publish") {
+                toolbarState.workflowPublishAction?()
+            }
+            .keyboardShortcut("p", modifiers: [.command, .shift])
+            .disabled(toolbarState.workflowPublishAction == nil)
+
+            Divider()
+
+            Button("Fit to View") {
+                toolbarState.workflowFitViewAction?()
+            }
+            .disabled(toolbarState.workflowFitViewAction == nil)
+
+            Divider()
+
+            // Add Step submenu — all step types from the palette
+            Menu("Add Step") {
+                Section("Execution") {
+                    stepButton("Tool", type: "tool")
+                    stepButton("Code", type: "code")
+                    stepButton("Agent", type: "agent")
+                    stepButton("Sub-Workflow", type: "sub_workflow")
+                }
+                Section("Flow Control") {
+                    stepButton("Condition", type: "condition")
+                    stepButton("Parallel", type: "parallel")
+                    stepButton("For Each", type: "for_each")
+                    stepButton("Delay", type: "delay")
+                }
+                Section("Integration") {
+                    stepButton("Webhook", type: "webhook_out")
+                    stepButton("Transform", type: "transform")
+                }
+                Section("Human") {
+                    stepButton("Approval", type: "approval")
+                    stepButton("Wait", type: "waitpoint")
+                }
+            }
+            .disabled(toolbarState.workflowAddStepAction == nil)
+
+            Divider()
+
+            Button("Settings...") {
+                toolbarState.workflowSettingsAction?()
+            }
+            .disabled(toolbarState.workflowSettingsAction == nil)
+
+            Button("Versions") {
+                toolbarState.workflowVersionsAction?()
+            }
+            .disabled(toolbarState.workflowVersionsAction == nil)
+
+            Button("Webhooks") {
+                toolbarState.workflowWebhooksAction?()
+            }
+            .disabled(toolbarState.workflowWebhooksAction == nil)
+
+            Button("Metrics") {
+                toolbarState.workflowMetricsAction?()
+            }
+            .disabled(toolbarState.workflowMetricsAction == nil)
+
+            Button("Run History") {
+                toolbarState.workflowRunHistoryAction?()
+            }
+            .disabled(toolbarState.workflowRunHistoryAction == nil)
+
+            Button("Dead Letter Queue") {
+                toolbarState.workflowDLQAction?()
+            }
+            .disabled(toolbarState.workflowDLQAction == nil)
+
+            Divider()
+
+            Button("Export as PNG") {
+                toolbarState.workflowExportAction?()
+            }
+            .keyboardShortcut("e", modifiers: .command)
+            .disabled(toolbarState.workflowExportAction == nil)
+        }
+    }
+
+    private func stepButton(_ label: String, type: String) -> some View {
+        Button(label) {
+            toolbarState.workflowAddStepAction?(type)
         }
     }
 }

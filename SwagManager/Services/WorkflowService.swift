@@ -119,16 +119,85 @@ class WorkflowService {
     // MARK: - Graph
 
     func getGraph(workflowId: String, runId: String? = nil, storeId: UUID?) async -> WorkflowGraph? {
-        var args: [String: Any] = ["workflow_id": workflowId]
-        if let runId { args["run_id"] = runId }
+        // The server has no separate "graph" action — use "get" which returns workflow_steps embedded
+        let result = await callTool(action: "get", args: ["workflow_id": workflowId], storeId: storeId)
+        guard let dict = result as? [String: Any] else { return nil }
 
-        let result = await callTool(action: "graph", args: args, storeId: storeId)
-        if let dict = result as? [String: Any] {
+        // Try standard graph format first (nodes/edges)
+        if let _ = dict["nodes"] as? [[String: Any]] {
             let graph = decodeGraph(dict)
             currentGraph = graph
             return graph
         }
-        return nil
+
+        // Construct graph from workflow_steps
+        guard let steps = dict["workflow_steps"] as? [[String: Any]] else { return nil }
+
+        var nodes: [GraphNode] = []
+        var edges: [GraphEdge] = []
+
+        for step in steps {
+            guard let stepKey = step["step_key"] as? String else { continue }
+
+            var pos: GraphPosition?
+            if let x = step["position_x"] as? Double, let y = step["position_y"] as? Double,
+               !(x == 0 && y == 0) {
+                pos = GraphPosition(x: x, y: y)
+            }
+
+            var stepConfig: [String: AnyCodable]?
+            if let sc = step["step_config"] as? [String: Any] {
+                stepConfig = sc.mapValues { AnyCodable($0) }
+            }
+
+            let node = GraphNode(
+                id: stepKey,
+                stepId: step["id"] as? String,
+                type: step["step_type"] as? String ?? "noop",
+                label: stepKey,
+                isEntryPoint: step["is_entry_point"] as? Bool ?? false,
+                position: pos,
+                configSummary: nil,
+                onSuccess: step["on_success"] as? String,
+                onFailure: step["on_failure"] as? String,
+                stepConfig: stepConfig,
+                maxRetries: step["max_retries"] as? Int,
+                timeoutSeconds: step["timeout_seconds"] as? Int
+            )
+            nodes.append(node)
+
+            // Derive edges from on_success / on_failure
+            if let target = step["on_success"] as? String, !target.isEmpty {
+                edges.append(GraphEdge(from: stepKey, to: target, type: "success", label: nil))
+            }
+            if let target = step["on_failure"] as? String, !target.isEmpty {
+                edges.append(GraphEdge(from: stepKey, to: target, type: "failure", label: nil))
+            }
+        }
+
+        // Overlay run status if a runId was requested
+        var nodeStatus: [String: NodeStatus]?
+        if let runId {
+            let stepRuns = await getStepRuns(runId: runId, storeId: storeId)
+            if !stepRuns.isEmpty {
+                var statuses: [String: NodeStatus] = [:]
+                for sr in stepRuns {
+                    statuses[sr.stepKey] = NodeStatus(
+                        status: sr.status,
+                        durationMs: sr.durationMs,
+                        error: sr.error,
+                        startedAt: sr.startedAt
+                    )
+                }
+                nodeStatus = statuses
+            }
+        }
+
+        var graph = WorkflowGraph(nodes: nodes, edges: edges, nodeStatus: nodeStatus)
+        // Extract the workflow's owning store_id from the get response
+        graph.ownerStoreId = dict["store_id"] as? String
+        currentGraph = graph
+        return graph
     }
 
     // MARK: - Run Control
@@ -140,7 +209,15 @@ class WorkflowService {
 
         let result = await callTool(action: "start", args: args, storeId: storeId)
         if let dict = result as? [String: Any] {
-            return decodeRun(dict)
+            // Try direct decode first, then check common wrappers
+            if let run = decodeRun(dict) { return run }
+            // Server may wrap: { run: {...} }
+            if let nested = dict["run"] as? [String: Any], let run = decodeRun(nested) { return run }
+            print("[WorkflowService] startRun: decodeRun failed — keys: \(dict.keys.sorted())")
+        } else if result != nil {
+            print("[WorkflowService] startRun: unexpected result type: \(type(of: result))")
+        } else {
+            print("[WorkflowService] startRun: callTool returned nil — error: \(self.error ?? "none")")
         }
         return nil
     }
@@ -242,27 +319,37 @@ class WorkflowService {
     // MARK: - DLQ
 
     func getDLQ(status: String? = nil, storeId: UUID?) async -> [DLQEntry] {
-        var args: [String: Any] = [:]
-        if let s = status { args["status"] = s }
-        let result = await callTool(action: "dlq", args: args, storeId: storeId)
-        if let items = result as? [[String: Any]] {
-            return items.compactMap { decodeDLQ($0) }
+        // DLQ not yet implemented server-side — derive from failed runs
+        let runs = await getRuns(workflowId: nil, status: "failed", limit: 50, storeId: storeId)
+        return runs.map { run in
+            DLQEntry(
+                id: run.id,
+                runId: run.id,
+                stepKey: "",
+                error: run.error ?? "Unknown error",
+                status: "pending",
+                retryCount: nil,
+                createdAt: run.startedAt ?? ""
+            )
         }
-        return []
     }
 
     func retryDLQ(dlqId: String, storeId: UUID?) async -> Bool {
-        await callTool(action: "dlq_retry", args: ["dlq_id": dlqId], storeId: storeId) != nil
+        // DLQ retry not yet implemented — no-op
+        self.error = "DLQ retry not available"
+        return false
     }
 
     func dismissDLQ(dlqId: String, storeId: UUID?) async -> Bool {
-        await callTool(action: "dlq_dismiss", args: ["dlq_id": dlqId], storeId: storeId) != nil
+        // DLQ dismiss not yet implemented — no-op
+        self.error = "DLQ dismiss not available"
+        return false
     }
 
     // MARK: - Metrics
 
     func getMetrics(days: Int = 30, storeId: UUID?) async -> WorkflowMetrics? {
-        let result = await callTool(action: "metrics", args: ["days": days], storeId: storeId)
+        let result = await callTool(action: "analytics", args: ["days": days], storeId: storeId)
         if let dict = result as? [String: Any] {
             return decodeMetrics(dict)
         }
@@ -273,8 +360,84 @@ class WorkflowService {
 
     func setSchedule(workflowId: String, cronExpression: String?, storeId: UUID?) async -> Bool {
         var args: [String: Any] = ["workflow_id": workflowId]
-        if let cron = cronExpression { args["cron_expression"] = cron }
-        return await callTool(action: "set_schedule", args: args, storeId: storeId) != nil
+        if let cron = cronExpression {
+            args["trigger_type"] = "schedule"
+            args["trigger_config"] = ["cron_expression": cron]
+        }
+        return await callTool(action: "update", args: args, storeId: storeId) != nil
+    }
+
+    // MARK: - Webhooks
+
+    func createWebhook(workflowId: String, name: String, slug: String, storeId: UUID?) async -> WebhookEndpoint? {
+        let result = await callTool(action: "create_webhook", args: [
+            "workflow_id": workflowId, "name": name, "slug": slug
+        ], storeId: storeId)
+        if let dict = result as? [String: Any] { return decodeWebhook(dict) }
+        return nil
+    }
+
+    func listWebhooks(workflowId: String, storeId: UUID?) async -> [WebhookEndpoint] {
+        let result = await callTool(action: "list_webhooks", args: ["workflow_id": workflowId], storeId: storeId)
+        if let items = result as? [[String: Any]] {
+            return items.compactMap { decodeWebhook($0) }
+        } else if let wrapper = result as? [String: Any], let items = wrapper["webhooks"] as? [[String: Any]] {
+            return items.compactMap { decodeWebhook($0) }
+        }
+        return []
+    }
+
+    func deleteWebhook(webhookId: String, storeId: UUID?) async -> Bool {
+        await callTool(action: "delete_webhook", args: ["webhook_id": webhookId], storeId: storeId) != nil
+    }
+
+    // MARK: - Rollback
+
+    func rollback(workflowId: String, version: Int, storeId: UUID?) async -> Bool {
+        await callTool(action: "rollback", args: ["workflow_id": workflowId, "version": version], storeId: storeId) != nil
+    }
+
+    // MARK: - Checkpoints
+
+    func getCheckpoints(runId: String, storeId: UUID?) async -> [WorkflowCheckpoint] {
+        // Checkpoints not yet implemented server-side
+        return []
+    }
+
+    func replayFromCheckpoint(checkpointId: String, storeId: UUID?) async -> WorkflowRun? {
+        // Replay not yet implemented server-side
+        self.error = "Replay not available"
+        return nil
+    }
+
+    // MARK: - Waitpoints
+
+    func listWaitpoints(runId: String, storeId: UUID?) async -> [WorkflowWaitpoint] {
+        // Waitpoints not yet implemented server-side
+        return []
+    }
+
+    func completeWaitpoint(waitpointId: String, data: [String: Any]?, storeId: UUID?) async -> Bool {
+        // Waitpoints not yet implemented server-side
+        self.error = "Waitpoints not available"
+        return false
+    }
+
+    // MARK: - Events
+
+    func getEvents(runId: String, storeId: UUID?) async -> [WorkflowEvent] {
+        // Events not yet implemented server-side
+        return []
+    }
+
+    // MARK: - Step Testing
+
+    /// Test a single step in isolation with mock input data.
+    /// Sends action "test_step" to the backend with the step key and mock input.
+    func testStep(workflowId: String, stepKey: String, mockInput: [String: Any], storeId: UUID?) async -> StepRun? {
+        // test_step not yet implemented server-side — start a full run instead
+        self.error = "Step testing not available"
+        return nil
     }
 
     // MARK: - SSE Streaming
@@ -282,9 +445,12 @@ class WorkflowService {
     func streamRun(runId: String) -> AsyncStream<WorkflowSSEEvent> {
         AsyncStream { continuation in
             let task = Task {
-                let url = serverURL.appendingPathComponent("workflows/runs/\(runId)/stream")
+                var components = URLComponents(url: serverURL, resolvingAgainstBaseURL: false)!
+                components.path = "/workflows/runs/\(runId)/stream"
+                let url = components.url ?? serverURL.appendingPathComponent("workflows/runs/\(runId)/stream")
                 var request = URLRequest(url: url)
                 request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+                request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
                 do {
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
@@ -330,14 +496,13 @@ class WorkflowService {
     private func callTool(action: String, args: [String: Any], storeId: UUID?) async -> Any? {
         var fullArgs = args
         fullArgs["action"] = action
-        if let storeId { fullArgs["store_id"] = storeId.uuidString }
 
         var body: [String: Any] = [
             "mode": "tool",
             "tool_name": "workflows",
             "args": fullArgs,
         ]
-        if let storeId { body["store_id"] = storeId.uuidString }
+        if let storeId { body["store_id"] = storeId.uuidString.lowercased() }
 
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else {
             self.error = "Failed to encode request"
@@ -354,7 +519,14 @@ class WorkflowService {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-                self.error = "Server error \(statusCode)"
+                // Try to extract error message from response body
+                if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMsg = errorJson["error"] as? String {
+                    self.error = "[\(statusCode)] \(errorMsg)"
+                } else {
+                    self.error = "Server error \(statusCode)"
+                }
+                print("[WorkflowService] \(action) failed: \(self.error ?? "") — body: \(String(data: data, encoding: .utf8) ?? "")")
                 return nil
             }
 
@@ -396,7 +568,10 @@ class WorkflowService {
             runCount: dict["run_count"] as? Int,
             storeId: dict["store_id"] as? String,
             createdAt: dict["created_at"] as? String ?? "",
-            updatedAt: dict["updated_at"] as? String
+            updatedAt: dict["updated_at"] as? String,
+            errorWebhookUrl: dict["on_error_webhook_url"] as? String ?? dict["error_webhook_url"] as? String,
+            errorEmail: dict["on_error_email"] as? String ?? dict["error_email"] as? String,
+            circuitBreakerThreshold: dict["circuit_breaker_threshold"] as? Int
         )
     }
 
@@ -440,19 +615,31 @@ class WorkflowService {
                     expression: s["expression"] as? String
                 )
             }
+            // Parse step_config into AnyCodable dict
+            var stepConfig: [String: AnyCodable]?
+            if let sc = n["step_config"] as? [String: Any] {
+                stepConfig = sc.mapValues { AnyCodable($0) }
+            }
+
             return GraphNode(
                 id: id,
+                stepId: n["step_id"] as? String,
                 type: n["type"] as? String ?? "noop",
                 label: n["label"] as? String ?? id,
                 isEntryPoint: n["is_entry_point"] as? Bool ?? false,
                 position: pos,
-                configSummary: summary
+                configSummary: summary,
+                onSuccess: n["on_success"] as? String,
+                onFailure: n["on_failure"] as? String,
+                stepConfig: stepConfig,
+                maxRetries: n["max_retries"] as? Int,
+                timeoutSeconds: n["timeout_seconds"] as? Int
             )
         }
 
         let edges = edgesArr.compactMap { e -> GraphEdge? in
             guard let from = e["from"] as? String, let to = e["to"] as? String else { return nil }
-            return GraphEdge(from: from, to: to, type: e["type"] as? String ?? "success")
+            return GraphEdge(from: from, to: to, type: e["type"] as? String ?? "success", label: e["label"] as? String)
         }
 
         var nodeStatus: [String: NodeStatus]?
@@ -471,35 +658,43 @@ class WorkflowService {
     }
 
     private func decodeRun(_ dict: [String: Any]) -> WorkflowRun? {
-        guard let id = dict["id"] as? String else { return nil }
+        guard let id = (dict["id"] as? String) ?? (dict["run_id"] as? String) else { return nil }
         return WorkflowRun(
             id: id,
             workflowId: dict["workflow_id"] as? String ?? "",
             status: dict["status"] as? String ?? "unknown",
             triggerType: dict["trigger_type"] as? String,
             triggerPayload: nil,
-            startedAt: dict["started_at"] as? String,
+            startedAt: dict["started_at"] as? String ?? dict["created_at"] as? String,
             completedAt: dict["completed_at"] as? String,
-            error: dict["error"] as? String,
+            error: (dict["error"] as? String) ?? (dict["error_message"] as? String),
             traceId: dict["trace_id"] as? String
         )
     }
 
     private func decodeStepRun(_ dict: [String: Any]) -> StepRun? {
         guard let id = dict["id"] as? String else { return nil }
+        var inputMap: [String: AnyCodable]?
+        if let input = dict["input"] as? [String: Any] {
+            inputMap = input.mapValues { AnyCodable($0) }
+        }
+        var outputMap: [String: AnyCodable]?
+        if let output = dict["output"] as? [String: Any] {
+            outputMap = output.mapValues { AnyCodable($0) }
+        }
         return StepRun(
             id: id,
             runId: dict["run_id"] as? String ?? "",
             stepKey: dict["step_key"] as? String ?? "",
             stepType: dict["step_type"] as? String ?? "",
             status: dict["status"] as? String ?? "",
-            input: nil,
-            output: nil,
-            error: dict["error"] as? String,
+            input: inputMap,
+            output: outputMap,
+            error: (dict["error"] as? String) ?? (dict["error_message"] as? String),
             durationMs: dict["duration_ms"] as? Int,
             startedAt: dict["started_at"] as? String,
             completedAt: dict["completed_at"] as? String,
-            retryCount: dict["retry_count"] as? Int
+            retryCount: (dict["retry_count"] as? Int) ?? (dict["attempt_count"] as? Int)
         )
     }
 
@@ -546,16 +741,102 @@ class WorkflowService {
     }
 
     private func decodeMetrics(_ dict: [String: Any]) -> WorkflowMetrics? {
-        WorkflowMetrics(
+        // Analytics response has: total_runs, success_rate, avg_duration_ms,
+        // success_count, failed_count, running_count, by_workflow, by_trigger_type
+        var topErrors: [[String: AnyCodable]]?
+        if let errArr = dict["top_errors"] as? [[String: Any]] {
+            topErrors = errArr.map { $0.mapValues { AnyCodable($0) } }
+        }
+
+        var stepStats: [[String: AnyCodable]]?
+        if let statsArr = dict["step_stats"] as? [[String: Any]] {
+            stepStats = statsArr.map { $0.mapValues { AnyCodable($0) } }
+        }
+        // Also try by_workflow as step-level stats
+        if stepStats == nil, let byWf = dict["by_workflow"] as? [[String: Any]], !byWf.isEmpty {
+            stepStats = byWf.map { $0.mapValues { AnyCodable($0) } }
+        }
+
+        // success_rate may come as 0-1 or 0-100 or nil
+        var successRate = dict["success_rate"] as? Double
+        if successRate == nil {
+            let total = dict["total_runs"] as? Int ?? 0
+            let success = dict["success_count"] as? Int ?? 0
+            if total > 0 { successRate = Double(success) / Double(total) * 100.0 }
+        }
+
+        return WorkflowMetrics(
             totalRuns: dict["total_runs"] as? Int,
-            successRate: dict["success_rate"] as? Double,
+            successRate: successRate,
             avgDurationMs: dict["avg_duration_ms"] as? Double,
             p50Ms: dict["p50_ms"] as? Double,
             p95Ms: dict["p95_ms"] as? Double,
             p99Ms: dict["p99_ms"] as? Double,
-            dlqCount: dict["dlq_count"] as? Int,
-            topErrors: nil,
-            stepStats: nil
+            dlqCount: dict["dlq_count"] as? Int ?? (dict["failed_count"] as? Int),
+            topErrors: topErrors,
+            stepStats: stepStats
+        )
+    }
+
+    private func decodeWebhook(_ dict: [String: Any]) -> WebhookEndpoint? {
+        guard let id = dict["id"] as? String else { return nil }
+        return WebhookEndpoint(
+            id: id,
+            workflowId: dict["workflow_id"] as? String ?? "",
+            name: dict["name"] as? String ?? "",
+            slug: dict["slug"] as? String ?? "",
+            url: dict["url"] as? String,
+            isActive: dict["is_active"] as? Bool ?? true,
+            createdAt: dict["created_at"] as? String ?? ""
+        )
+    }
+
+    private func decodeCheckpoint(_ dict: [String: Any]) -> WorkflowCheckpoint? {
+        guard let id = dict["id"] as? String else { return nil }
+        var stateMap: [String: AnyCodable]?
+        if let state = dict["state"] as? [String: Any] {
+            stateMap = state.mapValues { AnyCodable($0) }
+        }
+        return WorkflowCheckpoint(
+            id: id,
+            runId: dict["run_id"] as? String ?? "",
+            stepKey: dict["step_key"] as? String ?? "",
+            state: stateMap,
+            createdAt: dict["created_at"] as? String ?? ""
+        )
+    }
+
+    private func decodeEvent(_ dict: [String: Any]) -> WorkflowEvent? {
+        guard let id = dict["id"] as? String else { return nil }
+        var dataMap: [String: AnyCodable]?
+        if let data = dict["data"] as? [String: Any] {
+            dataMap = data.mapValues { AnyCodable($0) }
+        }
+        return WorkflowEvent(
+            id: id,
+            runId: dict["run_id"] as? String ?? "",
+            eventType: dict["event_type"] as? String ?? "",
+            stepKey: dict["step_key"] as? String,
+            data: dataMap,
+            createdAt: dict["created_at"] as? String ?? ""
+        )
+    }
+
+    private func decodeWaitpoint(_ dict: [String: Any]) -> WorkflowWaitpoint? {
+        guard let id = dict["id"] as? String else { return nil }
+        var dataMap: [String: AnyCodable]?
+        if let data = dict["data"] as? [String: Any] {
+            dataMap = data.mapValues { AnyCodable($0) }
+        }
+        return WorkflowWaitpoint(
+            id: id,
+            runId: dict["run_id"] as? String ?? "",
+            stepKey: dict["step_key"] as? String ?? "",
+            label: dict["label"] as? String,
+            status: dict["status"] as? String ?? "pending",
+            data: dataMap,
+            expiresAt: dict["expires_at"] as? String,
+            createdAt: dict["created_at"] as? String ?? ""
         )
     }
 }

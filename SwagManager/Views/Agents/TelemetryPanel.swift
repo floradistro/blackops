@@ -133,6 +133,9 @@ struct TelemetryPanel: View {
 
     private var traceListView: some View {
         VStack(spacing: 0) {
+            // Clear the view switcher overlay in title bar area
+            Color.clear.frame(height: 28)
+
             // Time range + live + refresh
             timeRangeBar
             Divider()

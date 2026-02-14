@@ -1,97 +1,87 @@
 import SwiftUI
 
 // MARK: - Step Palette
-// Horizontal strip of draggable step type chips at bottom of canvas
-// Grouped by category: Execution, Flow, Integration, Human, Data
+// Compact strip of step type buttons below canvas, grouped by category
 
 struct StepPalette: View {
     let onAddStep: (String) -> Void
 
-    @State private var expandedCategory: String?
-
     var body: some View {
-        VStack(spacing: DS.Spacing.xs) {
-            // Category tabs
-            HStack(spacing: DS.Spacing.sm) {
-                ForEach(WorkflowStepType.categories, id: \.self) { category in
-                    Button {
-                        withAnimation(DS.Animation.fast) {
-                            expandedCategory = expandedCategory == category ? nil : category
-                        }
-                    } label: {
-                        Text(category.uppercased())
-                            .font(DS.Typography.monoSmall)
-                            .padding(.horizontal, DS.Spacing.sm)
-                            .padding(.vertical, DS.Spacing.xxs)
-                            .background(
-                                expandedCategory == category ? DS.Colors.accent.opacity(0.2) : DS.Colors.surfaceElevated,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.pill)
-                            )
-                            .foregroundStyle(expandedCategory == category ? DS.Colors.accent : DS.Colors.textSecondary)
-                    }
-                    .buttonStyle(.plain)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                // Execution
+                paletteGroup {
+                    paletteButton("tool", icon: "hammer.fill", color: DS.Colors.orange, label: "Tool")
+                    paletteButton("code", icon: "terminal.fill", color: DS.Colors.purple, label: "Code")
+                    paletteButton("agent", icon: "brain.fill", color: DS.Colors.cyan, label: "Agent")
+                    paletteButton("sub_workflow", icon: "arrow.triangle.branch", color: DS.Colors.accent, label: "Sub-Flow")
                 }
 
-                Spacer()
-            }
+                paletteDivider
 
-            // Step chips for selected category (or all if none selected)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Spacing.sm) {
-                    let types = expandedCategory != nil
-                        ? WorkflowStepType.types(in: expandedCategory!)
-                        : WorkflowStepType.allTypes
+                // Flow
+                paletteGroup {
+                    paletteButton("condition", icon: "diamond.fill", color: DS.Colors.accent, label: "Condition")
+                    paletteButton("parallel", icon: "square.stack.3d.up.fill", color: DS.Colors.purple, label: "Parallel")
+                    paletteButton("for_each", icon: "arrow.2.squarepath", color: DS.Colors.accent, label: "For Each")
+                    paletteButton("delay", icon: "clock.fill", color: DS.Colors.warning, label: "Delay")
+                }
 
-                    ForEach(types, id: \.key) { stepType in
-                        stepChip(stepType)
-                    }
+                paletteDivider
+
+                // Integration
+                paletteGroup {
+                    paletteButton("webhook_out", icon: "antenna.radiowaves.left.and.right", color: DS.Colors.green, label: "Webhook")
+                    paletteButton("transform", icon: "arrow.left.arrow.right", color: DS.Colors.cyan, label: "Transform")
+                }
+
+                paletteDivider
+
+                // Human
+                paletteGroup {
+                    paletteButton("approval", icon: "checkmark.seal.fill", color: DS.Colors.warning, label: "Approval")
+                    paletteButton("waitpoint", icon: "pause.circle.fill", color: DS.Colors.warning, label: "Wait")
                 }
             }
         }
-        .padding(DS.Spacing.md)
-        .glassSurface(material: .regular, tint: DS.Colors.surfaceTertiary, cornerRadius: DS.Radius.lg)
-        .overlay {
-            RoundedRectangle(cornerRadius: DS.Radius.lg)
-                .strokeBorder(.quaternary, lineWidth: 0.5)
+        .padding(.horizontal, DS.Spacing.sm)
+        .padding(.vertical, DS.Spacing.xs)
+        .background(DS.Colors.surfaceTertiary)
+        .overlay(alignment: .top) {
+            Divider().opacity(0.3)
         }
     }
 
-    private func stepChip(_ stepType: (key: String, label: String, icon: String, category: String)) -> some View {
-        Button {
-            onAddStep(stepType.key)
-        } label: {
-            HStack(spacing: DS.Spacing.xs) {
-                Image(systemName: stepType.icon)
-                    .font(DesignSystem.font(11, weight: .medium))
-                    .foregroundStyle(chipColor(stepType.category))
+    private func paletteGroup<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: DS.Spacing.xxs) {
+            content()
+        }
+    }
 
-                Text(stepType.label)
-                    .font(DS.Typography.caption2)
-                    .foregroundStyle(DS.Colors.textSecondary)
+    private var paletteDivider: some View {
+        Divider()
+            .frame(height: 16)
+            .opacity(0.2)
+            .padding(.horizontal, DS.Spacing.xs)
+    }
+
+    private func paletteButton(_ stepType: String, icon: String, color: Color, label: String) -> some View {
+        Button {
+            onAddStep(stepType)
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(DesignSystem.font(11, weight: .medium))
+                    .foregroundStyle(color)
+
+                Text(label)
+                    .font(DesignSystem.font(9))
+                    .foregroundStyle(DS.Colors.textTertiary)
             }
-            .padding(.horizontal, DS.Spacing.sm)
-            .padding(.vertical, DS.Spacing.xs)
-            .background(
-                DS.Colors.surfaceElevated,
-                in: RoundedRectangle(cornerRadius: DS.Radius.md)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: DS.Radius.md)
-                    .strokeBorder(DS.Colors.border, lineWidth: 0.5)
-            }
+            .frame(width: 52, height: 38)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Add \(stepType.label) step")
-    }
-
-    private func chipColor(_ category: String) -> Color {
-        switch category {
-        case "Execution": return DS.Colors.orange
-        case "Flow": return DS.Colors.accent
-        case "Integration": return DS.Colors.green
-        case "Human": return DS.Colors.warning
-        case "Data": return DS.Colors.cyan
-        default: return DS.Colors.textSecondary
-        }
+        .help("Add \(label)")
     }
 }

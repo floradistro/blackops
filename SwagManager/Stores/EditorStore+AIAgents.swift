@@ -8,27 +8,43 @@ import SwiftUI
 private struct AgentUpdatePayload: Encodable {
     let name: String
     let description: String
+    let icon: String?
+    let accentColor: String?
     let systemPrompt: String
     let model: String
     let temperature: Double
     let maxTokens: Int
+    let maxToolCalls: Int?
     let isActive: Bool
+    let status: String?
     let enabledTools: [String]
     let tone: String
     let verbosity: String
+    let canQuery: Bool
+    let canSend: Bool
+    let canModify: Bool
+    let apiKey: String?
     let contextConfig: AgentContextConfig?
 
     enum CodingKeys: String, CodingKey {
         case name
         case description
+        case icon
+        case accentColor = "accent_color"
         case systemPrompt = "system_prompt"
         case model
         case temperature
         case maxTokens = "max_tokens"
+        case maxToolCalls = "max_tool_calls"
         case isActive = "is_active"
+        case status
         case enabledTools = "enabled_tools"
         case tone
         case verbosity
+        case canQuery = "can_query"
+        case canSend = "can_send"
+        case canModify = "can_modify"
+        case apiKey = "api_key"
         case contextConfig = "context_config"
     }
 }
@@ -139,14 +155,22 @@ extension EditorStore {
         let updatePayload = AgentUpdatePayload(
             name: agent.name ?? "",
             description: agent.description ?? "",
+            icon: agent.icon,
+            accentColor: agent.accentColor,
             systemPrompt: agent.systemPrompt ?? "",
             model: agent.model ?? "claude-sonnet-4-20250514",
             temperature: agent.temperature ?? 0.7,
             maxTokens: agent.maxTokens ?? 32000,
+            maxToolCalls: agent.maxToolCalls,
             isActive: agent.isActive,
+            status: agent.status ?? "draft",
             enabledTools: agent.enabledTools ?? [],
             tone: agent.tone ?? "professional",
             verbosity: agent.verbosity ?? "moderate",
+            canQuery: agent.canQuery ?? true,
+            canSend: agent.canSend ?? false,
+            canModify: agent.canModify ?? false,
+            apiKey: agent.apiKey,
             contextConfig: agent.contextConfig
         )
 
